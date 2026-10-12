@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CDMS Prototype | Post-Auction Menus</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="data.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <nav class="side" aria-label="CDMS menu">
+      <div class="side-h">CDMS MENU</div>
+      <div class="menu" id="menu"></div>
+    </nav>
+    <div class="main">
+      <header class="top">
+        <button type="button" class="burger" id="burger" aria-label="Open menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#293a8e" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <img class="logo" id="home-logo" src="assets/logo.png" alt="JBA Philippines (go to Home)">
+        <span class="proto-tag">Prototype · sample data</span>
+        <img class="user" src="assets/user.png" alt="Signed in as system (SYSADMIN)">
+      </header>
+      <main class="content" id="content" tabindex="-1"></main>
+      <footer class="foot">&copy; 2026 JBA Philippines Inc.</footer>
+    </div>
+  </div>
+  <div class="toast-wrap" id="toasts" aria-live="polite"></div>
+</body>
+</html>
