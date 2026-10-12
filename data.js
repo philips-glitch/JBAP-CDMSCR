@@ -5190,5 +5190,425 @@ window.MOCK_DATA = {
     "remitted": null
    }
   ]
- }
+ },
+ "activityLog": [
+  {
+   "at": "2026-09-03 15:05:37",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Pending Awarding",
+   "action": "Update",
+   "record": "Auction 216, Lot 067 · NKO9627",
+   "field": "Awarding Date",
+   "old": "",
+   "new": "09/03/2026"
+  },
+  {
+   "at": "2026-09-06 11:00:45",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "Unpaid",
+   "action": "Update",
+   "record": "Auction 216, Lot 105 · NKG8546",
+   "field": "Buyer Paid",
+   "old": "",
+   "new": "09/06/2026"
+  },
+  {
+   "at": "2026-09-08 14:58:57",
+   "user": "fad.lea",
+   "module": "FAD",
+   "screen": "Cancellation Billing",
+   "action": "Update",
+   "record": "Auction 212, Lot 108 · NLA3154",
+   "field": "Billing Date",
+   "old": "",
+   "new": "09/08/2026"
+  },
+  {
+   "at": "2026-09-10 17:06:20",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Pending Awarding",
+   "action": "Update",
+   "record": "Auction 217, Lot 012 · AIA1465",
+   "field": "Awarding Date",
+   "old": "",
+   "new": "09/10/2026"
+  },
+  {
+   "at": "2026-09-12 16:52:02",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Pending Awarding",
+   "action": "Update",
+   "record": "Auction 217, Lot 035 · NHM7031",
+   "field": "Awarding Date",
+   "old": "",
+   "new": "09/12/2026"
+  },
+  {
+   "at": "2026-09-13 17:05:24",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Unpaid",
+   "action": "Update",
+   "record": "Auction 217, Lot 035 · NHM7031",
+   "field": "Buyer Paid",
+   "old": "",
+   "new": "09/13/2026"
+  },
+  {
+   "at": "2026-09-15 12:33:22",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Seller Acknowledgement",
+   "action": "Update",
+   "record": "Auction 216, Lot 067 · NKO9627",
+   "field": "Seller Acknowledgement Date",
+   "old": "",
+   "new": "09/15/2026"
+  },
+  {
+   "at": "2026-09-16 10:34:14",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "For Dispatch",
+   "action": "Update",
+   "record": "Auction 216, Lot 105 · NKG8546",
+   "field": "Dispatch Date",
+   "old": "",
+   "new": "09/16/2026"
+  },
+  {
+   "at": "2026-09-18 08:43:57",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "Rebate Payable",
+   "action": "Update",
+   "record": "Auction 216, Lot 042 · NJQ1118",
+   "field": "Rebate Paid",
+   "old": "",
+   "new": "09/18/2026"
+  },
+  {
+   "at": "2026-09-18 17:13:52",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Pending Awarding",
+   "action": "Update",
+   "record": "Auction 218, Lot 015 · AAZ6997",
+   "field": "Awarding Date",
+   "old": "",
+   "new": "09/18/2026"
+  },
+  {
+   "at": "2026-09-19 10:36:07",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "Rebate Payable",
+   "action": "Update",
+   "record": "Auction 217, Lot 063 · NIQ9285",
+   "field": "Rebate Paid",
+   "old": "",
+   "new": "09/19/2026"
+  },
+  {
+   "at": "2026-09-20 08:46:48",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "For Dispatch",
+   "action": "Update",
+   "record": "Auction 216, Lot 041 · NFM5719",
+   "field": "Dispatch Date",
+   "old": "",
+   "new": "09/20/2026"
+  },
+  {
+   "at": "2026-09-20 14:47:23",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Unpaid",
+   "action": "Update",
+   "record": "Auction 218, Lot 101 · NKI8683",
+   "field": "Buyer Paid",
+   "old": "",
+   "new": "09/20/2026"
+  },
+  {
+   "at": "2026-09-21 12:27:25",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "Unpaid",
+   "action": "Update",
+   "record": "Auction 218, Lot 039 · AAK8780",
+   "field": "Buyer Paid",
+   "old": "",
+   "new": "09/21/2026"
+  },
+  {
+   "at": "2026-09-23 09:04:26",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Seller Acknowledgement",
+   "action": "Update",
+   "record": "Auction 217, Lot 028 · FAU2169",
+   "field": "Seller Acknowledgement Date",
+   "old": "",
+   "new": "09/23/2026"
+  },
+  {
+   "at": "2026-09-23 11:55:40",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "Seller Acknowledgement",
+   "action": "Update",
+   "record": "Auction 216, Lot 019 · NFW4473",
+   "field": "Seller Acknowledgement Date",
+   "old": "",
+   "new": "09/22/2026"
+  },
+  {
+   "at": "2026-09-24 10:45:38",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Pending Awarding",
+   "action": "Update",
+   "record": "Auction 219, Lot 038 · HK883A",
+   "field": "Awarding Date",
+   "old": "",
+   "new": "09/24/2026"
+  },
+  {
+   "at": "2026-09-24 11:01:41",
+   "user": "fad.lea",
+   "module": "FAD",
+   "screen": "Seller Acknowledgement",
+   "action": "Update",
+   "record": "Auction 216, Lot 019 · NFW4473",
+   "field": "Seller Acknowledgement Date",
+   "old": "09/22/2026",
+   "new": "09/23/2026"
+  },
+  {
+   "at": "2026-09-25 09:02:49",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Pending Awarding",
+   "action": "Update",
+   "record": "Auction 219, Lot 033 · NDD9015",
+   "field": "Awarding Date",
+   "old": "",
+   "new": "09/25/2026"
+  },
+  {
+   "at": "2026-09-25 16:58:59",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "Rebate Payable",
+   "action": "Update",
+   "record": "Auction 218, Lot 060 · NIT2571",
+   "field": "Rebate Paid",
+   "old": "",
+   "new": "09/25/2026"
+  },
+  {
+   "at": "2026-09-26 09:11:33",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "Payment Seller",
+   "action": "Update",
+   "record": "Auction 218, Lot 058 · NIG4195",
+   "field": "Payment to Seller Date",
+   "old": "",
+   "new": "09/26/2026"
+  },
+  {
+   "at": "2026-09-27 13:36:35",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "Unpaid",
+   "action": "Update",
+   "record": "Auction 219, Lot 110 · VAA2053",
+   "field": "Buyer Paid",
+   "old": "",
+   "new": "09/27/2026"
+  },
+  {
+   "at": "2026-09-27 14:50:15",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "Seller Acknowledgement",
+   "action": "Update",
+   "record": "Auction 218, Lot 046 · DAV8828",
+   "field": "Seller Acknowledgement Date",
+   "old": "",
+   "new": "09/27/2026"
+  },
+  {
+   "at": "2026-09-28 14:56:03",
+   "user": "fad.lea",
+   "module": "FAD",
+   "screen": "Cancellation Entry",
+   "action": "Cancel",
+   "record": "Auction 216, Lot 108 · MBD1875",
+   "field": "Status",
+   "old": "Sold",
+   "new": "Cancelled"
+  },
+  {
+   "at": "2026-09-28 14:56:03",
+   "user": "fad.lea",
+   "module": "FAD",
+   "screen": "Cancellation Entry",
+   "action": "Cancel",
+   "record": "Auction 216, Lot 108 · MBD1875",
+   "field": "Date Cancelled",
+   "old": "",
+   "new": "09/28/2026"
+  },
+  {
+   "at": "2026-09-28 14:56:03",
+   "user": "fad.lea",
+   "module": "FAD",
+   "screen": "Cancellation Entry",
+   "action": "Cancel",
+   "record": "Auction 216, Lot 108 · MBD1875",
+   "field": "Cancellation Fee Waived",
+   "old": "",
+   "new": "No"
+  },
+  {
+   "at": "2026-09-28 14:56:03",
+   "user": "fad.lea",
+   "module": "FAD",
+   "screen": "Cancellation Entry",
+   "action": "Cancel",
+   "record": "Auction 216, Lot 108 · MBD1875",
+   "field": "Justification of Waiver",
+   "old": "",
+   "new": "Did not pay"
+  },
+  {
+   "at": "2026-09-29 14:33:15",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "Seller Acknowledgement",
+   "action": "Update",
+   "record": "Auction 218, Lot 014 · NDM2209",
+   "field": "Seller Acknowledgement Date",
+   "old": "",
+   "new": "09/29/2026"
+  },
+  {
+   "at": "2026-09-30 14:50:45",
+   "user": "fad.lea",
+   "module": "FAD",
+   "screen": "Cancellation Billing",
+   "action": "Update",
+   "record": "Auction 216, Lot 108 · MBD1875",
+   "field": "Billing Date",
+   "old": "",
+   "new": "09/30/2026"
+  },
+  {
+   "at": "2026-09-30 16:04:27",
+   "user": "fad.rico",
+   "module": "FAD",
+   "screen": "For Dispatch",
+   "action": "Update",
+   "record": "Auction 218, Lot 060 · NIT2571",
+   "field": "Dispatch Date",
+   "old": "",
+   "new": "09/30/2026"
+  },
+  {
+   "at": "2026-10-01 10:18:33",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Pending Awarding",
+   "action": "Update",
+   "record": "Auction 220, Lot 003 · NAB1204",
+   "field": "Awarding Date",
+   "old": "",
+   "new": "10/01/2026"
+  },
+  {
+   "at": "2026-10-02 11:24:59",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Pending Awarding",
+   "action": "Update",
+   "record": "Auction 220, Lot 080 · NJH2087",
+   "field": "Awarding Date",
+   "old": "",
+   "new": "10/02/2026"
+  },
+  {
+   "at": "2026-10-03 12:46:18",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Pending Awarding",
+   "action": "Update",
+   "record": "Auction 220, Lot 016 · NDQ3381",
+   "field": "Awarding Date",
+   "old": "",
+   "new": "10/03/2026"
+  },
+  {
+   "at": "2026-10-04 10:31:32",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Seller Acknowledgement",
+   "action": "Update",
+   "record": "Auction 219, Lot 110 · VAA2053",
+   "field": "Seller Acknowledgement Date",
+   "old": "",
+   "new": "10/04/2026"
+  },
+  {
+   "at": "2026-10-04 15:59:04",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Pending Awarding",
+   "action": "Update",
+   "record": "Auction 220, Lot 092 · NKB6631",
+   "field": "Awarding Date",
+   "old": "",
+   "new": "10/04/2026"
+  },
+  {
+   "at": "2026-10-06 09:03:39",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "For Dispatch",
+   "action": "Update",
+   "record": "Auction 218, Lot 107 · GBF4509",
+   "field": "Dispatch Date",
+   "old": "",
+   "new": "10/06/2026"
+  },
+  {
+   "at": "2026-10-07 12:52:43",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Seller Acknowledgement",
+   "action": "Update",
+   "record": "Auction 219, Lot 086 · C4U474",
+   "field": "Seller Acknowledgement Date",
+   "old": "",
+   "new": "10/07/2026"
+  },
+  {
+   "at": "2026-10-08 15:37:46",
+   "user": "fad.ana",
+   "module": "FAD",
+   "screen": "Pending Awarding",
+   "action": "Update",
+   "record": "Auction 221, Lot 008 · NPZ5080",
+   "field": "Awarding Date",
+   "old": "",
+   "new": "10/08/2026"
+  }
+ ]
 };

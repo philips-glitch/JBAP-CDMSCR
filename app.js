@@ -45,12 +45,13 @@ const DEPT_ICON = {
   FAD: '<rect x="5" y="2.5" width="14" height="19" rx="1.6"/><rect x="7.8" y="5.3" width="8.4" height="3.6" rx=".6"/><path d="M8.3 12.3h.1M12 12.3h.1M15.7 12.3h.1M8.3 15.3h.1M12 15.3h.1M15.7 15.3h.1M8.3 18.3h.1M12 18.3h.1M15.7 18.3h.1"/>',
   SMD: '<rect x="3" y="3.5" width="18" height="12.5" rx="1.2"/><path d="M12 16v3.5M8 21h8"/><path d="M6.5 13v-2.5M10 13V8.5M13.5 13v-3M17 13V6.5"/>',
   VWD: '<path d="M2.5 9.5L12 4l9.5 5.5V21h-19z"/><path d="M6 21v-6.5h12V21"/><path d="M7.6 17.8h8.8M9 14.5l1-1.8h4l1 1.8"/><path d="M8.6 19.6h.1M15.4 19.6h.1"/>',
+  LOG: '<rect x="4.5" y="3.5" width="13" height="17.5" rx="1.4"/><path d="M8 3.5V2.5h6v2H8z"/><path d="M7.5 9h7M7.5 12.5h4"/><circle cx="17" cy="17" r="4.2"/><path d="M17 15v2.2l1.4 1"/>',
 };
 const deptSvg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DEPT_ICON[d]}</svg>`;
 
 // ─── State ────────────────────────────────────────────────────────────
 // [MOCK] Deep copy of data.js so "Reset demo data" is just a page refresh.
-const S = D ? JSON.parse(JSON.stringify({ veh: D.vehicles, cancels: D.cancellations, billing: D.billing })) : null;
+const S = D ? JSON.parse(JSON.stringify({ veh: D.vehicles, cancels: D.cancellations, billing: D.billing, log: [] })) : null;
 const SELLER = D ? Object.fromEntries(D.sellers.map(s => [s.code, s])) : {};
 const UI = {};          // per-screen UI state: filters, sort, page, edits, errors, message
 const OPEN = { FAD: false, SMD: false, VWD: false };
@@ -82,6 +83,22 @@ const CX = () => S.cancels.map(c => {
   return Object.assign({}, c, { _raw: c, status: 'Cancelled', adate: a ? `${fmtDate(a[0])} - ${fmtDate(a[1])}` : '' });
 });
 const SMD = k => D.smd[k].map((r, i) => Object.assign({ id: `${k}-${i}` }, r));
+// ─── Activity log (one entry per changed field; entries are never edited or deleted) ──
+const LOG_ID = 'log-activity';
+const LOG_USER = 'system';   // [MOCK] the header user; there is no real login in the prototype
+const addLog = e => S.log.push(Object.assign({ id: `L${S.log.length + 1}`, date: e.at.slice(0, 10) }, e));
+if (S) (D.activityLog || []).forEach(addLog);
+const logVal = (type, v) => type === 'check' ? (v ? 'Yes' : 'No') : v === null || v === undefined || v === '' ? ''
+  : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : type === 'date' ? fmtDate(v) : type === 'money' ? money(v) : String(v);
+const logRecord = r => r.auction ? `Auction ${r.auction}, Lot ${r.lot || '-'}${r.plate ? ` · ${r.plate}` : ''}` : `Billing #${r.no}`;
+// [BEHAVIOR] changes: [[field label, type, old value, new value]]. Update rows whose value did not change are skipped.
+function logChange(scr, action, r, changes) {
+  const at = `${TODAY} ${new Date().toTimeString().slice(0, 8)}`;   // demo date + real clock time
+  changes.forEach(([field, type, o, n]) => {
+    const old = logVal(type, o), nw = logVal(type, n);
+    if (action !== 'Update' || old !== nw) addLog({ at, user: LOG_USER, module: scr.dept, screen: scr.title, action, record: logRecord(r), field, old, new: nw });
+  });
+}
 function resultSummary() {
   const g = {};
   sold().forEach(v => { (g[v.auction] ||= { id: v.auction, auction: v.auction, units: 0, total: 0, comm: 0, rebates: 0, start: v.auction_start }); const x = g[v.auction]; x.units++; x.total += v.price; x.comm += v.ctotal; x.rebates += v.rebate || 0; });
@@ -90,7 +107,7 @@ function resultSummary() {
 
 // ─── Column helper ────────────────────────────────────────────────────
 const C = (label, key, type = 'text', o = {}) => Object.assign({ label, key, type }, o);
-const CEN = new Set(['code', 'date', 'check', 'status', 'rocheck']);
+const CEN = new Set(['code', 'date', 'check', 'status', 'rocheck', 'datetime', 'action']);
 const RIGHT = new Set(['money', 'int']);
 const sumBy = (rows, k) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
 const AUCTION_FILTER = { key: 'auction', label: 'Auction No.', type: 'text', w: 'w1', exact: true };
@@ -301,8 +318,19 @@ const SCREENS = [
       C('Status', 'status', 'status'), C('Awarding Date', 'awarding', 'date'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller', 'pay_seller', 'date'),
       C('Seller Acknowledgement', 'seller_ack', 'date'), C('Dispatch Date', 'dispatch', 'date'), C('Vehicle Release Date', 'release', 'date')],
     totals: rows => ({ customer: `${rows.length} lots, ${rows.filter(r => r.status === 'Sold').length} sold` }) },
+
+  // ===================== Log Activity (top-level menu, read-only) =====================
+  { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
+    rule: 'Every data change made in FAD, SMD and VWD, one row per changed field. Entries cannot be edited or deleted. SMD and VWD are view-only under the CR, so they have no entries.',
+    rows: () => S.log, sort: ['at', 'desc'],
+    cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
+      C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
+    filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
+      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel'] },
+      { key: 'record', label: 'Record / Plate' }],
+    emptyNote: () => { const m = U(LOG_ID).applied.module; return m === 'SMD' || m === 'VWD' ? `No activity: ${m} is view-only under the CR, so it has no update actions to log.` : null; } },
 ];
-SCREENS.forEach(s => { s.id = `${s.dept}/${s.slug}`; });
+SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
 
 function U(id) {
@@ -354,13 +382,15 @@ function renderSide(route) {
     return `<button type="button" class="mi" data-group="${d}" aria-expanded="${open}" aria-controls="grp-${d}">${deptSvg(d)}${d}<span class="caret"></span></button>
       <div class="lvs" id="grp-${d}" ${open ? '' : 'hidden'}>${items}</div>`;
   }).join('');
-  $('#menu').innerHTML = TOP_BEFORE.map(disabledItem).join('') + groups + TOP_AFTER.map(disabledItem).join('') +
-    '<p class="side-note">Prototype: only FAD, SMD and VWD are active. Other menus are disabled.</p>';
+  const logOn = route === LOG_ID;
+  const log = `<a class="mi ${logOn ? 'is-active' : ''}" href="#/${LOG_ID}" ${logOn ? 'aria-current="page"' : ''}>${deptSvg('LOG')}Log Activity</a>`;
+  $('#menu').innerHTML = TOP_BEFORE.map(disabledItem).join('') + groups + TOP_AFTER.map(disabledItem).join('') + log +
+    '<p class="side-note">Prototype: only FAD, SMD, VWD and Log Activity are active. Other menus are disabled.</p>';
 }
 
 function pageHead(scr) {
   const pills = scr.actions.map(a => `<span class="pill ${a === 'Update' ? 'u' : ''}">${a}</span>`).join('');
-  return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›<span>${scr.dept}</span>›<b>${esc(scr.title)}</b></nav>
+  return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›${scr.top ? '' : `<span>${scr.dept}</span>›`}<b>${esc(scr.title)}</b></nav>
     <div class="hrow"><h1>${esc(scr.title)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>
     <p class="rule">${IC.info}<span>${esc(scr.rule)}</span></p>`;
 }
@@ -401,7 +431,9 @@ function cellHtml(scr, r, c, upd) {
   const v = r[c.key];
   if (c.type === 'rocheck' || c.type === 'check') return `<td class="c"><span class="ro-chk ${v ? 'on' : ''}" role="img" aria-label="${v ? 'Yes' : 'No'}">${v ? IC.check : ''}</span></td>`;
   if (c.type === 'status') { const k = { Sold: 'sold', 'Not Sold': 'ns', Cancelled: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
-  let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : (v ?? '');
+  if (c.type === 'action') { const k = { Update: 'up', Create: 'sold', Cancel: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
+  if (c.type === 'logval' && (v ?? '') === '') return '<td><span class="blank">(blank)</span></td>';
+  let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : c.type === 'datetime' ? `${fmtDate(v.slice(0, 10))} ${v.slice(11)}` : (v ?? '');
   const late = c.late && v && v < TODAY ? ' late' : '';
   if (c.w) return `<td class="${cls}${late}"><div class="tx" style="max-width:${c.w}px" title="${esc(t)}">${esc(t)}</div></td>`;
   return `<td class="${cls}${late}">${esc(t)}</td>`;
@@ -423,7 +455,7 @@ function dataCard(scr, title) {
     return `<th class="${ed ? 'ed' : ''}" aria-sort="${srt}" scope="col"><button type="button" class="hb" data-sort="${c.key}">${upd ? (ed ? IC.pen : `<span class="lk">${IC.lock}</span>`) : ''}<span>${esc(c.label)}</span><span class="si" aria-hidden="true"></span></button></th>`;
   }).join('');
   const body = rows.length ? rows.map(r => `<tr class="${ui.edits[r.id] ? 'is-dirty' : ''}" data-tr="${esc(r.id)}">${scr.cols.map(c => cellHtml(scr, r, c, upd)).join('')}</tr>`).join('')
-    : `<tr><td colspan="${scr.cols.length}"><div class="empty">${IC.inbox}<b>No records to show</b>${hasFilter(scr) ? 'No records match the filter. Try Reset.' : 'Nothing is waiting in this list right now.'}</div></td></tr>`;
+    : `<tr><td colspan="${scr.cols.length}"><div class="empty">${IC.inbox}<b>No records to show</b>${esc(scr.emptyNote?.() || '') || (hasFilter(scr) ? 'No records match the filter. Try Reset.' : 'Nothing is waiting in this list right now.')}</div></td></tr>`;
   let foot = '';
   if (scr.totals && all.length) {
     const t = scr.totals(all);
@@ -499,7 +531,7 @@ function render() {
   renderSide(r);
   const c = $('#content');
   if (!scr) { c.innerHTML = homeLayout(); document.title = 'CDMS Prototype | Post-Auction Menus'; return; }
-  document.title = `${scr.title} | ${scr.dept} | CDMS Prototype`;
+  document.title = `${scr.title} | ${scr.top ? '' : `${scr.dept} | `}CDMS Prototype`;
   let html = pageHead(scr);
   if (scr.layout === 'entry') html += entryLayout(scr);
   else { if (scr.layout === 'query') html += queryCard(scr); if (scr.filters && scr.actions.includes('Filter')) html += filterCard(scr); html += dataCard(scr, scr.title + ' list'); }
@@ -541,7 +573,11 @@ function applyEdits(scr, ids) {
   const ui = U(scr.id), map = Object.fromEntries(scr.rows().map(r => [r.id, r])); let n = 0;
   (ids || Object.keys(ui.edits)).forEach(id => {
     const r = map[id], e = ui.edits[id]; if (!r || !e) return;
-    Object.entries(e).forEach(([k, val]) => { r._raw[k] = (val === '' ? null : (scr.cols.find(c => c.key === k)?.edit === 'money' && val !== null ? Number(val) : val)); });
+    const changes = Object.entries(e).map(([k, val]) => {
+      const col = scr.cols.find(c => c.key === k), nv = val === '' ? null : (col?.edit === 'money' && val !== null ? Number(val) : val);
+      const ch = [col?.label || k, col?.edit, r._raw[k], nv]; r._raw[k] = nv; return ch;
+    });
+    logChange(scr, 'Update', r, changes);
     delete ui.edits[id]; n++;
   });
   return n;
@@ -575,7 +611,11 @@ const ACTIONS = {
     openModal({ title: `Email BAAF: ${Object.keys(groups).length} buyer(s), ${rows.length} vehicle(s)`, icon: 'mail', wide: true, body: mails,
       note: 'Simulated: no email is actually sent.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Send ${Object.keys(groups).length} email(s)`, kind: 'pr', icon: 'mail', onClick: () => {
-        rows.forEach(r => { const e = ui.edits[r.id] || {}; r._raw.awarding = e.awarding || TODAY; if ('transfer_fee' in e && e.transfer_fee !== '') r._raw.transfer_fee = Number(e.transfer_fee); r._raw.for_baaf = false; delete ui.edits[r.id]; });
+        rows.forEach(r => {
+          const e = ui.edits[r.id] || {}, award = e.awarding || TODAY, tf = 'transfer_fee' in e && e.transfer_fee !== '' ? Number(e.transfer_fee) : r._raw.transfer_fee;
+          logChange(scr, 'Update', r, [['Awarding Date', 'date', r._raw.awarding, award], ['Transfer Fees', 'money', r._raw.transfer_fee, tf], ['For BAAF', 'check', r._raw.for_baaf, false]]);
+          r._raw.awarding = award; r._raw.transfer_fee = tf; r._raw.for_baaf = false; delete ui.edits[r.id];
+        });
         closeModal(); render(); toast(`BAAF sent to ${Object.keys(groups).length} buyer(s). ${rows.length} vehicle(s) moved to Unpaid.`);
       } }] });
   },
@@ -617,8 +657,13 @@ const ACTIONS = {
         else if (bd > TODAY || bd < lastRemit) { $('#cb-date-err').textContent = `Must be between ${fmtDate(lastRemit)} and ${fmtDate(TODAY)}.`; $('#cb-date').classList.add('is-invalid'); ok = false; }
         if (!ok) return;
         const parts = [...new Set(rows.map(r => r.adate))].join('; ');
-        S.billing.push({ no, customer: SELLER[sellers[0]]?.name || sellers[0], particular: parts, bdate: bd, total: Math.round(sumBy(rows, 'ctotal') * 100) / 100, trans: null, pay: null, cr: '' });
-        const ui = U(scr.id); rows.forEach(r => { r._raw.billed = true; r._raw.print_comm = false; delete ui.edits[r.id]; });
+        const bill = { no, customer: SELLER[sellers[0]]?.name || sellers[0], particular: parts, bdate: bd, total: Math.round(sumBy(rows, 'ctotal') * 100) / 100, trans: null, pay: null, cr: '' };
+        S.billing.push(bill);
+        logChange(scr, 'Create', bill, [['Customer', 'text', null, bill.customer], ['Billing Date', 'date', null, bd], ['Total', 'money', null, bill.total]]);
+        const ui = U(scr.id); rows.forEach(r => {
+          logChange(scr, 'Update', r, [['Commission Billing No.', 'text', null, no], ['Print?', 'check', r._raw.print_comm, false]]);
+          r._raw.billed = true; r._raw.print_comm = false; delete ui.edits[r.id];
+        });
         printModal(); closeModal(); render(); toast(`Billing #${esc(no)} recorded for ${rows.length} vehicle(s). See Billing Monitoring and Unpaid Billing.`);
       } }] });
   },
@@ -632,7 +677,10 @@ const ACTIONS = {
       <p class="fn">Cancellation fee amount and payment deadline: rule to be confirmed with JBAP.</p></div>`;
     openModal({ title: 'Print cancellation billing', icon: 'print', wide: true, body, note: 'Recording sets the Cancellation Billing Date to today.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record billing date & print', kind: 'pr', icon: 'print', onClick: () => {
-        const ui = U(scr.id); rows.forEach(r => { r._raw.bill_date = TODAY; r._raw.for_print = false; delete ui.edits[r.id]; });
+        const ui = U(scr.id); rows.forEach(r => {
+          logChange(scr, 'Update', r, [['Billing Date', 'date', r._raw.bill_date, TODAY], ['For Print?', 'check', r._raw.for_print, false]]);
+          r._raw.bill_date = TODAY; r._raw.for_print = false; delete ui.edits[r.id];
+        });
         printModal(); closeModal(); render(); toast(`${rows.length} cancellation(s) billed. They moved to Cancellation Payment.`);
       } }] });
   },
@@ -658,8 +706,8 @@ function bind() {
   const content = $('#content'), menu = $('#menu');
   menu.addEventListener('click', ev => {
     const g = ev.target.closest('[data-group]'); if (g) { OPEN[g.dataset.group] = !OPEN[g.dataset.group]; renderSide(route()); return; }
-    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only FAD, SMD and VWD are active.`, 'warn'); return; }
-    if (ev.target.closest('.mis')) document.body.classList.remove('nav-open');
+    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only FAD, SMD, VWD and Log Activity are active.`, 'warn'); return; }
+    if (ev.target.closest('.mis, a.mi')) document.body.classList.remove('nav-open');
   });
   content.addEventListener('change', ev => {
     const el = ev.target;
@@ -716,6 +764,8 @@ function entryCancel(scr) {
     body: `<p>Lot <b>${esc(v.lot)}</b> of Auction <b>${v.auction}</b> (${esc(v.plate)}, ${esc(v.customer)}) will be set to <b>Cancelled</b> on ${fmtDate(e.form.date)}.</p>
       <p>Cancellation fee: <b>${e.form.waived ? 'waived' : 'to be billed'}</b>. The vehicle leaves all FAD work lists${e.form.waived ? '' : ' and appears in Cancellation Billing'}.</p>`,
     footer: [{ label: 'Keep transaction', kind: 'gh', onClick: closeModal }, { label: 'Cancel transaction', kind: 'dg', icon: 'ban', onClick: () => {
+      logChange(scr, 'Cancel', v, [['Status', 'text', v._raw.status, 'Cancelled'], ['Date Cancelled', 'date', null, e.form.date],
+        ['Cancellation Fee Waived', null, null, e.form.waived], ['Justification of Waiver', 'text', null, e.form.just]]);
       v._raw.status = 'Cancelled';
       S.cancels.unshift({ id: `C-${v.auction}-${v.lot}-new`, auction: v.auction, lot: v.lot, plate: v.plate, customer: v.customer, cid: v.cid, dcancel: e.form.date,
         waived: e.form.waived, just: e.form.just, remitted: null, bill_date: null, paid_date: null, amount: null, for_print: false });

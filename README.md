@@ -14,8 +14,8 @@ The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is l
 
 ## What is clickable
 
-- **Only FAD, SMD and VWD are active.** All other CDMS menus (Dashboard, Customer, Cars, Report, Payment, etc.) are disabled and show a short message when clicked.
-- **31 screens**: FAD 18, SMD 9, VWD 4, plus a Home page with counts per list.
+- **Only FAD, SMD, VWD and Log Activity are active.** All other CDMS menus (Dashboard, Customer, Cars, Report, Payment, etc.) are disabled and show a short message when clicked.
+- **32 screens**: FAD 18, SMD 9, VWD 4, Log Activity 1 (last item in the sidebar, below Staff), plus a Home page with counts per list.
 - Every list has working **filters, column sorting, page size and paging**, an empty state, and totals where the design has them.
 
 ## Flow walkthrough (FAD, data flows between lists and into VWD)
@@ -28,6 +28,7 @@ The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is l
 6. **Unpaid Billing**: enter Payment Date + Collection Receipt > **Save**.
 7. **Cancellation Entry**: enter an Auction No. and Lot (tip: copy one from Unpaid) > **Find** > set Status to *Cancelled*, date, waiver and reason > **Cancel transaction**. It appears in **Cancellation Monitoring** and (if not waived) **Cancellation Billing** > print to bill > **Cancellation Payment** > enter date paid and amount.
 8. **Rebate Payable**: enter *Rebate Paid* > **Save**. **Liability to Seller**: pick a date > **Generate**.
+9. **Log Activity**: every change from steps 1 to 8 appears here as user `system`, one row per changed field with the old and new value (newest first). Filter by date, user, module, action or record/plate. Print previews and *Generate* are not logged, because they do not change data.
 
 ## Access per menu
 
@@ -36,6 +37,7 @@ The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is l
 | FAD | View, filter, sort; update on the screens marked *Update* (CR form) |
 | SMD | View, filter, sort only. Shows the **legacy SMD sample data** (snapshot), so FAD actions do not change SMD lists |
 | VWD | View, filter, sort only. Uses the same live data as FAD |
+| Log Activity | View, filter, sort only. Entries cannot be edited or deleted. Only FAD has entries, because SMD and VWD are view-only |
 
 ## Seeded test data (`data.js` > `window.MOCK_DATA`)
 
@@ -43,6 +45,7 @@ The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is l
 - **cancellations**: 32 records (legacy Cancellation Monitoring, Billing and Payment rows plus generated ones)
 - **billing**: 24 legacy billing records (Aug to Sep 2025)
 - **smd**: legacy SMD screenshots (Result Summary, Auction Monitoring, Pending Awarding, Unpaid, Pending Seller Ack., For Dispatch, Unreleased Units, Rebates, Cancellations)
+- **activityLog**: 38 sample Log Activity entries (09/03 to 10/08/2026) by 3 sample users (`fad.ana`, `fad.rico`, `fad.lea`), built from the vehicle and cancellation dates above so every new value matches the lists. Includes one correction (old value to new value) and one cancellation
 - **Demo date** is fixed at **10/09/2026** (`meta.demoToday`) so deadlines and penalties look the same whenever it is opened. Buyer emails are placeholders (example.com).
 
 Edit `data.js` and refresh the browser to change sample data.
@@ -59,11 +62,12 @@ Edit `data.js` and refresh the browser to change sample data.
 | One commission billing per seller | Enforced when printing | **Assumption** |
 | Waived cancellations are not billed | Excluded from Cancellation Billing | **Assumption** |
 | Overdue deadlines shown in red | Unpaid, Payment Seller, Unreleased, Unpaid Billing | Prototype suggestion |
+| Log Activity records data changes only (not views or prints), one row per changed field | Update, Create, Cancel | Prototype suggestion, **to confirm** |
 
 ## Not simulated
 
-- Persistence: all changes are lost on refresh (by design)
-- Real login: the header shows the CDMS user only
+- Persistence: all changes are lost on refresh (by design), including new Log Activity entries
+- Real login: the header shows the CDMS user only, so every change made in the demo is logged as `system`. Log times use the demo date with the real clock time
 - Real emails and NOAH: email and print are previews; nothing is sent or posted
 - Vehicle release by VWD: the CR gives VWD view-only access, so released dates cannot be entered here
 - Pixel-perfect design: this is a prototype, not the final UI
