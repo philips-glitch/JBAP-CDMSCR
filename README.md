@@ -23,7 +23,7 @@ The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is l
 1. **Pending Awarding**: tick *For BAAF* on 1 or more lots (optionally change Awarding Date or Transfer Fees) > **Email BAAF** > preview one email per buyer > **Send**. Lots move to **Unpaid**.
 2. **Unpaid**: enter *Buyer Paid* > **Save changes**. Lot moves to **Payment Seller**. Try a future date to see validation.
 3. **Payment Seller**: tick *Print Payment to Seller* > **Print payment to seller** (report per seller). Enter *Payment to Seller Date* > **Save**. Lot moves to **Seller Acknowledgement** and **Commission Billing**.
-4. **Seller Acknowledgement** > **For Dispatch** > enter dates and save. Dispatched lots appear in **Unreleased Unit** (FAD) and in VWD **Unreleased Unit / Unreleased Unit (Overdue)**.
+4. **Seller Acknowledgement**: enter the date and save. **For Dispatch** lists every paid lot without a Dispatch Date (as in MS Access): enter the date and save. Dispatched lots appear in **Unreleased Unit** (FAD) and in VWD **Unreleased Unit / Unreleased Unit (Overdue)**.
 5. **Commission Billing**: tick *Print?* for lots of **one seller** > **Print commission billing** > enter NOAH Billing No. and date > **Record billing & print**. A new billing appears in **Billing Monitoring** and **Unpaid Billing**.
 6. **Unpaid Billing**: enter Payment Date + Collection Receipt > **Save**.
 7. **Cancellation Entry**: enter an Auction No. and Lot (tip: copy one from Unpaid) > **Find** > set Status to *Cancelled*, date, waiver and reason > **Cancel transaction**. It appears in **Cancellation Monitoring** and (if not waived) **Cancellation Billing** > print to bill > **Cancellation Payment** > enter date paid and amount.
@@ -41,12 +41,32 @@ The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is l
 
 ## Seeded test data (`data.js` > `window.MOCK_DATA`)
 
-- **vehicles**: 85 lots from auctions 216 to 221 at every stage (pending awarding to released)
-- **cancellations**: 32 records (legacy Cancellation Monitoring, Billing and Payment rows plus generated ones)
-- **billing**: 24 legacy billing records (Aug to Sep 2025)
+- **vehicles**: 209 lots. **134 come from the MS Access FAD Maintenance screenshots of 10/08/2026** (Pending Awarding, Unpaid, Payment Seller, Seller Acknowledgement, For Dispatch, Unreleased Units, Liability to Seller, Rebate Monitoring, Commission Billing). The other 75 are the earlier generated sample lots, kept so every walkthrough step has data. Lots were merged by plate number: a generated lot whose plate appears in Access now holds the Access data (10 of them are now the cancelled sale from Access Cancellation Monitoring).
+- **auctions**: weekly Monday to Wednesday calendar, auction 220 = 09/21 to 09/23/2026 (from Access), 197 to 221, plus 175, 180 and 181 (Nov and Dec 2025) for the Liability to Seller rows
+- **fadResult**: FAD Result Summary copied from Access (auctions 197 to 220). It does not recalculate when lots change, because the sample holds only some lots per auction
+- **cancellations**: 46 records: Access Cancellation Monitoring (23 rows), legacy SMD records and generated ones
+- **billing**: 48 records: Access Billing Monitoring (#486 to #510) and Unpaid Billing (24 rows, including #428 three times as in Access)
 - **smd**: legacy SMD screenshots (Result Summary, Auction Monitoring, Pending Awarding, Unpaid, Pending Seller Ack., For Dispatch, Unreleased Units, Rebates, Cancellations)
-- **activityLog**: 38 sample Log Activity entries (09/03 to 10/08/2026) by 3 sample users (`fad.ana`, `fad.rico`, `fad.lea`), built from the vehicle and cancellation dates above so every new value matches the lists. Includes one correction (old value to new value) and one cancellation
-- **Demo date** is fixed at **10/09/2026** (`meta.demoToday`) so deadlines and penalties look the same whenever it is opened. Buyer emails are placeholders (example.com).
+- **activityLog**: 38 sample Log Activity entries (09/01 to 10/06/2026) by 3 sample users (`fad.ana`, `fad.rico`, `fad.lea`), built from the lot and cancellation dates above so every new value matches the lists. Includes one correction (old value to new value) and one cancellation
+- **Demo date** is fixed at **10/08/2026** (`meta.demoToday`), the day the Access screenshots were taken, so deadlines and penalties match Access. Buyer emails are placeholders (example.com).
+
+### Values not visible in the Access screenshots (inferred)
+
+Names cut off in Access end in "…". Everything shown in a screenshot is copied as is; these values were filled in so the lots follow the prototype rules, and are **not** Access data:
+
+| Value | How it was filled |
+|-------|-------------------|
+| Awarding Date | Buyer deadline minus 3 working days (Unpaid), Sold-Accounting date, or auction end plus 4 working days |
+| Buyer Paid | Payment to Seller deadline minus 3 working days, or Awarding plus 3 working days |
+| Payment to Seller, Seller Acknowledgement, Dispatch, Release | Next step plus 2 to 3 working days, so each lot appears only on the lists Access shows it on (the Unpaid, Payment Seller, For Dispatch, Unreleased and Commission Billing screenshots are complete lists) |
+| Dispatch Date (Unreleased Units) | Dispatch deadline minus 3 working days |
+| Result Price | From Pending Awarding, Commission Billing or Sold-Accounting; otherwise the total minus the seller's transfer fee; blank when no amount is shown |
+| Transfer fee | TFS PHP 500 and JACCS 0 (worked out from Access totals); other sellers use the seller default |
+| Auction No. (Seller Acknowledgement lots) | Latest auction ending before the inferred Awarding Date |
+| Lot No. when not shown | Next free number from 121 |
+| Buyer ID when not shown | Placeholder **B9001 to B9041** |
+| Customer name (Liability lots), Make/Model when not shown | Left blank |
+| Billing Date (Unpaid Billing rows) | Auction end of the particulars plus 7 days, never earlier than a lower Billing # |
 
 Edit `data.js` and refresh the browser to change sample data.
 
@@ -54,11 +74,18 @@ Edit `data.js` and refresh the browser to change sample data.
 
 | Rule | Prototype value | Source |
 |------|-----------------|--------|
-| Buyer deadline, payment-to-seller deadline, dispatch deadline | 3 working days (Mon to Fri, no holiday list yet) | Access guideline |
-| Billing due date | Billing date + 10 days | Access DB notes |
-| Commission | 5% of winning bid, VAT 12% inside | Legacy commission billing |
-| Penalty after dispatch deadline | PHP 500 per calendar day | Inferred from legacy SMD data, **placeholder** |
-| "To JBAP" on Payment Seller | 5% of result price | **Placeholder**, meaning not defined |
+| Buyer deadline, payment-to-seller deadline, dispatch deadline | 3 working days (Mon to Fri, no holiday list yet) | Access guideline; matches the Access screenshots of 10/08/2026 |
+| Billing due date | Billing date + 10 days | Access DB notes (the Due Date column is empty in the Access screenshots) |
+| Commission | 5% of winning bid, VAT 12% inside | Legacy commission billing; matches Access Commission Billing (SBC lots) |
+| Penalty after dispatch deadline | PHP 500 per calendar day | **Confirmed** by Access Unreleased Units (e.g. NBB4088: deadline 09/28, PHP 5,000 on 10/08) |
+| "To JBAP" on Payment Seller | Access value where shown; otherwise 5% of result price | In Access it is about 4.3% of the total and 0.00 for TFS lots: **formula to confirm** |
+| For Dispatch | Sold + Buyer Paid + no Dispatch Date | **Matches Access**: 9 EWB/ORIX lots are listed before Payment to Seller. The CR rule also required Payment to Seller and Seller Acknowledgement: **to confirm** |
+| Payment Seller "Total" | Result price + transfer fees (CR column) | Access shows total minus To JBAP (e.g. 451,960.71 vs 472,400.00 for NLA2191): **to confirm** |
+| Liability to Seller amount | Result price + transfer fees | Matches Access *SumOfTOTAL* |
+| Liability lots on Payment Seller | The 15 Access Liability lots (Nov 2025 to Aug 2026) also show on Payment Seller | Access does not list them on Payment Seller: **to confirm** which filter Access uses |
+| TFS transfer fee / JACCS transfer fee | PHP 500 / 0 on the Access lots | Worked out from Access totals; seller settings to confirm |
+| Billing # unique | Not enforced for existing rows | Access lists Billing #428 three times: **data issue to check** |
+| "Sold - Accounting" menu | Not in the prototype | Exists in Access FAD but not in the CR form: **to confirm** if needed |
 | One commission billing per seller | Enforced when printing | **Assumption** |
 | Waived cancellations are not billed | Excluded from Cancellation Billing | **Assumption** |
 | Overdue deadlines shown in red | Unpaid, Payment Seller, Unreleased, Unpaid Billing | Prototype suggestion |

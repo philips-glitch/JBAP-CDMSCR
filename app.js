@@ -21,7 +21,6 @@ const addDays = (iso, n) => { const d = toDate(iso); d.setUTCDate(d.getUTCDate()
 // [BEHAVIOR] Working days skip Saturday and Sunday only. Holiday list is an open question (Q44).
 function addWorkdays(iso, n) { let d = toDate(iso), left = n; while (left > 0) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6) left--; } return toIso(d); }
 const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / 86400000);
-const monthName = iso => toDate(iso).toLocaleString('en-US', { month: 'long', timeZone: 'UTC' });
 
 const IC = {
   filter: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>',
@@ -67,8 +66,9 @@ function enrichV(v) {
   const com = Math.round(ctotal / 1.12 * 100) / 100;
   return Object.assign({}, v, {
     _raw: v, auction_start: as, auction_end: ae, adate: as ? `${fmtDate(as)} - ${fmtDate(ae)}` : '',
-    seller_full: SELLER[v.seller]?.name || v.seller, total: v.price + (v.transfer_fee || 0),
-    to_jbap: Math.round(v.price * COMMISSION_RATE * 100) / 100,   // [MOCK] placeholder; meaning of "To JBAP" to confirm (Q53)
+    seller_full: SELLER[v.seller]?.name || v.seller, total: v.price === null ? null : v.price + (v.transfer_fee || 0),
+    // Access value where the screenshot shows it; otherwise [MOCK] placeholder 5% (meaning of "To JBAP" to confirm, Q53)
+    to_jbap: v.to_jbap ?? (v.price === null ? null : Math.round(v.price * COMMISSION_RATE * 100) / 100),
     buyer_deadline, pay_deadline, dispatch_deadline,
     penalty: overdue ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
     ctotal, com, cvat: Math.round((ctotal - com) * 100) / 100,
@@ -76,7 +76,8 @@ function enrichV(v) {
 }
 const V = () => S.veh.map(enrichV);
 const sold = () => V().filter(v => v.status === 'Sold');
-const B = () => S.billing.map(b => Object.assign({}, b, { _raw: b, id: b.no, bill: Math.round(b.total / 1.12 * 100) / 100,
+// id includes the position: Access has the same Billing # more than once (e.g. 428)
+const B = () => S.billing.map((b, i) => Object.assign({}, b, { _raw: b, id: `${b.no}#${i}`, bill: Math.round(b.total / 1.12 * 100) / 100,
   vat: Math.round((b.total - b.total / 1.12) * 100) / 100, due: addDays(b.bdate, BILL_DUE_DAYS) }));
 const CX = () => S.cancels.map(c => {
   const a = D.auctions[String(c.auction)];
@@ -98,11 +99,6 @@ function logChange(scr, action, r, changes) {
     const old = logVal(type, o), nw = logVal(type, n);
     if (action !== 'Update' || old !== nw) addLog({ at, user: LOG_USER, module: scr.dept, screen: scr.title, action, record: logRecord(r), field, old, new: nw });
   });
-}
-function resultSummary() {
-  const g = {};
-  sold().forEach(v => { (g[v.auction] ||= { id: v.auction, auction: v.auction, units: 0, total: 0, comm: 0, rebates: 0, start: v.auction_start }); const x = g[v.auction]; x.units++; x.total += v.price; x.comm += v.ctotal; x.rebates += v.rebate || 0; });
-  return Object.values(g).map(x => Object.assign(x, { avg: x.total / x.units, month: monthName(x.start), year: x.start.slice(0, 4) }));
 }
 
 // ─── Column helper ────────────────────────────────────────────────────
@@ -140,10 +136,11 @@ const REBMON_COLS = [C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code')
 
 const SCREENS = [
   // ===================== FAD =====================
-  { dept: 'FAD', slug: 'result-summary', title: 'Result Summary', actions: VFS, rule: 'One row per auction. Average price per unit = Total awarded price ÷ Sold units.',
-    rows: resultSummary, cols: RESULT_COLS, sort: ['auction', 'desc'], totals: resultTotals,
-    filters: [{ key: 'month', label: 'Month', type: 'select', options: () => [...new Set(resultSummary().map(r => r.month))] },
-      { key: 'year', label: 'Year', type: 'select', w: 'w1', options: () => [...new Set(resultSummary().map(r => r.year))] }, AUCTION_FILTER] },
+  // [MOCK] Snapshot of the Access Result Summary (10/08/2026): the sample has only some lots per auction, so totals are not recalculated
+  { dept: 'FAD', slug: 'result-summary', title: 'Result Summary', actions: VFS, rule: 'One row per auction. Average price per unit = Total awarded price ÷ Sold units. Prototype: figures copied from the Access Result Summary of 10/08/2026; they do not change when lots are updated here.',
+    rows: () => D.fadResult.map(r => Object.assign({ id: r.auction }, r)), cols: RESULT_COLS, sort: ['auction', 'desc'], totals: resultTotals,
+    filters: [{ key: 'month', label: 'Month', type: 'select', options: () => [...new Set(D.fadResult.map(r => r.month))] },
+      { key: 'year', label: 'Year', type: 'select', w: 'w1', options: () => [...new Set(D.fadResult.map(r => r.year))] }, AUCTION_FILTER] },
   { dept: 'FAD', slug: 'auction-monitoring', title: 'Auction Monitoring', actions: VFS, compact: true,
     rule: 'Auction result per auction and lot, with every milestone date from awarding to release to the buyer.',
     rows: V, cols: AM_COLS, sort: ['auction', 'desc'], filters: AM_FILTERS, totals: amTotals },
@@ -184,14 +181,15 @@ const SCREENS = [
       C('Seller Acknowledgement Date', 'seller_ack', 'date', { edit: 'date' }), C('Payment to Seller Deadline', 'pay_deadline', 'date')],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ seller_ack: notFuture(e.seller_ack) || notBefore(e.seller_ack, r.pay_seller, 'Payment to Seller') }),
-    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Acknowledged vehicles moved to For Dispatch.' },
+    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Acknowledged vehicles removed from the list.' },
   { dept: 'FAD', slug: 'for-dispatch', title: 'For Dispatch', actions: VFSU,
-    rule: 'Vehicles with status SOLD, Buyer Paid, Payment to Seller and Seller Acknowledgement filled in, and a blank Dispatch Date. Buyer must release within 3 working days after dispatch.',
-    rows: () => sold().filter(v => v.seller_ack && !v.dispatch), sort: ['adate', 'asc'],
+    // [BEHAVIOR] Matches MS Access: lots are listed once the buyer has paid, even before Payment to Seller (CR rule required Seller Acknowledgement; to confirm)
+    rule: 'Vehicles with status SOLD, a Buyer Paid date and a blank Dispatch Date (as in MS Access; the CR rule also required Payment to Seller and Seller Acknowledgement, to confirm). Buyer must release within 3 working days after dispatch.',
+    rows: () => sold().filter(v => v.buyer_paid && !v.dispatch), sort: ['adate', 'asc'],
     cols: [C('Seller Full Name', 'seller_full', 'text', { w: 290 }), C('Customer Name', 'customer', 'text', { w: 250 }), C('Auction Date', 'adate', 'code'),
       C('Make/Model', 'model', 'text', { w: 210 }), C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Dispatch Date', 'dispatch', 'date', { edit: 'date' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
-    validate: (r, e) => ({ dispatch: notFuture(e.dispatch) || notBefore(e.dispatch, r.seller_ack, 'Seller Acknowledgement') }),
+    validate: (r, e) => ({ dispatch: notFuture(e.dispatch) || notBefore(e.dispatch, r.buyer_paid, 'Buyer Paid') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Dispatched vehicles moved to Unreleased Unit (FAD and VWD).' },
   { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
     rule: `Dispatched vehicles not yet released to the buyer. Penalty shows once the dispatch deadline has passed (prototype rule: PHP ${PENALTY_PER_DAY}/day, to confirm).`,
@@ -202,8 +200,8 @@ const SCREENS = [
     rows: () => { const d = U('FAD/liability-to-seller').asOf || TODAY; return sold().filter(v => v.buyer_paid && v.buyer_paid <= d && (!v.pay_seller || v.pay_seller > d)); },
     sort: ['seller_full', 'asc'],
     cols: [C('Seller', 'seller_full', 'text', { w: 290 }), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }),
-      C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller Deadline', 'pay_deadline', 'date'), C('Result Price', 'price', 'money')],
-    totals: rows => ({ seller_full: 'Total liability to sellers', price: money(sumBy(rows, 'price')) }) },
+      C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller Deadline', 'pay_deadline', 'date'), C('Total (Result Price + Transfer Fees)', 'total', 'money')],
+    totals: rows => ({ seller_full: 'Total liability to sellers', total: money(sumBy(rows, 'total')) }) },
   { dept: 'FAD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', actions: VS, rule: 'Result price records with status SOLD and a rebate.',
     rows: () => sold().filter(v => v.rebate), cols: REBMON_COLS, sort: ['adate', 'desc'] },
   { dept: 'FAD', slug: 'rebate-payable', title: 'Rebate Payable', actions: VSU, rule: 'Result price records with status SOLD, a rebate, a Buyer Paid date, and a blank Rebate Paid date.',
