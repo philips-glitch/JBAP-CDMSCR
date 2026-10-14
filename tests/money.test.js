@@ -12,6 +12,15 @@ test('To JBAP and payable match all 18 Access rows', () => {
 test('SBC commission billing matches Access (VAT inside 5%)', () => {
   const v = lots.NKC4711; assert.deepStrictEqual([v.com, v.cvat, v.ctotal], [15758.93, 1891.07, 17650]);
 });
+test('Commission Billing rows foot: com + cvat = ctotal for every priced lot', () => {
+  const r = x => Math.round(x * 100) / 100;
+  const priced = P.V().filter(v => v.price !== null && v.price !== undefined);
+  assert.ok(priced.length > 0);
+  for (const v of priced) assert.strictEqual(r(v.com + v.cvat), v.ctotal, `${v.plate} com + cvat vs ctotal`);
+});
+test('NKR1470 (EWB, 866,250) splits to 38,671.87 + 4,640.63 = 43,312.50', () => {
+  const v = lots.NKR1470; assert.deepStrictEqual([v.com, v.cvat, v.ctotal], [38671.87, 4640.63, 43312.5]);
+});
 test('VAT on top for non-inclusive sellers (Q1, ORIX sample)', () => {
   const m = P.sellerMoney({ seller: 'ORIX', price: 231000, transfer_fee: 0 });
   assert.deepStrictEqual([m.com, m.cvat, m.ctotal], [11550, 1386, 12936]);

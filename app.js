@@ -66,7 +66,7 @@ function sellerMoney(v) {
   if (price === null || price === undefined) return { com: null, cvat: null, ctotal: null, wtax: null, to_jbap: null, payable: null };
   const rate = s.commission_rate ?? COMMISSION_RATE, com = s.vat_inclusive ? price * rate / (1 + VAT_RATE) : price * rate;
   const vat = com * VAT_RATE, net = s.net !== false, wtax = net ? com * WTAX_RATE : 0, toJbap = net ? com + vat - wtax : 0;
-  return { com: r2(com), cvat: r2(vat), ctotal: r2(com + vat), wtax: r2(wtax), to_jbap: r2(toJbap), payable: r2(price + (v.transfer_fee || 0) - toJbap) };
+  return { com: r2(com), cvat: r2(r2(com + vat) - r2(com)), ctotal: r2(com + vat), wtax: r2(wtax), to_jbap: r2(toJbap), payable: r2(price + (v.transfer_fee || 0) - toJbap) };
 }
 function enrichV(v) {
   const [as, ae] = D.auctions[String(v.auction)] || [null, null];
