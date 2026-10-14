@@ -1,6 +1,37 @@
 const test = require('node:test'), assert = require('node:assert');
 const { load } = require('./harness');
 const P = load();
+const groupBy = (rows, k) => { const g = {}; rows.forEach(r => (g[r[k]] ||= []).push(r)); return Object.values(g); };
+// Read-only: renders every row that can reach each report as its app.js call site does, on fresh data (no record* calls)
+test('render sweep: no report prints null, undefined or NaN', () => {
+  const Q = load(), T = Q.TODAY, rows = id => Q.byId[id].rows(), co = Q.D.meta.company, out = [], add = (name, h) => out.push([name, h]);
+  groupBy(rows('FAD/pending-awarding'), 'cid').forEach(list => {
+    const b = { customer: list[0].customer, cid: list[0].cid, email: list[0].email }, award = list[0].awarding || T;
+    const lots = list.map(r => Object.assign({}, r, { transfer_fee: Number(r.transfer_fee || 0) })), withRebate = lots.filter(r => r.rebate);
+    add(`awarding ${b.cid}`, Q.REPORTS.awarding(b, lots, award));
+    if (withRebate.length) add(`rebate ${b.cid}`, Q.REPORTS.rebate(b, withRebate, Q.addWorkdays(award, 3)));
+    add(`BAAF email ${b.cid}`, Q.REPORTS.email({ from: co.emails.finance, to: `${b.customer} <${b.email}>`, cc: co.emails.sales, subject: `NOTICE OF AWARDING - ${Q.fmtDate(award)}`,
+      atts: [{ key: `aw:${b.cid}`, name: 'JBAP AWARDING.pdf' }], body: 'Congratulations!!' }));
+  });
+  groupBy(rows('FAD/payment-seller'), 'seller').forEach(list => add(`payable ${list[0].seller}`, Q.REPORTS.payableToSeller(list[0].seller, list, T)));
+  groupBy(rows('FAD/commission-billing'), 'seller').forEach(list => add(`billing ${list[0].seller}`, Q.REPORTS.billingComputation(list[0].seller, '999', T, list)));
+  groupBy(rows('FAD/billing-monitoring'), 'customer').forEach(list => add(`transmittal ${list[0].customer}`, Q.REPORTS.billingTransmittal(list[0].customer, list, T)));
+  groupBy(rows('FAD/for-dispatch'), 'cid').forEach(list => {
+    const b = { customer: list[0].customer, cid: list[0].cid, email: list[0].email };
+    add(`dispatch ${b.cid}`, Q.REPORTS.dispatchForm(b, list, T));
+    add(`dispatch email ${b.cid}`, Q.REPORTS.email({ from: co.emails.finance, to: `${b.customer} <${b.email}>`, cc: `${co.emails.sales}; ${co.emails.vwd}; ${co.emails.finance}`,
+      subject: 'JBAP VEHICLE FOR RELEASE', atts: [{ key: b.cid, name: 'VEHICLE DISPATCH.pdf' }], body: 'Vehicles for release' }));
+  });
+  [...rows('VWD/unreleased-unit'), ...rows('VWD/unreleased-unit-overdue')].forEach(v =>
+    add(`release ${v.plate}`, Q.REPORTS.releaseForm(Q.enrichV(v._raw), { date: T, to: v.customer || '', type: 'Sold', items: [] }, '00001')));
+  Q.cancelLetterGroups(rows('FAD/cancellation-billing')).forEach(list => add(`cancellation ${list[0].customer}`, Q.REPORTS.cancellationLetter({ customer: list[0].customer }, list, T)));
+  rows('FAD/document-monitoring').forEach(v => add(`document ${v.plate}`, Q.REPORTS.documentTransmittal(Q.enrichV(v._raw), [], '', 'HRAD-ATF-0', '')));
+  for (const id of ['FAD/pending-awarding', 'FAD/payment-seller', 'FAD/commission-billing', 'FAD/billing-monitoring', 'FAD/for-dispatch', 'VWD/unreleased-unit-overdue', 'FAD/cancellation-billing', 'FAD/document-monitoring'])
+    assert.ok(rows(id).length > 0, `${id} has rows to render`);
+  const bad = out.map(([name, h]) => [name, h.replace(/<[^>]*>/g, ' ').match(/.{0,30}(\bnull\b|undefined|NaN).{0,30}/)]).filter(([, m]) => m).map(([name, m]) => `${name}: ${m[0].trim()}`);
+  assert.deepStrictEqual(bad, []);
+  assert.strictEqual(Q.S.log.length, (Q.D.activityLog || []).length, 'the sweep records nothing');
+});
 const buyer = { customer: 'TEST BUYER', cid: 'B0001', email: 'b0001@buyers.example.com' };
 const lot = (o = {}) => Object.assign({ adate: '09/21/2026 - 09/23/2026', model: 'TOYOTA VIOS XLE', plate: 'AAA1111', year: 2020, lot: '001', price: 400000, transfer_fee: 1000, rebate: 5000 }, o);
 test('awarding: deadline, rows, grand total, placeholder bank, role signature', () => {

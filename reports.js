@@ -30,7 +30,7 @@ const REPORTS = {
       <tfoot><tr><td colspan="6">Grand total</td><td class="r">${money(lots.reduce((a, r) => a + tot(r), 0))}</td></tr></tfoot></table>
       <h3>Terms and conditions</h3><p>This is to declare the undersigned Buyer as the official winner of the above-listed vehicles. The Winning Bid Amount is considered as the Vehicle Selling Price of the awarded vehicles. The Buyer fully understands that the full amount of the Vehicle Selling Price and other applicable fees must be settled within three (3) working days from the Winning Bid Confirmation date.</p>
       <h3>Bank account details</h3><p>${rptBank()}<br>Please send the proof of payment to ${esc(CO().emails.finance)}.</p>
-      <h3>Penalties</h3><p>A Buyer that fails to make payment on or before the due date shall automatically forfeit the transaction and shall have no further claim as regards the right to purchase the Vehicle/s. Forfeiture of transaction is subject to a penalty of Php${money(CANCEL_PENALTY)} per vehicle which will be withdrawn from the deposit. In the event that the total penalty exceeds the deposit amount, the outstanding penalty shall be settled within 48 hours from forfeiture. Failure to settle the prescribed penalty fee will result to the Buyer being banned from joining future JBAP Auctions.</p>
+      <h3>Penalties</h3><p>A Buyer that fails to make payment on or before the due date shall automatically forfeit the transaction and shall have no further claim as regards the right to purchase the Vehicle/s. Forfeiture of transaction is subject to a penalty of Php ${money(CANCEL_PENALTY)} per vehicle which will be withdrawn from the deposit. In the event that the total penalty exceeds the deposit amount, the outstanding penalty shall be settled within 48 hours from forfeiture. Failure to settle the prescribed penalty fee will result to the Buyer being banned from joining future JBAP Auctions.</p>
       ${rptSign([b.customer, CO().roles.financeHead])}`);
   },
   // 2. qryRebatePrint: Rebate Confirmation (attached to the awarding email)
@@ -84,16 +84,16 @@ const REPORTS = {
   // 7. rptVehiclerelease: Vehicle Release Form + Gate Pass (two copies per page, as in the Access sample)
   releaseForm(v, f, vrf) {
     const box = on => `<span class="rbox">${on ? '✓' : ''}</span>`, types = ['Sold', 'Return to Seller', 'Others'];
-    const ref = `${v.seller} ${v.auction}`, typeList = types.map(t => `${box(f.type === t)}${t}`).join('<br>');
-    const items = ['No. of Keys', 'Copy of OR/CR', "Owner's Manual", 'Warranty booklet', 'Spare Tire', 'Tools', 'Jack', 'Radio', 'A/C', 'Accessories'].map(t => `<span>${box(f.items.includes(t))}${esc(t)}</span>`).join('');
+    const ref = [v.seller, v.auction].filter(x => x != null && x !== '').join(' '), typeList = types.map(t => `${box(f.type === t)}${t}`).join(' &nbsp; ');
+    const items = RELEASE_ITEMS.map(t => `<span>${box(f.items.includes(t))}${esc(t)}</span>`).join('');
     const copy = `<div class="split"><div><h2>Vehicle Release Form</h2><div class="kv"><b>VRF No.</b><span>${vrf}</span><b>Release date</b><span>${shortDate(f.date)}</span><b>Released to</b><span>${esc(f.to)}</span><b>Address</b><span>-</span></div>
         <p>${typeList}</p>
         <div class="kv"><b>Make / Model</b><span>${esc(v.model)}</span><b>Fuel type</b><span>${esc(v.fuel || '')}</span><b>Year</b><span>${esc(v.year || '')}</span><b>Plate / CS no.</b><span>${esc(v.plate)}${v.cs_no ? ` / ${esc(v.cs_no)}` : ''}</span><b>Color</b><span>${esc(v.color || '')}</span><b>Auction ref</b><span>${esc(ref)}</span></div>
         <div class="cols2">${items}</div>
         <p class="fn">This is to acknowledge receipt of the abovementioned item(s) in good condition and fully aware of the purchase of this vehicle is on "AS IS WHERE IS BASIS". Therefore, I hold JBAP and the Seller, its officers, employees and other authorized representatives free from any and all liabilities arising from any hidden defect on said vehicle, which may be discovered any time after its release to my possession.</p>
         ${rptSign([`Prepared: ${CO().roles.vwdStaff}`, `Approved: ${CO().roles.vwdManager}`, 'Signature over printed name (buyer / representative)'])}</div>
-      <div><h2>Gate Pass</h2><div class="kv"><b>No.</b><span>${vrf}</span><b>Release date</b><span>${shortDate(f.date)}</span><b>Released to</b><span>${esc(f.to)}</span></div><p>${typeList}</p>
-        <div class="kv"><b>Make / Model</b><span>${esc(v.model)}</span><b>Year</b><span>${esc(v.year || '')}</span><b>Color</b><span>${esc(v.color || '')}</span><b>Fuel type</b><span>${esc(v.fuel || '')}</span><b>Plate / CS no.</b><span>${esc(v.plate)}</span></div>
+      <div class="gp"><h2>Gate Pass</h2><div class="kv"><b>No.</b><span>${vrf}</span><b>Release date</b><span>${shortDate(f.date)}</span><b>Released to</b><span>${esc(f.to)}</span></div><p>${typeList}</p>
+        <div class="kv"><b>Make / Model</b><span>${esc(v.model)}</span><b>Year</b><span>${esc(v.year || '')}</span><b>Color</b><span>${esc(v.color || '')}</span><b>Fuel type</b><span>${esc(v.fuel || '')}</span><b>Plate / CS no.</b><span>${esc(v.plate)}${v.cs_no ? ` / ${esc(v.cs_no)}` : ''}</span></div>
         ${rptSign([`Prepared: ${CO().roles.vwdStaff}`, `Approved: ${CO().roles.vwdManager}`])}<p>Date out: ______ &nbsp; Time out: ______</p>${rptSign([`Checked: ${CO().roles.guard}`])}</div></div>`;
     return rptPage('landscape', copy + copy);
   },
