@@ -15,7 +15,7 @@ The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is l
 ## What is clickable
 
 - **Only FAD, SMD, VWD and Log Activity are active.** All other CDMS menus (Dashboard, Customer, Cars, Report, Payment, etc.) are disabled and show a short message when clicked.
-- **32 screens**: FAD 18, SMD 9, VWD 4, Log Activity 1 (last item in the sidebar, below Staff), plus a Home page with counts per list.
+- **33 screens**: FAD 19, SMD 9, VWD 4, Log Activity 1 (last item in the sidebar, below Staff), plus a Home page with counts per list.
 - Every list has working **filters, column sorting, page size and paging**, an empty state, and totals where the design has them.
 
 ## Flow walkthrough (FAD, data flows between lists and into VWD)
@@ -23,7 +23,7 @@ The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is l
 1. **Pending Awarding**: tick *For BAAF* on 1 or more lots (optionally change Awarding Date or Transfer Fees) > **Email BAAF** > preview one email per buyer > **Send**. Lots move to **Unpaid**.
 2. **Unpaid**: enter *Buyer Paid* > **Save changes**. Lot moves to **Payment Seller**. Try a future date to see validation.
 3. **Payment Seller**: tick *Print Payment to Seller* > **Print payment to seller** (report per seller). Enter *Payment to Seller Date* > **Save**. Lot moves to **Seller Acknowledgement** and **Commission Billing**.
-4. **Seller Acknowledgement**: enter the date and save. **For Dispatch** lists every paid lot without a Dispatch Date (as in MS Access): enter the date and save. Dispatched lots appear in **Unreleased Unit** (FAD) and in VWD **Unreleased Unit / Unreleased Unit (Overdue)**.
+4. **Seller Acknowledgement**: enter the date and save. **For Dispatch** lists lots whose seller condition is met (Buyer Payment / DOAS sellers after Buyer Paid, others after Seller Acknowledgement): enter the date and save. **Document Monitoring**: enter the DOAS and document dates in order. Dispatched lots appear in **Unreleased Unit** (FAD) and in VWD **Unreleased Unit / Unreleased Unit (Overdue)**.
 5. **Commission Billing**: tick *Print?* for lots of **one seller** > **Print commission billing** > enter NOAH Billing No. and date > **Record billing & print**. A new billing appears in **Billing Monitoring** and **Unpaid Billing**.
 6. **Unpaid Billing**: enter Payment Date + Collection Receipt > **Save**.
 7. **Cancellation Entry**: enter an Auction No. and Lot (tip: copy one from Unpaid) > **Find** > set Status to *Cancelled*, date, waiver and reason > **Cancel transaction**. It appears in **Cancellation Monitoring** and (if not waived) **Cancellation Billing** > print to bill > **Cancellation Payment** > enter date paid and amount.
@@ -42,6 +42,8 @@ The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is l
 ## Seeded test data (`data.js` > `window.MOCK_DATA`)
 
 - **vehicles**: 209 lots. **134 come from the MS Access FAD Maintenance screenshots of 10/08/2026** (Pending Awarding, Unpaid, Payment Seller, Seller Acknowledgement, For Dispatch, Unreleased Units, Liability to Seller, Rebate Monitoring, Commission Billing). The other 75 are the earlier generated sample lots, kept so every walkthrough step has data. Lots were merged by plate number: a generated lot whose plate appears in Access now holds the Access data (10 of them are now the cancelled sale from Access Cancellation Monitoring).
+- **sellers**: release condition, VAT handling, NET/GROSS and notarial fees per seller (ORICO, ASIALINK and the sample code TFSPH are not in JBAP's list: marked unconfirmed)
+- **location**: every lot is "Pasay City" until JBAP lists its storage locations (Q31)
 - **auctions**: weekly Monday to Wednesday calendar, auction 220 = 09/21 to 09/23/2026 (from Access), 197 to 221, plus 175, 180 and 181 (Nov and Dec 2025) for the Liability to Seller rows
 - **fadResult**: FAD Result Summary copied from Access (auctions 197 to 220). It does not recalculate when lots change, because the sample holds only some lots per auction
 - **cancellations**: 46 records: Access Cancellation Monitoring (23 rows), legacy SMD records and generated ones
@@ -76,14 +78,14 @@ Edit `data.js` and refresh the browser to change sample data.
 |------|-----------------|--------|
 | Buyer deadline, payment-to-seller deadline, dispatch deadline | 3 working days (Mon to Fri, no holiday list yet) | Access guideline; matches the Access screenshots of 10/08/2026 |
 | Billing due date | Billing date + 10 days | Access DB notes (the Due Date column is empty in the Access screenshots) |
-| Commission | 5% of winning bid, VAT 12% inside | Legacy commission billing; matches Access Commission Billing (SBC lots) |
-| Penalty after dispatch deadline | PHP 500 per calendar day | **Confirmed** by Access Unreleased Units (e.g. NBB4088: deadline 09/28, PHP 5,000 on 10/08) |
-| "To JBAP" on Payment Seller | Access value where shown; otherwise 5% of result price | In Access it is about 4.3% of the total and 0.00 for TFS lots: **formula to confirm** |
-| For Dispatch | Sold + Buyer Paid + no Dispatch Date | **Matches Access**: 9 EWB/ORIX lots are listed before Payment to Seller. The CR rule also required Payment to Seller and Seller Acknowledgement: **to confirm** |
-| Payment Seller "Total" | Result price + transfer fees (CR column) | Access shows total minus To JBAP (e.g. 451,960.71 vs 472,400.00 for NLA2191): **to confirm** |
+| Seller settings | Release condition, VAT inside 5% (EWB, SBC) or on top (others), NET (all except TFS) / GROSS (TFS), notarial fee (EWB 1,000; SBC 400 up to 499,999.99 then 500; TFS 500; JACCS 0) | Dispatch Condition per seller.xlsx, Access samples; Q25 to Q29 to confirm |
+| Commission, VAT, W/TAX | Commission 5% (÷1.12 when VAT is inside); VAT 12%; W/TAX 15% of commission for NET sellers | Q1, Access Payment Seller sample; Q25, Q26 to confirm |
+| To JBAP / Payable to Seller | Commission + VAT − W/TAX (0 for GROSS) / price + fee − To JBAP | Matches all 18 Access Payment Seller rows to the centavo |
+| For Dispatch | Seller condition met: Buyer Payment and DOAS sellers after Buyer Paid, others after Seller Acknowledgement | Dispatch Condition per seller; DOAS date for release: Q28 |
+| Storage penalty | PHP 500 per calendar day after the dispatch deadline, only at Pasay City / JBAP | Confirmed by Access data, Q15; locations Q31 |
+| Cancellation penalty | PHP 10,000 per lot; 5,000 seller / 5,000 JBAP; EWB all JBAP; waived 0 | Q4 |
 | Liability to Seller amount | Result price + transfer fees | Matches Access *SumOfTOTAL* |
 | Liability lots on Payment Seller | The 15 Access Liability lots (Nov 2025 to Aug 2026) also show on Payment Seller | Access does not list them on Payment Seller: **to confirm** which filter Access uses |
-| TFS transfer fee / JACCS transfer fee | PHP 500 / 0 on the Access lots | Worked out from Access totals; seller settings to confirm |
 | Billing # unique | Not enforced for existing rows | Access lists Billing #428 three times: **data issue to check** |
 | "Sold - Accounting" menu | Not in the prototype | Exists in Access FAD but not in the CR form: **to confirm** if needed |
 | One commission billing per seller | Enforced when printing | **Assumption** |
