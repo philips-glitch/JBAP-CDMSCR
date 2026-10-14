@@ -8,7 +8,10 @@ const D = window.MOCK_DATA;
 // [BEHAVIOR] Fixed demo date so deadlines and penalties stay the same whenever the prototype is opened.
 const TODAY = D ? D.meta.demoToday : '2026-10-09';
 const PENALTY_PER_DAY = 500;     // [MOCK] placeholder; legacy data suggests PHP 500/day after dispatch deadline (to confirm)
-const COMMISSION_RATE = 0.05;    // [MOCK] default seller commission incl. 12% VAT, as in the legacy commission billing
+const COMMISSION_RATE = 0.05;    // default commission rate (seller.commission_rate overrides)
+const VAT_RATE = 0.12;
+const WTAX_RATE = 0.15;          // withholding tax on the commission for NET sellers (Access Payment Seller sample; to confirm Q26)
+const r2 = n => Math.round(n * 100) / 100;
 const BILL_DUE_DAYS = 10;        // Access DB: billing due date = billing date + 10 days
 const $ = (s, el = document) => el.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -56,22 +59,27 @@ const UI = {};          // per-screen UI state: filters, sort, page, edits, erro
 const OPEN = { FAD: false, SMD: false, VWD: false };
 
 // ─── Derived fields (business rules from the Access guideline) ────────
+// [BEHAVIOR] Commission (÷1.12 when the seller's 5% includes VAT), VAT 12%, W/TAX 15% for NET sellers,
+// To JBAP = commission + VAT − W/TAX (0 for GROSS sellers), Payable to Seller = price + fee − To JBAP. Unrounded until displayed.
+function sellerMoney(v) {
+  const s = SELLER[v.seller] || {}, price = v.price;
+  if (price === null || price === undefined) return { com: null, cvat: null, ctotal: null, wtax: null, to_jbap: null, payable: null };
+  const rate = s.commission_rate ?? COMMISSION_RATE, com = s.vat_inclusive ? price * rate / (1 + VAT_RATE) : price * rate;
+  const vat = com * VAT_RATE, net = s.net !== false, wtax = net ? com * WTAX_RATE : 0, toJbap = net ? com + vat - wtax : 0;
+  return { com: r2(com), cvat: r2(vat), ctotal: r2(com + vat), wtax: r2(wtax), to_jbap: r2(toJbap), payable: r2(price + (v.transfer_fee || 0) - toJbap) };
+}
 function enrichV(v) {
   const [as, ae] = D.auctions[String(v.auction)] || [null, null];
   const buyer_deadline = v.awarding ? addWorkdays(v.awarding, 3) : null;     // 3 working days after awarding
   const pay_deadline = v.buyer_paid ? addWorkdays(v.buyer_paid, 3) : null;   // 3 working days after buyer paid
   const dispatch_deadline = v.dispatch ? addWorkdays(v.dispatch, 3) : null;  // 3 working days after dispatch
   const overdue = v.dispatch && !v.release && dispatch_deadline < TODAY;
-  const ctotal = v.price * (SELLER[v.seller]?.commission_rate ?? COMMISSION_RATE);
-  const com = Math.round(ctotal / 1.12 * 100) / 100;
   return Object.assign({}, v, {
     _raw: v, auction_start: as, auction_end: ae, adate: as ? `${fmtDate(as)} - ${fmtDate(ae)}` : '',
     seller_full: SELLER[v.seller]?.name || v.seller, total: v.price === null ? null : v.price + (v.transfer_fee || 0),
-    // Access value where the screenshot shows it; otherwise [MOCK] placeholder 5% (meaning of "To JBAP" to confirm, Q53)
-    to_jbap: v.to_jbap ?? (v.price === null ? null : Math.round(v.price * COMMISSION_RATE * 100) / 100),
     buyer_deadline, pay_deadline, dispatch_deadline,
     penalty: overdue ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
-    ctotal, com, cvat: Math.round((ctotal - com) * 100) / 100,
+    ...sellerMoney(v),
   });
 }
 const V = () => S.veh.map(enrichV);
@@ -164,13 +172,13 @@ const SCREENS = [
     totals: rows => ({ total: money(sumBy(rows, 'total')) }),
     validate: (r, e) => ({ buyer_paid: notFuture(e.buyer_paid) || notBefore(e.buyer_paid, r.awarding, 'the Awarding Date') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid vehicles moved to Payment Seller.' },
-  { dept: 'FAD', slug: 'payment-seller', title: 'Payment Seller', actions: VFSU, rule: 'Vehicles with status SOLD, a Buyer Paid date, and a blank Payment to Seller date. Deadline = 3 working days after Buyer Paid.',
+  { dept: 'FAD', slug: 'payment-seller', title: 'Payment Seller', actions: VFSU, rule: 'Vehicles with status SOLD, a Buyer Paid date, and a blank Payment to Seller date. Deadline = 3 working days after Buyer Paid. To JBAP = commission + VAT − 15% withholding tax (NET sellers); Payable to Seller = total − To JBAP.',
     rows: () => sold().filter(v => v.buyer_paid && !v.pay_seller), sort: ['pay_deadline', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction Date', 'adate', 'code'), C('Plate Number', 'plate', 'code'),
-      C('Total (Awarded Price + Transfer Fees)', 'total', 'money'), C('To JBAP', 'to_jbap', 'money'), C('Payment to Seller Date', 'pay_seller', 'date', { edit: 'date' }),
+      C('Total (Awarded Price + Transfer Fees)', 'total', 'money'), C('To JBAP', 'to_jbap', 'money'), C('Payable to Seller', 'payable', 'money'), C('Payment to Seller Date', 'pay_seller', 'date', { edit: 'date' }),
       C('Payment to Seller Deadline', 'pay_deadline', 'date', { late: true }), C('Print Payment to Seller', 'print_seller', 'check', { edit: 'check' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'auction_start', label: 'Auction Date', type: 'daterange', w: 'w2' }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
-    totals: rows => ({ total: money(sumBy(rows, 'total')), to_jbap: money(sumBy(rows, 'to_jbap')) }),
+    totals: rows => ({ total: money(sumBy(rows, 'total')), to_jbap: money(sumBy(rows, 'to_jbap')), payable: money(sumBy(rows, 'payable')) }),
     validate: (r, e) => ({ pay_seller: notFuture(e.pay_seller) || notBefore(e.pay_seller, r.buyer_paid, 'Buyer Paid') }),
     buttons: [{ label: 'Print payment to seller', kind: 'ol', icon: 'print', act: 'printSeller', count: 'print_seller' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Paid sellers moved to Seller Acknowledgement and Commission Billing.' },
@@ -623,10 +631,10 @@ const ACTIONS = {
     setMsg(scr, null); render();
     const groups = {}; rows.forEach(r => (groups[r.seller] ||= []).push(r));
     const body = Object.entries(groups).map(([code, list]) => {
-      const lines = list.map(r => `<tr><td>${esc(r.customer)}</td><td class="c">${esc(r.adate)}</td><td class="c">${esc(r.plate)}</td><td class="r">${money(r.total)}</td><td class="r">${money(r.to_jbap)}</td><td class="r">${money(r.total - r.to_jbap)}</td></tr>`).join('');
+      const lines = list.map(r => `<tr><td>${esc(r.customer)}</td><td class="c">${esc(r.adate)}</td><td class="c">${esc(r.plate)}</td><td class="r">${money(r.total)}</td><td class="r">${money(r.to_jbap)}</td><td class="r">${money(r.payable)}</td></tr>`).join('');
       return `<div class="doc" style="margin-bottom:14px"><h2>Seller Payment Report</h2><div class="meta"><span><b>${esc(SELLER[code]?.name || code)}</b></span><span>Prepared ${fmtDate(TODAY)}</span></div>
         <table><thead><tr><th>Customer</th><th>Auction Date</th><th>Plate</th><th>Total</th><th>To JBAP</th><th>Amount to Seller</th></tr></thead><tbody>${lines}</tbody>
-        <tfoot><tr><td colspan="3">Total</td><td class="r">${money(sumBy(list, 'total'))}</td><td class="r">${money(sumBy(list, 'to_jbap'))}</td><td class="r">${money(sumBy(list, 'total') - sumBy(list, 'to_jbap'))}</td></tr></tfoot></table>
+        <tfoot><tr><td colspan="3">Total</td><td class="r">${money(sumBy(list, 'total'))}</td><td class="r">${money(sumBy(list, 'to_jbap'))}</td><td class="r">${money(sumBy(list, 'payable'))}</td></tr></tfoot></table>
         <p class="fn">Supporting document for the payment voucher in NOAH. Gross/Net calculation per seller to be confirmed.</p><div class="sign"><div>Prepared by (FAD)</div><div>Checked by (FAD Manager)</div><div>Approved by</div></div></div>`;
     }).join('');
     openModal({ title: 'Print payment to seller', icon: 'print', wide: true, body, note: 'Amounts are prototype placeholders.',
