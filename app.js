@@ -97,9 +97,12 @@ const B = () => S.billing.map((b, i) => Object.assign({}, b, { _raw: b, id: `${b
   vat: Math.round((b.total - b.total / 1.12) * 100) / 100, due: addDays(b.bdate, BILL_DUE_DAYS) }));
 // [BEHAVIOR] Cancellation penalty PHP 10,000 per lot: 5,000 to the seller and 5,000 to JBAP; EWB: all to JBAP (Q4). Waived lots: 0.
 function cancelSplit(c) { const p = c.waived ? 0 : CANCEL_PENALTY, toSeller = c.seller === 'EWB' ? 0 : p / 2; return { penalty: p, pen_seller: toSeller, pen_jbap: p - toSeller }; }
+// [BEHAVIOR] A cancellation without its own seller takes the seller of the vehicle with the same plate and auction.
+const cancelSeller = c => c.seller ?? (S.veh.find(x => x.plate === c.plate && x.auction === c.auction) || {}).seller ?? null;
 const CX = () => S.cancels.map(c => {
   const a = D.auctions[String(c.auction)], v = S.veh.find(x => x.plate === c.plate && x.auction === c.auction) || {};
-  return Object.assign({}, c, { _raw: c, status: 'Cancelled', adate: a ? `${fmtDate(a[0])} - ${fmtDate(a[1])}` : '', model: v.model || '', year: v.year || '' }, cancelSplit(c));
+  return Object.assign({}, c, { _raw: c, status: 'Cancelled', adate: a ? `${fmtDate(a[0])} - ${fmtDate(a[1])}` : '', model: v.model || '', year: v.year || '', seller: cancelSeller(c) },
+    cancelSplit(Object.assign({}, c, { seller: cancelSeller(c) })));
 });
 // [BEHAVIOR] Billing a cancellation records today's billing date and the penalty as the amount due
 function recordCancellationBilling(scr, rows) {
@@ -110,6 +113,8 @@ function recordCancellationBilling(scr, rows) {
     r._raw.bill_date = TODAY; r._raw.amount = amount; r._raw.for_print = false; delete ui.edits[r.id];
   });
 }
+// [MOCK] legacy billed cancellations without an amount default to the penalty, so Save on Cancellation Payment works
+if (S) S.cancels.forEach(c => { if (c.bill_date && (c.amount === null || c.amount === undefined)) c.amount = cancelSplit(Object.assign({}, c, { seller: cancelSeller(c) })).penalty; });
 const SMD = k => D.smd[k].map((r, i) => Object.assign({ id: `${k}-${i}` }, r));
 // ─── Activity log (one entry per changed field; entries are never edited or deleted) ──
 const LOG_ID = 'log-activity';
@@ -294,7 +299,8 @@ const SCREENS = [
     rule: 'Result price records with a Cancellation Billing Date and a blank Cancellation Payment.',
     rows: () => CX().filter(c => c.bill_date && !c.paid_date), sort: ['bill_date', 'asc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Plate No.', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 360 }), C('Date Cancelled', 'dcancel', 'date'),
-      C('Billing Date', 'bill_date', 'date'), C('Penalty', 'penalty', 'money'), C('Date Paid', 'paid_date', 'date', { edit: 'date' }), C('Amount', 'amount', 'money', { edit: 'money' })],
+      C('Billing Date', 'bill_date', 'date'), C('Penalty', 'penalty', 'money'), C('To Seller', 'pen_seller', 'money'), C('To JBAP', 'pen_jbap', 'money'),
+      C('Date Paid', 'paid_date', 'date', { edit: 'date' }), C('Amount', 'amount', 'money', { edit: 'money' })],
     validate: (r, e) => { const d = 'paid_date' in e ? e.paid_date : r.paid_date, a = 'amount' in e ? e.amount : r.amount;
       return { paid_date: notFuture(d) || notBefore(d, r.bill_date, 'the Billing Date') || (!d && a ? 'is required with an Amount' : null), amount: d && !(Number(a) > 0) ? 'must be more than 0' : null }; },
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid cancellations removed from the list.' },
@@ -811,7 +817,7 @@ function entryCancel(scr) {
         ['Cancellation Fee Waived', null, null, e.form.waived], ['Justification of Waiver', 'text', null, e.form.just]]);
       v._raw.status = 'Cancelled';
       S.cancels.unshift({ id: `C-${v.auction}-${v.lot}-new`, auction: v.auction, lot: v.lot, plate: v.plate, customer: v.customer, cid: v.cid, dcancel: e.form.date,
-        waived: e.form.waived, just: e.form.just, remitted: null, bill_date: null, paid_date: null, amount: null, for_print: false });
+        waived: e.form.waived, just: e.form.just, seller: v.seller, remitted: null, bill_date: null, paid_date: null, amount: null, for_print: false });
       U(scr.id).entry = null; closeModal(); render(); toast(`Lot ${esc(v.lot)} of Auction ${v.auction} cancelled.`);
     } }] });
 }
