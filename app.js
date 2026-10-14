@@ -59,6 +59,11 @@ const UI = {};          // per-screen UI state: filters, sort, page, edits, erro
 const OPEN = { FAD: false, SMD: false, VWD: false };
 
 // ─── Derived fields (business rules from the Access guideline) ────────
+const RELEASE_LABEL = { payment: 'Buyer Payment', ack: 'Seller Acknowledgement', doas: 'Required DOAS / Legal Documents signing' };
+const releaseOf = v => SELLER[v.seller]?.release || 'ack';
+// [BEHAVIOR] Dispatch notice per seller condition (Dispatch Condition per seller): payment and DOAS sellers after Buyer Paid,
+// others after Seller Acknowledgement. DOAS sellers still need the signed DOAS before VWD releases.
+const dispatchReady = v => releaseOf(v) === 'ack' ? !!v.seller_ack : !!v.buyer_paid;
 // [BEHAVIOR] Commission (÷1.12 when the seller's 5% includes VAT), VAT 12%, W/TAX 15% for NET sellers,
 // To JBAP = commission + VAT − W/TAX (0 for GROSS sellers), Payable to Seller = price + fee − To JBAP. Unrounded until displayed.
 function sellerMoney(v) {
@@ -77,6 +82,7 @@ function enrichV(v) {
   return Object.assign({}, v, {
     _raw: v, auction_start: as, auction_end: ae, adate: as ? `${fmtDate(as)} - ${fmtDate(ae)}` : '',
     seller_full: SELLER[v.seller]?.name || v.seller, total: v.price === null ? null : v.price + (v.transfer_fee || 0),
+    release_cond: RELEASE_LABEL[releaseOf(v)],
     buyer_deadline, pay_deadline, dispatch_deadline,
     penalty: overdue ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
     ...sellerMoney(v),
@@ -191,13 +197,13 @@ const SCREENS = [
     validate: (r, e) => ({ seller_ack: notFuture(e.seller_ack) || notBefore(e.seller_ack, r.pay_seller, 'Payment to Seller') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Acknowledged vehicles removed from the list.' },
   { dept: 'FAD', slug: 'for-dispatch', title: 'For Dispatch', actions: VFSU,
-    // [BEHAVIOR] Matches MS Access: lots are listed once the buyer has paid, even before Payment to Seller (CR rule required Seller Acknowledgement; to confirm)
-    rule: 'Vehicles with status SOLD, a Buyer Paid date and a blank Dispatch Date (as in MS Access; the CR rule also required Payment to Seller and Seller Acknowledgement, to confirm). Buyer must release within 3 working days after dispatch.',
-    rows: () => sold().filter(v => v.buyer_paid && !v.dispatch), sort: ['adate', 'asc'],
-    cols: [C('Seller Full Name', 'seller_full', 'text', { w: 290 }), C('Customer Name', 'customer', 'text', { w: 250 }), C('Auction Date', 'adate', 'code'),
-      C('Make/Model', 'model', 'text', { w: 210 }), C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Dispatch Date', 'dispatch', 'date', { edit: 'date' })],
+    rule: 'Vehicles with status SOLD and a blank Dispatch Date whose seller condition is met: Buyer Payment and DOAS sellers after Buyer Paid, other sellers after Seller Acknowledgement (Dispatch Condition per seller). DOAS sellers need the signed DOAS before release. Buyer must release within 3 working days after dispatch.',
+    rows: () => sold().filter(v => !v.dispatch && dispatchReady(v)), sort: ['adate', 'asc'],
+    cols: [C('Seller Full Name', 'seller_full', 'text', { w: 250 }), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction Date', 'adate', 'code'),
+      C('Make/Model', 'model', 'text', { w: 190 }), C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Release Condition', 'release_cond', 'text', { w: 220 }),
+      C('Dispatch Date', 'dispatch', 'date', { edit: 'date' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
-    validate: (r, e) => ({ dispatch: notFuture(e.dispatch) || notBefore(e.dispatch, r.buyer_paid, 'Buyer Paid') }),
+    validate: (r, e) => ({ dispatch: notFuture(e.dispatch) || (releaseOf(r) === 'ack' ? notBefore(e.dispatch, r.seller_ack, 'Seller Acknowledgement') : notBefore(e.dispatch, r.buyer_paid, 'Buyer Paid')) }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Dispatched vehicles moved to Unreleased Unit (FAD and VWD).' },
   { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
     rule: `Dispatched vehicles not yet released to the buyer. Penalty shows once the dispatch deadline has passed (prototype rule: PHP ${PENALTY_PER_DAY}/day, to confirm).`,
