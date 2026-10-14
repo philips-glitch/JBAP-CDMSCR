@@ -110,13 +110,15 @@ const REPORTS = {
       <p>Hope we can continue our partnership in the future.</p><p>${esc(CO().name)}</p>`);
   },
   // 9. DocumentTransmittalPrint: Auction Transmittal Form (signed by the buyer as receiving copy)
-  documentTransmittal(v, docs, others, atf) {
+  documentTransmittal(v, docs, others, atf, remarks = '') {
     const box = on => `<span class="rbox">${on ? '✓' : ''}</span>`;
-    const list = DOC_TYPES.map(t => `<span>${box(docs.includes(t))}${esc(t)}${t === 'Others' && others ? `: ${esc(others)}` : ''}</span>`).join('');
+    const list = DOC_TYPES.map(t => { const isOthers = t === 'Others' && others;   // typed Others text always prints, with the box ticked
+      return `<span>${box(docs.includes(t) || isOthers)}${esc(t)}${isOthers ? `: ${esc(others)}` : ''}</span>`; }).join('');
     return rptPage('portrait', `<h1>Auction Transmittal Form</h1><div class="kv"><b>Reference</b><span>Auction Internal forms</span><b>Control number</b><span>${esc(atf)}</span>
         <b>Buyer</b><span>${esc(v.customer)}</span><b>Received from</b><span>${esc(CO().name.toUpperCase())}</span></div>
       <h3>Document details</h3><div class="kv"><b>Car make</b><span>${esc(v.model)}</span><b>Brand</b><span>${esc((v.model || '').split(' ')[0])}</span><b>Color</b><span>${esc(v.color || '')}</span>
-        <b>Year</b><span>${esc(v.year || '')}</span><b>Plate #</b><span>${esc(v.plate)}</span><b>CS #</b><span>${esc(v.cs_no || '')}</span></div>
+        <b>Year</b><span>${esc(v.year || '')}</span><b>Plate #</b><span>${esc(v.plate)}</span><b>CS #</b><span>${esc(v.cs_no || '')}</span>
+        <b>Remarks</b><span>${esc(remarks)}</span></div>
       <h3>Documents</h3><div class="cols2">${list}</div>
       <h3>Acknowledgement</h3>${rptSign(['Received by (signature over printed name)', 'Date / time received'])}`);
   },

@@ -92,3 +92,16 @@ test('document transmittal: control number, checklist and saved documents', () =
   const h = P.REPORTS.documentTransmittal(P.enrichV(v._raw), ['Spare Key'], 'Extra key fob', atf);
   assert.match(h, /Auction Transmittal Form/); assert.match(h, /HRAD-ATF-8864/); assert.strictEqual(P.DOC_TYPES.length, 19);
 });
+test('document transmittal: Others and Remarks are saved, logged and printed (escaped)', () => {
+  const scr = P.byId['FAD/document-monitoring'], v = scr.rows()[1], before = P.S.log.length;
+  const atf = P.recordDocTransmittal(scr, v, ['Spare Key', 'Others'], 'Extra key fob', 'Keys with VWD');
+  assert.strictEqual(v._raw.docs_others, 'Extra key fob'); assert.strictEqual(v._raw.docs_remarks, 'Keys with VWD');
+  const added = P.S.log.slice(before), entry = f => added.find(e => e.field === f);
+  assert.strictEqual(entry('Documents Others').new, 'Extra key fob'); assert.strictEqual(entry('Documents Remarks').new, 'Keys with VWD');
+  assert.ok(entry('Documents Received') && entry('ATF Control No.'), 'the existing fields are still logged');
+  const h = P.REPORTS.documentTransmittal(P.enrichV(v._raw), ['Spare Key', 'Others'], 'Extra key fob', atf, 'Keys with VWD');
+  assert.match(h, /Keys with VWD/); assert.match(h, /Others: Extra key fob/);
+  const x = P.REPORTS.documentTransmittal(P.enrichV(v._raw), ['Spare Key'], '<b>x</b>', atf, '<i>r</i>');
+  assert.match(x, /&lt;b&gt;x/); assert.match(x, /&lt;i&gt;r/); assert.doesNotMatch(x, /<b>x<\/b>/);
+  assert.match(x, /rbox">✓<\/span>Others: /, 'typed Others text prints with the Others box ticked');
+});

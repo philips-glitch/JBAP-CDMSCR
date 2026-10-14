@@ -673,10 +673,11 @@ const RELEASE_ITEMS = ['No. of Keys', 'Copy of OR/CR', "Owner's Manual", 'Warran
 // [BEHAVIOR] One cancellation billing letter per buyer name, the name printed on the letter (cid is missing on some lots).
 const cancelLetterGroups = rows => { const g = {}; rows.forEach(r => (g[r.customer] ||= []).push(r)); return Object.values(g); };
 // [BEHAVIOR] Saves the documents received and returns the ATF control number (HRAD-ATF-<running no.>); a reprint keeps the existing number.
-function recordDocTransmittal(scr, v, docs, others) {
+function recordDocTransmittal(scr, v, docs, others, remarks = '') {
   const co = D.meta.company, atf = v._raw.atf_no || `HRAD-ATF-${co.next.atf++}`;
-  logChange(scr, 'Update', v, [['Documents Received', 'text', (v._raw.docs_received || []).join(', '), docs.join(', ')], ['ATF Control No.', 'text', v._raw.atf_no, atf], ['Print Transmittal?', 'check', v._raw.print_doc_trans, false]]);
-  Object.assign(v._raw, { docs_received: docs, docs_others: others, atf_no: atf, print_doc_trans: false }); delete U(scr.id).edits[v.id];
+  logChange(scr, 'Update', v, [['Documents Received', 'text', (v._raw.docs_received || []).join(', '), docs.join(', ')], ['Documents Others', 'text', v._raw.docs_others, others], ['Documents Remarks', 'text', v._raw.docs_remarks, remarks],
+    ['ATF Control No.', 'text', v._raw.atf_no, atf], ['Print Transmittal?', 'check', v._raw.print_doc_trans, false]]);
+  Object.assign(v._raw, { docs_received: docs, docs_others: others, docs_remarks: remarks, atf_no: atf, print_doc_trans: false }); delete U(scr.id).edits[v.id];
   return atf;
 }
 const ACTIONS = {
@@ -789,11 +790,13 @@ const ACTIONS = {
     if (missing.length) { setMsg(scr, 'error', `Enter <b>Original Docs Received from Seller</b> and save first: ${missing.map(r => esc(r.plate)).join(', ')}.`); render(); return; }
     setMsg(scr, null); render();
     const form = rows.map((r, n) => `<fieldset class="dt-lot"><legend><b>${esc(r.plate)}</b> · ${esc(r.customer)}</legend><div class="cols2">${DOC_TYPES.map((t, i) => `<label class="chkline"><input type="checkbox" class="chk" id="dt-${n}-${i}" ${(r.docs_received || []).includes(t) ? 'checked' : ''}>${esc(t)}</label>`).join('')}</div>
-      <div class="fld"><label for="dt-${n}-o">Others</label><input class="ctl" id="dt-${n}-o" value="${esc(r.docs_others || '')}"></div></fieldset>`).join('');
+      <div class="fld"><label for="dt-${n}-o">Others</label><input class="ctl" id="dt-${n}-o" value="${esc(r.docs_others || '')}"></div>
+      <div class="fld"><label for="dt-${n}-r">Remarks</label><input class="ctl" id="dt-${n}-r" value="${esc(r.docs_remarks || '')}"></div></fieldset>`).join('');
     openModal({ title: `Document transmittal: ${rows.length} lot(s)`, icon: 'print', wide: true, body: form, note: 'Tick the documents received from the seller.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record & print', kind: 'pr', icon: 'print', onClick: () => {
-        const pages = rows.map((r, n) => { const docs = DOC_TYPES.filter((_, i) => $(`#dt-${n}-${i}`).checked), others = $(`#dt-${n}-o`).value.trim();
-          const atf = recordDocTransmittal(scr, r, docs, others); return REPORTS.documentTransmittal(enrichV(r._raw), docs, others, atf); }).join('');
+        const pages = rows.map((r, n) => { const docs = DOC_TYPES.filter((_, i) => $(`#dt-${n}-${i}`).checked), others = $(`#dt-${n}-o`).value.trim(), remarks = $(`#dt-${n}-r`).value.trim();
+          if (others && !docs.includes('Others')) docs.push('Others');   // [BEHAVIOR] typed Others text counts as the Others document being received
+          const atf = recordDocTransmittal(scr, r, docs, others, remarks); return REPORTS.documentTransmittal(enrichV(r._raw), docs, others, atf, remarks); }).join('');
         render(); openModal({ title: 'Auction transmittal form', icon: 'print', wide: true, body: pages, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
         printModal(); toast(`Transmittal recorded for ${rows.length} lot(s).`);
       } }] });
