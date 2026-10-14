@@ -28,7 +28,7 @@ The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is l
 6. **Unpaid Billing**: enter Payment Date + Collection Receipt > **Save**.
 7. **Cancellation Entry**: enter an Auction No. and Lot (tip: copy one from Unpaid) > **Find** > set Status to *Cancelled*, date, waiver and reason > **Cancel transaction**. It appears in **Cancellation Monitoring** and (if not waived) **Cancellation Billing** > print to bill > **Cancellation Payment** > enter date paid and amount.
 8. **Rebate Payable**: enter *Rebate Paid* > **Save**. **Liability to Seller**: pick a date > **Generate**.
-9. **Log Activity**: every change from steps 1 to 8 and every VWD release appears here as user `system`, one row per changed field with the old and new value (newest first). Filter by date, user, module, action or record/plate. Prints and emails that record a value (Awarding Date, Billing #, Transmittal Date, Dispatch Date, vehicle release, ATF No.) are logged; previews that change nothing and *Generate* are not.
+9. **Log Activity**: every change from steps 1 to 8 and every VWD release appears here as user `system`, one row per changed field with the old and new value (newest first). Filter by date, user, module, action or record/plate. Prints and emails that record a value (Awarding Date, Billing #, Transmittal Date, Dispatch Date, cancellation billing date and amount, vehicle release with type and checklist, documents received with Others/Remarks and ATF No.) are logged; previews that change nothing and *Generate* are not.
 
 ## Reports and emails (layouts of the MS Access samples, 12 Oct 2026)
 
@@ -57,7 +57,7 @@ Reports print role titles and a placeholder bank account, not JBAP's staff names
 ## Seeded test data (`data.js` > `window.MOCK_DATA`)
 
 - **vehicles**: 209 lots. **134 come from the MS Access FAD Maintenance screenshots of 10/08/2026** (Pending Awarding, Unpaid, Payment Seller, Seller Acknowledgement, For Dispatch, Unreleased Units, Liability to Seller, Rebate Monitoring, Commission Billing). The other 75 are the earlier generated sample lots, kept so every walkthrough step has data. Lots were merged by plate number: a generated lot whose plate appears in Access now holds the Access data (10 of them are now the cancelled sale from Access Cancellation Monitoring).
-- **sellers**: release condition, VAT handling, NET/GROSS and notarial fees per seller (ORICO, ASIALINK and the sample code TFSPH are not in JBAP's list: marked unconfirmed)
+- **sellers**: release condition, VAT handling, NET/GROSS and notarial fees per seller (ORICO, ASIALINK and the sample code TFSPH are not in JBAP's list: marked unconfirmed). TFSPH (Toyota Financial Services Philippines) uses the TFS settings: Buyer Payment release, GROSS
 - **location**: every lot is "Pasay City" until JBAP lists its storage locations (Q31)
 - **year, color, fuel, CS no.**: sample values on generated lots; blank on Access lots (not in the screenshots)
 - **auctions**: weekly Monday to Wednesday calendar, auction 220 = 09/21 to 09/23/2026 (from Access), 197 to 221, plus 175, 180 and 181 (Nov and Dec 2025) for the Liability to Seller rows
@@ -79,8 +79,8 @@ Names cut off in Access end in "…". Everything shown in a screenshot is copied
 | Buyer Paid | Payment to Seller deadline minus 3 working days, or Awarding plus 3 working days |
 | Payment to Seller, Seller Acknowledgement, Dispatch, Release | Next step plus 2 to 3 working days, so each lot appears only on the lists Access shows it on (the Unpaid, Payment Seller, For Dispatch, Unreleased and Commission Billing screenshots are complete lists) |
 | Dispatch Date (Unreleased Units) | Dispatch deadline minus 3 working days |
-| Result Price | From Pending Awarding, Commission Billing or Sold-Accounting; otherwise the total minus the seller's transfer fee; blank when no amount is shown |
-| Transfer fee | TFS PHP 500 and JACCS 0 (worked out from Access totals); other sellers use the seller default |
+| Result Price | From Pending Awarding, Commission Billing or Sold-Accounting; otherwise the total minus the seller's transfer fee; blank when no amount is shown; Payment Seller lots: To JBAP ÷ 0.97 × 22.4 (exact to the centavo) |
+| Transfer fee | EWB 1,000, SBC 400 up to 499,999.99 then 500, TFS 500, JACCS 0 (seller settings); other sellers keep their sample default |
 | Auction No. (Seller Acknowledgement lots) | Latest auction ending before the inferred Awarding Date |
 | Lot No. when not shown | Next free number from 121 |
 | Buyer ID when not shown | Placeholder **B9001 to B9041** |
@@ -91,11 +91,13 @@ Edit `data.js` and refresh the browser to change sample data.
 
 ## Rules used (to confirm with JBAP)
 
+Qn = question n in JBAP's Open Questions document.
+
 | Rule | Prototype value | Source |
 |------|-----------------|--------|
 | Buyer deadline, payment-to-seller deadline, dispatch deadline | 3 working days (Mon to Fri, no holiday list yet) | Access guideline; matches the Access screenshots of 10/08/2026 |
 | Billing due date | Billing date + 10 days | Access DB notes (the Due Date column is empty in the Access screenshots) |
-| Seller settings | Release condition, VAT inside 5% (EWB, SBC) or on top (others), NET (all except TFS) / GROSS (TFS), notarial fee (EWB 1,000; SBC 400 up to 499,999.99 then 500; TFS 500; JACCS 0) | Dispatch Condition per seller.xlsx, Access samples; Q25 to Q29 to confirm |
+| Seller settings | Release condition, VAT inside 5% (EWB, SBC) or on top (others), NET (all except TFS) / GROSS (TFS and its sample code TFSPH), notarial fee (EWB 1,000; SBC 400 up to 499,999.99 then 500; TFS 500; JACCS 0) | Dispatch Condition per seller.xlsx, Access samples; Q25 to Q29 to confirm |
 | Commission, VAT, W/TAX | Commission 5% (÷1.12 when VAT is inside); VAT 12%; W/TAX 15% of commission for NET sellers | Q1, Access Payment Seller sample; Q25, Q26 to confirm |
 | To JBAP / Payable to Seller | Commission + VAT − W/TAX (0 for GROSS) / price + fee − To JBAP | Matches all 18 Access Payment Seller rows to the centavo |
 | For Dispatch | Seller condition met: Buyer Payment and DOAS sellers after Buyer Paid, others after Seller Acknowledgement | Dispatch Condition per seller; DOAS date for release: Q28 |

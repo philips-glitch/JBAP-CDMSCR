@@ -244,7 +244,7 @@ const SCREENS = [
     validate: docValidate,
     buttons: [{ label: 'Print document transmittal', kind: 'ol', icon: 'print', act: 'printDocTrans', count: 'print_doc_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Lots with Documents Released to Buyer were removed from the list.' },
   { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
-    rule: `Dispatched vehicles not yet released to the buyer. Penalty shows once the dispatch deadline has passed (prototype rule: PHP ${PENALTY_PER_DAY}/day, to confirm).`,
+    rule: `Dispatched vehicles not yet released to the buyer. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15).`,
     rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'], cols: UNREL_COLS, filters: UNREL_FILTERS,
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')) }) },
   { dept: 'FAD', slug: 'liability-to-seller', title: 'Liability to Seller', actions: VS, layout: 'query',
@@ -343,7 +343,7 @@ const SCREENS = [
     filters: [{ key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }], totals: rows => ({ customer: `${rows.length} units` }) },
   { dept: 'SMD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
     rule: 'Dispatched vehicles that have not been released to the buyer yet. Penalty shows once the dispatch deadline has passed.',
-    rows: () => SMD('unreleased'), sort: ['customer', 'asc'], cols: UNREL_COLS,
+    rows: () => SMD('unreleased'), sort: ['customer', 'asc'], cols: UNREL_COLS.filter(c => c.key !== 'location'),
     filters: [{ key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }, { key: 'dispatch_deadline', label: 'Dispatch Deadline', type: 'daterange', w: 'w2' }],
     totals: rows => ({ adate: `${rows.length} units`, penalty: money(sumBy(rows, 'penalty')) }) },
   { dept: 'SMD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', actions: VS, rule: 'Result price records with status SOLD and a rebate.',
@@ -363,7 +363,7 @@ const SCREENS = [
       C('Seller Acknowledgement', 'seller_ack', 'date')],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Buyer' }, { key: 'plate', label: 'Plate Number' }] },
   { dept: 'VWD', slug: 'unreleased-unit-overdue', title: 'Unreleased Unit (Overdue)', actions: VFSU,
-    rule: `Dispatched vehicles past the dispatch deadline. Penalty is calculated by the system (prototype rule: PHP ${PENALTY_PER_DAY}/day, to confirm). VWD releases a vehicle with Release vehicle (JBAP Q9).`,
+    rule: `Dispatched vehicles past the dispatch deadline. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15). VWD releases a vehicle with Release vehicle (JBAP Q9) once the penalty is paid.`,
     rows: () => sold().filter(v => v.dispatch && !v.release && v.dispatch_deadline < TODAY), sort: ['dispatch_deadline', 'asc'], cols: [...UNREL_COLS, C('Release', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })], filters: UNREL_FILTERS,
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')) }) },
   { dept: 'VWD', slug: 'auction-monitoring', title: 'Auction Monitoring', actions: VFS, rule: 'Auction result per auction and lot, from awarding to vehicle release.',
@@ -486,7 +486,7 @@ function cellHtml(scr, r, c, upd) {
   if (c.type === 'rocheck' || c.type === 'check') return `<td class="c"><span class="ro-chk ${v ? 'on' : ''}" role="img" aria-label="${v ? 'Yes' : 'No'}">${v ? IC.check : ''}</span></td>`;
   if (c.type === 'status') { const k = { Sold: 'sold', 'Not Sold': 'ns', Cancelled: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
   if (c.type === 'action') { const k = { Update: 'up', Create: 'sold', Cancel: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
-  if (c.type === 'rowbtn') return `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}">${esc(c.btn)}</button></td>`;
+  if (c.type === 'rowbtn') return `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}" aria-label="${esc(c.btn)} ${esc(r.plate || '')}">${esc(c.btn)}</button></td>`;
   if (c.type === 'logval' && (v ?? '') === '') return '<td><span class="blank">(blank)</span></td>';
   let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : c.type === 'datetime' ? `${fmtDate(v.slice(0, 10))} ${v.slice(11)}` : (v ?? '');
   const late = c.late && v && v < TODAY ? ' late' : '';
@@ -495,7 +495,7 @@ function cellHtml(scr, r, c, upd) {
 }
 
 function dataCard(scr, title) {
-  const ui = U(scr.id), upd = scr.actions.includes('Update') && scr.layout !== 'entry';
+  const ui = U(scr.id), upd = scr.actions.includes('Update') && scr.layout !== 'entry', anyEdit = upd && scr.cols.some(c => c.edit);   // VWD lists: Update (row button) but no editable column
   const all = sortRows(scr, applyFilters(scr, scr.rows()));
   const pages = Math.max(1, Math.ceil(all.length / ui.size)); ui.page = Math.min(ui.page, pages);
   const rows = all.slice((ui.page - 1) * ui.size, ui.page * ui.size);
@@ -504,10 +504,10 @@ function dataCard(scr, title) {
     const n = b.act === 'save' ? dirty : effectiveCount(scr, b.count);
     return `<button type="button" class="btn ${b.kind}" data-act="${b.act}">${IC[b.icon]}${esc(b.label)}${n ? `<span class="n" data-count="${b.act}">${n}</span>` : `<span class="n" data-count="${b.act}" hidden></span>`}</button>`;
   }).join('');
-  const legend = upd ? '<div class="lg"><span><i class="sw l"></i>Locked</span><span><i class="sw e"></i>Editable</span><span><i class="sw d"></i>Unsaved change</span></div>' : '';
+  const legend = anyEdit ? '<div class="lg"><span><i class="sw l"></i>Locked</span><span><i class="sw e"></i>Editable</span><span><i class="sw d"></i>Unsaved change</span></div>' : '';
   const th = scr.cols.map(c => {
     const ed = c.edit && upd, srt = ui.sort && ui.sort[0] === c.key ? (ui.sort[1] === 'asc' ? 'ascending' : 'descending') : 'none';
-    return `<th class="${ed ? 'ed' : ''}" aria-sort="${srt}" scope="col"><button type="button" class="hb" data-sort="${c.key}">${upd ? (ed ? IC.pen : `<span class="lk">${IC.lock}</span>`) : ''}<span>${esc(c.label)}</span><span class="si" aria-hidden="true"></span></button></th>`;
+    return `<th class="${ed ? 'ed' : ''}" aria-sort="${srt}" scope="col"><button type="button" class="hb" data-sort="${c.key}">${anyEdit ? (ed ? IC.pen : `<span class="lk">${IC.lock}</span>`) : ''}<span>${esc(c.label)}</span><span class="si" aria-hidden="true"></span></button></th>`;
   }).join('');
   const body = rows.length ? rows.map(r => `<tr class="${ui.edits[r.id] ? 'is-dirty' : ''}" data-tr="${esc(r.id)}">${scr.cols.map(c => cellHtml(scr, r, c, upd)).join('')}</tr>`).join('')
     : `<tr><td colspan="${scr.cols.length}"><div class="empty">${IC.inbox}<b>No records to show</b>${esc(scr.emptyNote?.() || '') || (hasFilter(scr) ? 'No records match the filter. Try Reset.' : 'Nothing is waiting in this list right now.')}</div></td></tr>`;
