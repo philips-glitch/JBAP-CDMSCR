@@ -33,3 +33,10 @@ test('billing computation: billing no, date and commission totals', () => {
   const h = P.REPORTS.billingComputation('SBC', '511', '2026-10-08', rows);
   assert.match(h, /Billing Computation/); assert.match(h, /511/); assert.match(h, /10\/08\/2026/); assert.match(h, /37,550\.00/);
 });
+test('billing transmittal: report lists each billing and recording sets the transmittal date', () => {
+  const scr = P.byId['FAD/billing-monitoring'], rows = scr.rows().filter(b => !b.trans).slice(0, 2);
+  const h = P.REPORTS.billingTransmittal(rows[0].customer, rows, P.TODAY);
+  assert.match(h, /Transmittal of Documents/); for (const b of rows) assert.ok(h.includes(b.no));
+  P.recordBillingTransmittal(scr, rows);
+  for (const b of rows) assert.strictEqual(P.B().find(x => x.id === b.id).trans, P.TODAY);
+});

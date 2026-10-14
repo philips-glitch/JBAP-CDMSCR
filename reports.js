@@ -58,4 +58,12 @@ const REPORTS = {
       <tfoot><tr><td colspan="6">Grand total</td><td class="r">${money(rptSum(lots, 'price'))}</td><td class="r">${money(rptSum(lots, 'com'))}</td><td class="r">${money(rptSum(lots, 'cvat'))}</td><td class="r">${money(rptSum(lots, 'ctotal'))}</td></tr></tfoot></table>
       ${rptSign([`Prepared by: ${CO().roles.fadStaff}`, `Approved by: ${CO().roles.financeHead}`])}<p class="fn">${longDate(billDate)}</p>`);
   },
+  // 5. BILLING TRANSMITTAL: Transmittal of Documents (attached to the printed invoices sent to the seller)
+  billingTransmittal(customer, bills, date) {
+    const rows = bills.map(b => `<tr><td>${esc(b.customer)}</td><td>${esc(b.cr || '')}</td><td>${esc(b.particular)}</td><td class="c">${esc(b.no)}</td><td class="r">${money(b.total)}</td><td class="c">${fmtDate(b.due)}</td></tr>`).join('');
+    return rptPage('portrait', `<h1>Transmittal of Documents</h1><div class="kv"><b>Date</b><span>${longDate(date)}</span></div>
+      <table><thead><tr><th>Customer</th><th>CR</th><th>Auction Date / Particulars</th><th>Billing #</th><th class="r">Bill Amount</th><th>Due Date</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="4">Total</td><td class="r">${money(rptSum(bills, 'total'))}</td><td></td></tr></tfoot></table>
+      ${rptSign(['Received by', 'Date received'])}`);
+  },
 };

@@ -263,9 +263,11 @@ const SCREENS = [
     totals: rows => ({ rebate: money(sumBy(rows, 'rebate')) }),
     validate: (r, e) => ({ rebate_paid: notFuture(e.rebate_paid) || notBefore(e.rebate_paid, r.buyer_paid, 'Buyer Paid') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid rebates removed from the list.' },
-  { dept: 'FAD', slug: 'billing-monitoring', title: 'Billing Monitoring', actions: VS, rule: 'All records from the billing table. New commission billings appear here after printing.',
+  { dept: 'FAD', slug: 'billing-monitoring', title: 'Billing Monitoring', actions: VSU, rule: 'All records from the billing table. New commission billings appear here after printing. Tick Print Transmittal? and print the billing transmittal to record the Transmittal Date.',
     rows: B, sort: ['bdate', 'desc'],
-    cols: [C('Billing #', 'no', 'code'), C('Customer', 'customer', 'text', { w: 380 }), C('Auction Date / Particulars', 'particular', 'text', { w: 260 }), C('Billing Date', 'bdate', 'date'), C('Total', 'total', 'money')] },
+    cols: [C('Billing #', 'no', 'code'), C('Customer', 'customer', 'text', { w: 320 }), C('Auction Date / Particulars', 'particular', 'text', { w: 230 }), C('Billing Date', 'bdate', 'date'), C('Total', 'total', 'money'),
+      C('Transmittal Date', 'trans', 'date'), C('Print Transmittal?', 'print_trans', 'check', { edit: 'check' })],
+    buttons: [{ label: 'Print billing transmittal', kind: 'ol', icon: 'print', act: 'printTransmittal', count: 'print_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },
   { dept: 'FAD', slug: 'unpaid-billing', title: 'Unpaid Billing', actions: VSU, rule: `Billing records with a blank Payment Date. Due date = billing date + ${BILL_DUE_DAYS} days.`,
     rows: () => B().filter(b => !b.pay), sort: ['bdate', 'asc'],
     cols: [C('Customer', 'customer', 'text', { w: 240 }), C('Auction Date / Particulars', 'particular', 'text', { w: 180 }), C('Billing Date', 'bdate', 'date'), C('Bill Amount', 'bill', 'money'),
@@ -643,6 +645,11 @@ function openReport(title, html, back) {
   openModal({ title, icon: 'print', wide: true, body: html, note: 'Preview of the attached PDF.',
     footer: [{ label: 'Back to email', kind: 'gh', onClick: back }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
 }
+// [BEHAVIOR] Printing the billing transmittal records today's date as Transmittal Date on each billing
+function recordBillingTransmittal(scr, rows) {
+  const ui = U(scr.id);
+  rows.forEach(r => { logChange(scr, 'Update', r, [['Transmittal Date', 'date', r._raw.trans, TODAY], ['Print Transmittal?', 'check', r._raw.print_trans, false]]); r._raw.trans = TODAY; r._raw.print_trans = false; delete ui.edits[r.id]; });
+}
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
@@ -736,6 +743,17 @@ const ACTIONS = {
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record billing date & print', kind: 'pr', icon: 'print', onClick: () => {
         recordCancellationBilling(scr, rows);
         printModal(); closeModal(); render(); toast(`${rows.length} cancellation(s) billed. They moved to Cancellation Payment.`);
+      } }] });
+  },
+  printTransmittal(scr) {
+    const rows = selectedRows(scr, 'print_trans');
+    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Print Transmittal?</b> on at least one billing first.'); render(); return; }
+    setMsg(scr, null); render();
+    const groups = {}; rows.forEach(r => (groups[r.customer] ||= []).push(r));
+    const body = Object.entries(groups).map(([cust, list]) => REPORTS.billingTransmittal(cust, list, TODAY)).join('');
+    openModal({ title: `Billing transmittal: ${Object.keys(groups).length} customer(s)`, icon: 'print', wide: true, body, note: 'Recording sets the Transmittal Date to today.',
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record transmittal date & print', kind: 'pr', icon: 'print', onClick: () => {
+        recordBillingTransmittal(scr, rows); printModal(); closeModal(); render(); toast(`Transmittal Date recorded on ${rows.length} billing(s).`);
       } }] });
   },
   resetFilter(scr) { const ui = U(scr.id); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); },
