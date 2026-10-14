@@ -62,3 +62,13 @@ test('VWD release is blocked while a storage penalty is unpaid', () => {
   const v = P.byId['VWD/unreleased-unit-overdue'].rows().find(x => x.penalty > 0);
   assert.match(P.releaseBlock(v), /Storage penalty/);
 });
+test('Log Activity texts no longer call VWD view-only', () => {
+  const scr = P.byId['log-activity'];
+  assert.ok(!scr.rule.includes('VWD are view-only'), 'rule still says VWD is view-only');
+  assert.match(scr.rule, /VWD entries come from vehicle releases/);
+  P.U('log-activity').applied.module = 'VWD';
+  assert.match(scr.emptyNote(), /releases/);
+  P.U('log-activity').applied.module = 'SMD';
+  assert.match(scr.emptyNote(), /SMD is view-only/);
+  delete P.U('log-activity').applied.module;
+});

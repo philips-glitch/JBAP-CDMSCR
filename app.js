@@ -375,14 +375,14 @@ const SCREENS = [
 
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
-    rule: 'Every data change made in FAD, SMD and VWD, one row per changed field. Entries cannot be edited or deleted. SMD and VWD are view-only under the CR, so they have no entries.',
+    rule: 'Every data change made in FAD, SMD and VWD, one row per changed field. Entries cannot be edited or deleted. SMD is view-only under the CR, so it has no entries; VWD entries come from vehicle releases.',
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
       { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel'] },
       { key: 'record', label: 'Record / Plate' }],
-    emptyNote: () => { const m = U(LOG_ID).applied.module; return m === 'SMD' || m === 'VWD' ? `No activity: ${m} is view-only under the CR, so it has no update actions to log.` : null; } },
+    emptyNote: () => { const m = U(LOG_ID).applied.module; return m === 'SMD' ? 'No activity: SMD is view-only under the CR, so it has no update actions to log.' : m === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases a vehicle.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -570,7 +570,7 @@ function entryLayout(scr) {
 function homeLayout() {
   const card = d => {
     const subs = SCREENS.filter(s => s.dept === d).map(s => `<li><a href="#/${s.id}">${esc(s.title)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
-    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'View-only monitoring (legacy SMD sample data)', VWD: 'View-only: units for dispatch and release' }[d];
+    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'View-only monitoring (legacy SMD sample data)', VWD: 'Units for dispatch and release; VWD records the vehicle release' }[d];
     return `<section class="hcard"><div class="card-h"><div class="ico">${deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox')}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
   return `<div class="home"><nav class="crumb" aria-label="Breadcrumb"><b>Home</b></nav><h1>Post-Auction Menus</h1>
