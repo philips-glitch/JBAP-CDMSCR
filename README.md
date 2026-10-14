@@ -79,7 +79,7 @@ Names cut off in Access end in "…". Everything shown in a screenshot is copied
 | Buyer Paid | Payment to Seller deadline minus 3 working days, or Awarding plus 3 working days |
 | Payment to Seller, Seller Acknowledgement, Dispatch, Release | Next step plus 2 to 3 working days, so each lot appears only on the lists Access shows it on (the Unpaid, Payment Seller, For Dispatch, Unreleased and Commission Billing screenshots are complete lists) |
 | Dispatch Date (Unreleased Units) | Dispatch deadline minus 3 working days |
-| Result Price | From Pending Awarding, Commission Billing or Sold-Accounting; otherwise the total minus the seller's transfer fee; blank when no amount is shown; Payment Seller lots: To JBAP ÷ 0.97 × 22.4 (exact to the centavo) |
+| Result Price | From Pending Awarding, Commission Billing or Sold-Accounting; otherwise the total minus the seller's transfer fee; blank when no amount is shown; Payment Seller lots: To JBAP ÷ 0.97 × 22.4 (VAT-inside sellers), rounded to the nearest 50, which reproduces To JBAP to the centavo |
 | Transfer fee | EWB 1,000, SBC 400 up to 499,999.99 then 500, TFS 500, JACCS 0 (seller settings); other sellers keep their sample default |
 | Auction No. (Seller Acknowledgement lots) | Latest auction ending before the inferred Awarding Date |
 | Lot No. when not shown | Next free number from 121 |
