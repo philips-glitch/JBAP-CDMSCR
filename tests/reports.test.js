@@ -83,3 +83,12 @@ test('cancellation letters: one letter per buyer name, even when some lots have 
   assert.ok(rows.some(r => !r.cid) && rows.some(r => r.cid), 'lots should mix cid and no cid');
   assert.strictEqual(P.cancelLetterGroups(rows).length, 1);
 });
+test('document transmittal: control number, checklist and saved documents', () => {
+  const scr = P.byId['FAD/document-monitoring'], v = scr.rows()[0];
+  v._raw.orig_docs = v.buyer_paid;
+  const atf = P.recordDocTransmittal(scr, v, ['LTO Official Receipt', 'Spare Key'], 'Extra key fob');
+  assert.strictEqual(atf, 'HRAD-ATF-8864'); assert.deepStrictEqual(v._raw.docs_received, ['LTO Official Receipt', 'Spare Key']);
+  assert.strictEqual(P.recordDocTransmittal(scr, v, ['Spare Key'], ''), 'HRAD-ATF-8864', 'reprint keeps the number');
+  const h = P.REPORTS.documentTransmittal(P.enrichV(v._raw), ['Spare Key'], 'Extra key fob', atf);
+  assert.match(h, /Auction Transmittal Form/); assert.match(h, /HRAD-ATF-8864/); assert.strictEqual(P.DOC_TYPES.length, 19);
+});

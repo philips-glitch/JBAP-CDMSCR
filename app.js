@@ -239,10 +239,10 @@ const SCREENS = [
     cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 210 }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
       C('Buyer Paid', 'buyer_paid', 'date'), C('Received DOAS for Signing', 'rcv_doas', 'date', { edit: 'date' }), C('Buyer Signed DOAS', 'buyer_doas', 'date', { edit: 'date' }),
       C('Seller Receipt of Signed DOAS', 'seller_doas', 'date', { edit: 'date' }), C('Original Docs Received from Seller', 'orig_docs', 'date', { edit: 'date' }),
-      C('Documents Released to Buyer', 'to_buyer', 'date', { edit: 'date' })],
+      C('Documents Released to Buyer', 'to_buyer', 'date', { edit: 'date' }), C('ATF No.', 'atf_no', 'code'), C('Print Transmittal?', 'print_doc_trans', 'check', { edit: 'check' })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     validate: docValidate,
-    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Lots with Documents Released to Buyer were removed from the list.' },
+    buttons: [{ label: 'Print document transmittal', kind: 'ol', icon: 'print', act: 'printDocTrans', count: 'print_doc_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Lots with Documents Released to Buyer were removed from the list.' },
   { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
     rule: `Dispatched vehicles not yet released to the buyer. Penalty shows once the dispatch deadline has passed (prototype rule: PHP ${PENALTY_PER_DAY}/day, to confirm).`,
     rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'], cols: UNREL_COLS, filters: UNREL_FILTERS,
@@ -672,6 +672,13 @@ function recordRelease(scr, v, f) {
 const RELEASE_ITEMS = ['No. of Keys', 'Copy of OR/CR', "Owner's Manual", 'Warranty booklet', 'Spare Tire', 'Tools', 'Jack', 'Radio', 'A/C', 'Accessories'];
 // [BEHAVIOR] One cancellation billing letter per buyer name, the name printed on the letter (cid is missing on some lots).
 const cancelLetterGroups = rows => { const g = {}; rows.forEach(r => (g[r.customer] ||= []).push(r)); return Object.values(g); };
+// [BEHAVIOR] Saves the documents received and returns the ATF control number (HRAD-ATF-<running no.>); a reprint keeps the existing number.
+function recordDocTransmittal(scr, v, docs, others) {
+  const co = D.meta.company, atf = v._raw.atf_no || `HRAD-ATF-${co.next.atf++}`;
+  logChange(scr, 'Update', v, [['Documents Received', 'text', (v._raw.docs_received || []).join(', '), docs.join(', ')], ['ATF Control No.', 'text', v._raw.atf_no, atf], ['Print Transmittal?', 'check', v._raw.print_doc_trans, false]]);
+  Object.assign(v._raw, { docs_received: docs, docs_others: others, atf_no: atf, print_doc_trans: false }); delete U(scr.id).edits[v.id];
+  return atf;
+}
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
@@ -773,6 +780,22 @@ const ACTIONS = {
     openModal({ title: `Billing transmittal: ${Object.keys(groups).length} customer(s)`, icon: 'print', wide: true, body, note: 'Recording sets the Transmittal Date to today.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record transmittal date & print', kind: 'pr', icon: 'print', onClick: () => {
         recordBillingTransmittal(scr, rows); printModal(); closeModal(); render(); toast(`Transmittal Date recorded on ${rows.length} billing(s).`);
+      } }] });
+  },
+  printDocTrans(scr) {
+    const rows = selectedRows(scr, 'print_doc_trans');
+    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Print Transmittal?</b> on at least one lot first.'); render(); return; }
+    const missing = rows.filter(r => !r.orig_docs);
+    if (missing.length) { setMsg(scr, 'error', `Enter <b>Original Docs Received from Seller</b> and save first: ${missing.map(r => esc(r.plate)).join(', ')}.`); render(); return; }
+    setMsg(scr, null); render();
+    const form = rows.map((r, n) => `<fieldset class="dt-lot"><legend><b>${esc(r.plate)}</b> · ${esc(r.customer)}</legend><div class="cols2">${DOC_TYPES.map((t, i) => `<label class="chkline"><input type="checkbox" class="chk" id="dt-${n}-${i}" ${(r.docs_received || []).includes(t) ? 'checked' : ''}>${esc(t)}</label>`).join('')}</div>
+      <div class="fld"><label for="dt-${n}-o">Others</label><input class="ctl" id="dt-${n}-o" value="${esc(r.docs_others || '')}"></div></fieldset>`).join('');
+    openModal({ title: `Document transmittal: ${rows.length} lot(s)`, icon: 'print', wide: true, body: form, note: 'Tick the documents received from the seller.',
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record & print', kind: 'pr', icon: 'print', onClick: () => {
+        const pages = rows.map((r, n) => { const docs = DOC_TYPES.filter((_, i) => $(`#dt-${n}-${i}`).checked), others = $(`#dt-${n}-o`).value.trim();
+          const atf = recordDocTransmittal(scr, r, docs, others); return REPORTS.documentTransmittal(enrichV(r._raw), docs, others, atf); }).join('');
+        render(); openModal({ title: 'Auction transmittal form', icon: 'print', wide: true, body: pages, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
+        printModal(); toast(`Transmittal recorded for ${rows.length} lot(s).`);
       } }] });
   },
   emailDispatch(scr) {

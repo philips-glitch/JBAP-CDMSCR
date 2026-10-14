@@ -10,6 +10,10 @@ const rptPage = (cls, html) => `<section class="rpt ${cls}">${html}</section>`;
 const rptSum = (rows, k) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
 const rptSign = labels => `<div class="rsign">${labels.map(l => `<div>${esc(l)}</div>`).join('')}</div>`;
 const rptBank = () => `${esc(CO().name)}<br>${esc(CO().bank)}`;
+// Document types of the Access DocumentTransmittalPrint report
+const DOC_TYPES = ['LTO Official Receipt', 'LTO Certificate of Registration', 'Deed of Motor Sale', 'Cancellation of Mortgage', 'Release of Mortgage', 'Promissory with Chattel Mortgage',
+  'Voluntary surrender with SPA to sell', "Secretary's Certificate with ID", 'ID of Previous owner', 'Certificate of Sale', 'Lease Agreement', 'Car History and Used Car Waiver Form',
+  'Extra-Judicial Foreclosure of Chattel', 'LRA - RD Official Receipt', 'Official Receipt representing notarial', 'Service Invoice from the seller', 'Spare Key', 'TPL Insurance Premium', 'Others'];
 const REPORTS = {
   email({ from, to, cc, subject, body, atts }) {
     return `<article class="mail"><div class="mail-h"><b>From</b><span>${esc(from)}</span><b>To</b><span>${esc(to)}</span>${cc ? `<b>CC</b><span>${esc(cc)}</span>` : ''}<b>Subject</b><span>${esc(subject)}</span>
@@ -104,5 +108,16 @@ const REPORTS = {
       <p>Account Name: ${esc(CO().name)}<br>${esc(CO().bank)}</p>
       <p>We regret to inform you that we are temporarily suspending your account until this is paid. Failure to pay within the specified time will render your account banned from joining our future auctions.</p>
       <p>Hope we can continue our partnership in the future.</p><p>${esc(CO().name)}</p>`);
+  },
+  // 9. DocumentTransmittalPrint: Auction Transmittal Form (signed by the buyer as receiving copy)
+  documentTransmittal(v, docs, others, atf) {
+    const box = on => `<span class="rbox">${on ? '✓' : ''}</span>`;
+    const list = DOC_TYPES.map(t => `<span>${box(docs.includes(t))}${esc(t)}${t === 'Others' && others ? `: ${esc(others)}` : ''}</span>`).join('');
+    return rptPage('portrait', `<h1>Auction Transmittal Form</h1><div class="kv"><b>Reference</b><span>Auction Internal forms</span><b>Control number</b><span>${esc(atf)}</span>
+        <b>Buyer</b><span>${esc(v.customer)}</span><b>Received from</b><span>${esc(CO().name.toUpperCase())}</span></div>
+      <h3>Document details</h3><div class="kv"><b>Car make</b><span>${esc(v.model)}</span><b>Brand</b><span>${esc((v.model || '').split(' ')[0])}</span><b>Color</b><span>${esc(v.color || '')}</span>
+        <b>Year</b><span>${esc(v.year || '')}</span><b>Plate #</b><span>${esc(v.plate)}</span><b>CS #</b><span>${esc(v.cs_no || '')}</span></div>
+      <h3>Documents</h3><div class="cols2">${list}</div>
+      <h3>Acknowledgement</h3>${rptSign(['Received by (signature over printed name)', 'Date / time received'])}`);
   },
 };

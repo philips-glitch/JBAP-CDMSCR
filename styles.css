@@ -234,6 +234,7 @@ tfoot td{font-weight:700;background:#eef1f8;border-top:2px solid var(--line-2);b
 .rpt .fn{font-size:10.5px;color:#555}
 .rpt .rbox{display:inline-block;width:12px;height:12px;border:1px solid #333;margin-right:6px;vertical-align:-2px;text-align:center;line-height:11px;font-size:10px}
 .cols2{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px}
+.dt-lot{border:1px solid var(--line);border-radius:4px;margin:0 0 12px;padding:8px 12px}.dt-lot .cols2{margin-bottom:8px}
 .rpt .split{display:grid;grid-template-columns:2fr 1fr;gap:18px;border-bottom:1px dashed #999;padding-bottom:14px;margin-bottom:14px}
 .rpt .split:last-child{border-bottom:0}
 button.att{cursor:pointer;font-family:inherit;color:inherit}button.att:hover{background:#f6f8fc}
