@@ -48,3 +48,17 @@ test('dispatch form: deadline, remarks, location; recording moves the lot to Unr
   assert.ok(!scr.rows().some(x => x.plate === 'NKR1470'));
   assert.ok(P.byId['FAD/unreleased-unit'].rows().some(x => x.plate === 'NKR1470'));
 });
+test('VWD release: DOAS block, then release with the next VRF number', () => {
+  const scr = P.byId['VWD/unreleased-unit'];
+  const v = scr.rows().find(x => P.releaseOf(x) === 'doas') || P.V().find(x => P.releaseOf(x) === 'doas' && x.dispatch && !x.release && !(x.penalty > 0));
+  v._raw.buyer_doas = null; assert.match(P.releaseBlock(P.enrichV(v._raw)), /DOAS/);
+  v._raw.buyer_doas = v.buyer_paid; assert.strictEqual(P.releaseBlock(P.enrichV(v._raw)), null);
+  const vrf = P.recordRelease(scr, v, { date: P.TODAY, to: v.customer, type: 'Sold', items: ['No. of Keys'] });
+  assert.strictEqual(vrf, '04583'); assert.strictEqual(P.D.meta.company.next.vrf, 4584); assert.strictEqual(v._raw.release, P.TODAY);
+  const h = P.REPORTS.releaseForm(P.enrichV(v._raw), { date: P.TODAY, to: v.customer, type: 'Sold', items: ['No. of Keys'] }, vrf);
+  assert.match(h, /Vehicle Release Form/); assert.match(h, /Gate Pass/); assert.match(h, /04583/);
+});
+test('VWD release is blocked while a storage penalty is unpaid', () => {
+  const v = P.byId['VWD/unreleased-unit-overdue'].rows().find(x => x.penalty > 0);
+  assert.match(P.releaseBlock(v), /Storage penalty/);
+});

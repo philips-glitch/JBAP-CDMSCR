@@ -135,7 +135,7 @@ function logChange(scr, action, r, changes) {
 
 // ─── Column helper ────────────────────────────────────────────────────
 const C = (label, key, type = 'text', o = {}) => Object.assign({ label, key, type }, o);
-const CEN = new Set(['code', 'date', 'check', 'status', 'rocheck', 'datetime', 'action']);
+const CEN = new Set(['code', 'date', 'check', 'status', 'rocheck', 'datetime', 'action', 'rowbtn']);
 const RIGHT = new Set(['money', 'int']);
 const sumBy = (rows, k) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
 const AUCTION_FILTER = { key: 'auction', label: 'Auction No.', type: 'text', w: 'w1', exact: true };
@@ -351,20 +351,20 @@ const SCREENS = [
   { dept: 'SMD', slug: 'cancellation-monitoring', title: 'Cancellation Monitoring', actions: VS, rule: 'Information on cancelled vehicles.',
     rows: () => SMD('cancellations'), cols: CXMON_COLS, sort: ['dcancel', 'desc'] },
 
-  // ===================== VWD (read-only, live data shared with FAD) =====================
-  { dept: 'VWD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS, rule: 'Dispatched vehicles with no penalty yet (still within the dispatch deadline).',
+  // ===================== VWD (live data shared with FAD; the Unreleased screens release vehicles) =====================
+  { dept: 'VWD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFSU, rule: 'Dispatched vehicles with no penalty yet (still within the dispatch deadline). VWD releases a vehicle with Release vehicle (JBAP Q9).',
     rows: () => sold().filter(v => v.dispatch && !v.release && v.dispatch_deadline >= TODAY), sort: ['dispatch_deadline', 'asc'],
     cols: [C('Customer Name', 'customer', 'text', { w: 330 }), C('Auction No.', 'auction', 'code'), C('Make/Model', 'model', 'text', { w: 280 }), C('Plate Number', 'plate', 'code'),
-      C('Location', 'location', 'code'), C('Dispatch Deadline', 'dispatch_deadline', 'date')], filters: UNREL_FILTERS },
+      C('Location', 'location', 'code'), C('Dispatch Deadline', 'dispatch_deadline', 'date'), C('Release', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })], filters: UNREL_FILTERS },
   { dept: 'VWD', slug: 'for-dispatch', title: 'For Dispatch', actions: VFS, rule: 'Vehicles with status SOLD and a blank Dispatch Date (all stages before dispatch).',
     rows: () => sold().filter(v => !v.dispatch), sort: ['awarding', 'asc'],
     cols: [C('Vehicle Control Number', 'vcn', 'code'), C('Plate Number', 'plate', 'code'), C('Auction No.', 'auction', 'code'), C('Buyer', 'customer', 'text', { w: 250 }),
       C('Seller', 'seller_full', 'text', { w: 250 }), C('Awarding Date', 'awarding', 'date'), C('Payment Date', 'buyer_paid', 'date'), C('Payment to Seller Date', 'pay_seller', 'date'),
       C('Seller Acknowledgement', 'seller_ack', 'date')],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Buyer' }, { key: 'plate', label: 'Plate Number' }] },
-  { dept: 'VWD', slug: 'unreleased-unit-overdue', title: 'Unreleased Unit (Overdue)', actions: VFS,
-    rule: `Dispatched vehicles past the dispatch deadline. Penalty is calculated by the system (prototype rule: PHP ${PENALTY_PER_DAY}/day, to confirm).`,
-    rows: () => sold().filter(v => v.dispatch && !v.release && v.dispatch_deadline < TODAY), sort: ['dispatch_deadline', 'asc'], cols: UNREL_COLS, filters: UNREL_FILTERS,
+  { dept: 'VWD', slug: 'unreleased-unit-overdue', title: 'Unreleased Unit (Overdue)', actions: VFSU,
+    rule: `Dispatched vehicles past the dispatch deadline. Penalty is calculated by the system (prototype rule: PHP ${PENALTY_PER_DAY}/day, to confirm). VWD releases a vehicle with Release vehicle (JBAP Q9).`,
+    rows: () => sold().filter(v => v.dispatch && !v.release && v.dispatch_deadline < TODAY), sort: ['dispatch_deadline', 'asc'], cols: [...UNREL_COLS, C('Release', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })], filters: UNREL_FILTERS,
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')) }) },
   { dept: 'VWD', slug: 'auction-monitoring', title: 'Auction Monitoring', actions: VFS, rule: 'Auction result per auction and lot, from awarding to vehicle release.',
     rows: V, sort: ['auction', 'desc'], filters: AM_FILTERS,
@@ -486,6 +486,7 @@ function cellHtml(scr, r, c, upd) {
   if (c.type === 'rocheck' || c.type === 'check') return `<td class="c"><span class="ro-chk ${v ? 'on' : ''}" role="img" aria-label="${v ? 'Yes' : 'No'}">${v ? IC.check : ''}</span></td>`;
   if (c.type === 'status') { const k = { Sold: 'sold', 'Not Sold': 'ns', Cancelled: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
   if (c.type === 'action') { const k = { Update: 'up', Create: 'sold', Cancel: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
+  if (c.type === 'rowbtn') return `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}">${esc(c.btn)}</button></td>`;
   if (c.type === 'logval' && (v ?? '') === '') return '<td><span class="blank">(blank)</span></td>';
   let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : c.type === 'datetime' ? `${fmtDate(v.slice(0, 10))} ${v.slice(11)}` : (v ?? '');
   const late = c.late && v && v < TODAY ? ' late' : '';
@@ -655,6 +656,20 @@ function recordDispatch(scr, rows, dateFor) {
   const ui = U(scr.id);
   rows.forEach(r => { const d = dateFor(r); logChange(scr, 'Update', r, [['Dispatch Date', 'date', r._raw.dispatch, d], ['For Dispatch Email?', 'check', r._raw.for_dispatch_email, false]]); r._raw.dispatch = d; r._raw.for_dispatch_email = false; delete ui.edits[r.id]; });
 }
+// [BEHAVIOR] VWD releases only when the seller's DOAS is signed (DOAS sellers) and no storage penalty is unpaid (JBAP Q17).
+function releaseBlock(v) {
+  if (releaseOf(v) === 'doas' && !v.buyer_doas) return 'Buyer signed DOAS is missing: this seller requires DOAS / legal documents signing. FAD records it in Document Monitoring.';
+  if (v.penalty > 0) return `Storage penalty of PHP ${money(v.penalty)} is unpaid. Recording penalty payments comes with step 2 (holidays and extensions).`;
+  return null;
+}
+// Records the release on the lot and returns the new VRF No. (running number, 5 digits)
+function recordRelease(scr, v, f) {
+  const co = D.meta.company, vrf = String(co.next.vrf++).padStart(5, '0');
+  logChange(scr, 'Update', v, [['Vehicle Release Date', 'date', v._raw.release, f.date], ['VRF No.', 'text', v._raw.vrf_no, vrf], ['Released To', 'text', null, f.to]]);
+  Object.assign(v._raw, { release: f.date, vrf_no: vrf, release_to: f.to, release_type: f.type, release_items: f.items });
+  return vrf;
+}
+const RELEASE_ITEMS = ['No. of Keys', 'Copy of OR/CR', "Owner's Manual", 'Warranty booklet', 'Spare Tire', 'Tools', 'Jack', 'Radio', 'A/C', 'Accessories'];
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
@@ -782,6 +797,27 @@ const ACTIONS = {
         recordDispatch(scr, rows, dateFor); closeModal(); render(); toast(`Dispatch form sent to ${Object.keys(groups).length} buyer(s). ${rows.length} vehicle(s) moved to Unreleased Unit.`);
       } }] });
   },
+  releaseVehicle(scr, el) {
+    const v = scr.rows().find(r => r.id === el.dataset.rid); if (!v) return;
+    const block = releaseBlock(v);
+    if (block) { openModal({ title: `Cannot release ${v.plate}`, icon: 'ban', body: `<p>${esc(block)}</p>`, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }] }); return; }
+    const items = RELEASE_ITEMS.map((t, i) => `<label class="chkline"><input type="checkbox" class="chk" id="rl-i${i}" value="${esc(t)}">${esc(t)}</label>`).join('');
+    openModal({ title: `Release ${v.plate} (${v.model})`, icon: 'play',
+      body: `<div class="fgrid two"><div class="fld"><label for="rl-date">Release date</label><input class="ctl" type="date" id="rl-date" value="${TODAY}"><span class="err" id="rl-date-err"></span></div>
+        <div class="fld"><label for="rl-to">Released to</label><input class="ctl" id="rl-to" value="${esc(v.customer)}"></div>
+        <div class="fld"><label for="rl-type">Type</label><select class="ctl" id="rl-type"><option>Sold</option><option>Return to Seller</option><option>Others</option></select></div><div></div>
+        <div class="fld full"><span class="lbl">Checklist</span><div class="cols2">${items}</div></div></div>`,
+      note: 'Records the release date and the next VRF No., then prints the release form and gate pass.',
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Release & print', kind: 'pr', icon: 'print', onClick: () => {
+        const date = $('#rl-date').value, err = !date ? 'Release date is required.' : notFuture(date) || notBefore(date, v.dispatch, 'the Dispatch Date');
+        if (err) { $('#rl-date-err').textContent = err; $('#rl-date').classList.add('is-invalid'); return; }
+        const f = { date, to: $('#rl-to').value.trim() || v.customer, type: $('#rl-type').value, items: RELEASE_ITEMS.filter((_, i) => $(`#rl-i${i}`).checked) };
+        const vrf = recordRelease(scr, v, f); render();
+        openModal({ title: `Vehicle release form VRF No. ${vrf}`, icon: 'print', wide: true, body: REPORTS.releaseForm(enrichV(v._raw), f, vrf),
+          footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
+        printModal(); toast(`${v.plate} released (VRF No. ${vrf}).`);
+      } }] });
+  },
   resetFilter(scr) { const ui = U(scr.id); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); },
   entryClear(scr) { U(scr.id).entry = null; render(); },
 };
@@ -828,7 +864,7 @@ function bind() {
     const scr = currentScr(); if (!scr) return; const ui = U(scr.id);
     const s = ev.target.closest('[data-sort]'); if (s) { const k = s.dataset.sort; ui.sort = ui.sort && ui.sort[0] === k && ui.sort[1] === 'asc' ? [k, 'desc'] : [k, 'asc']; render(); return; }
     const p = ev.target.closest('[data-page]'); if (p && !p.disabled) { ui.page = +p.dataset.page; render(); return; }
-    const a = ev.target.closest('[data-act]'); if (a && ACTIONS[a.dataset.act]) ACTIONS[a.dataset.act](scr);
+    const a = ev.target.closest('[data-act]'); if (a && ACTIONS[a.dataset.act]) ACTIONS[a.dataset.act](scr, a);
   });
   $('#burger').addEventListener('click', () => document.body.classList.toggle('nav-open'));
   $('#home-logo').addEventListener('click', () => { location.hash = '#/'; });

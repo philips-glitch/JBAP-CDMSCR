@@ -77,4 +77,20 @@ const REPORTS = {
       <p>Upon failure to remove the Vehicle within the aforementioned period, the Buyer agrees and accepts that a storage fee of Php ${money(PENALTY_PER_DAY)} per day, including weekends, shall be charged until the Vehicle is removed from JBAP's Storage. JBAP shall release the Vehicle only upon full payment of the total computed storage fee.</p>
       ${rptSign([CO().roles.financeManager])}`);
   },
+  // 7. rptVehiclerelease: Vehicle Release Form + Gate Pass (two copies per page, as in the Access sample)
+  releaseForm(v, f, vrf) {
+    const box = on => `<span class="rbox">${on ? '✓' : ''}</span>`, types = ['Sold', 'Return to Seller', 'Others'];
+    const ref = `${v.seller} ${v.auction}`, typeList = types.map(t => `${box(f.type === t)}${t}`).join('<br>');
+    const items = ['No. of Keys', 'Copy of OR/CR', "Owner's Manual", 'Warranty booklet', 'Spare Tire', 'Tools', 'Jack', 'Radio', 'A/C', 'Accessories'].map(t => `<span>${box(f.items.includes(t))}${esc(t)}</span>`).join('');
+    const copy = `<div class="split"><div><h2>Vehicle Release Form</h2><div class="kv"><b>VRF No.</b><span>${vrf}</span><b>Release date</b><span>${shortDate(f.date)}</span><b>Released to</b><span>${esc(f.to)}</span><b>Address</b><span>-</span></div>
+        <p>${typeList}</p>
+        <div class="kv"><b>Make / Model</b><span>${esc(v.model)}</span><b>Fuel type</b><span>${esc(v.fuel || '')}</span><b>Year</b><span>${esc(v.year || '')}</span><b>Plate / CS no.</b><span>${esc(v.plate)}${v.cs_no ? ` / ${esc(v.cs_no)}` : ''}</span><b>Color</b><span>${esc(v.color || '')}</span><b>Auction ref</b><span>${esc(ref)}</span></div>
+        <div class="cols2">${items}</div>
+        <p class="fn">This is to acknowledge receipt of the abovementioned item(s) in good condition and fully aware of the purchase of this vehicle is on "AS IS WHERE IS BASIS". Therefore, I hold JBAP and the Seller, its officers, employees and other authorized representatives free from any and all liabilities arising from any hidden defect on said vehicle, which may be discovered any time after its release to my possession.</p>
+        ${rptSign([`Prepared: ${CO().roles.vwdStaff}`, `Approved: ${CO().roles.vwdManager}`, 'Signature over printed name (buyer / representative)'])}</div>
+      <div><h2>Gate Pass</h2><div class="kv"><b>No.</b><span>${vrf}</span><b>Release date</b><span>${shortDate(f.date)}</span><b>Released to</b><span>${esc(f.to)}</span></div><p>${typeList}</p>
+        <div class="kv"><b>Make / Model</b><span>${esc(v.model)}</span><b>Year</b><span>${esc(v.year || '')}</span><b>Color</b><span>${esc(v.color || '')}</span><b>Fuel type</b><span>${esc(v.fuel || '')}</span><b>Plate / CS no.</b><span>${esc(v.plate)}</span></div>
+        ${rptSign([`Prepared: ${CO().roles.vwdStaff}`, `Approved: ${CO().roles.vwdManager}`])}<p>Date out: ______ &nbsp; Time out: ______</p>${rptSign([`Checked: ${CO().roles.guard}`])}</div></div>`;
+    return rptPage('landscape', copy + copy);
+  },
 };
