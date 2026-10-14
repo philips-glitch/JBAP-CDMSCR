@@ -5,7 +5,28 @@ window.MOCK_DATA = {
  "meta": {
   "demoToday": "2026-10-08",
   "generated": "2026-10-09",
-  "note": "Mock data. FAD lots merged with the MS Access FAD Maintenance screenshots of 10/08/2026 (see README > Seeded test data); FAD and VWD share one live dataset; SMD shows the legacy SMD sample (read-only snapshot)."
+  "note": "Mock data. FAD lots merged with the MS Access FAD Maintenance screenshots of 10/08/2026 (see README > Seeded test data); FAD and VWD share one live dataset; SMD shows the legacy SMD sample (read-only snapshot).",
+  "company": {
+   "name": "JBA Philippines Inc.",
+   "bank": "Metrobank, account no. 000-0-000-000-000 (placeholder)",
+   "emails": {
+    "finance": "finance@jbap.com.ph",
+    "sales": "sales@jbap.com.ph",
+    "vwd": "vwd@jbap.com.ph"
+   },
+   "roles": {
+    "financeHead": "Finance and Admin Head",
+    "financeManager": "Finance and Admin Manager",
+    "fadStaff": "FAD staff",
+    "vwdStaff": "VWD staff",
+    "vwdManager": "VWD Manager",
+    "guard": "Security Guard"
+   },
+   "next": {
+    "vrf": 4583,
+    "atf": 8864
+   }
+  }
  },
  "auctions": {
   "175": [
@@ -125,68 +146,114 @@ window.MOCK_DATA = {
   {
    "code": "EWB",
    "name": "EAST WEST BANKING CORPORATION",
-   "transfer_fee": 10000,
-   "commission_rate": 0.05
+   "transfer_fee": 1000,
+   "commission_rate": 0.05,
+   "release": "doas",
+   "vat_inclusive": true,
+   "net": true
   },
   {
    "code": "SBC",
    "name": "SECURITY BANK CORPORATION",
-   "transfer_fee": 8500,
-   "commission_rate": 0.05
+   "transfer_fee": 400,
+   "commission_rate": 0.05,
+   "release": "doas",
+   "vat_inclusive": true,
+   "net": true,
+   "fee_tiers": [
+    [
+     499999.99,
+     400
+    ],
+    [
+     null,
+     500
+    ]
+   ]
   },
   {
    "code": "JACCS",
    "name": "JACCS FINANCE PHILIPPINES CORPORATION",
-   "transfer_fee": 9000,
-   "commission_rate": 0.05
+   "transfer_fee": 0,
+   "commission_rate": 0.05,
+   "release": "ack",
+   "vat_inclusive": false,
+   "net": true
   },
   {
    "code": "ORIX",
    "name": "ORIX RENTAL CORPORATION",
    "transfer_fee": 7500,
-   "commission_rate": 0.05
+   "commission_rate": 0.05,
+   "release": "doas",
+   "vat_inclusive": false,
+   "net": true
   },
   {
    "code": "ORICO",
    "name": "ORICO AUTO FINANCE PHILIPPINES",
    "transfer_fee": 9500,
-   "commission_rate": 0.05
+   "commission_rate": 0.05,
+   "release": "ack",
+   "vat_inclusive": false,
+   "net": true,
+   "unconfirmed": true
   },
   {
    "code": "TFSPH",
    "name": "TOYOTA FINANCIAL SERVICES PHILIPPINES",
    "transfer_fee": 11000,
-   "commission_rate": 0.05
+   "commission_rate": 0.05,
+   "release": "payment",
+   "vat_inclusive": false,
+   "net": false,
+   "unconfirmed": true
   },
   {
    "code": "ASIALINK",
    "name": "ASIALINK FINANCE CORPORATION",
    "transfer_fee": 8000,
-   "commission_rate": 0.05
+   "commission_rate": 0.05,
+   "release": "ack",
+   "vat_inclusive": false,
+   "net": true,
+   "unconfirmed": true
   },
   {
    "code": "PNB",
    "name": "PHILIPPINE NATIONAL BANK",
    "transfer_fee": 9000,
-   "commission_rate": 0.05
+   "commission_rate": 0.05,
+   "release": "doas",
+   "vat_inclusive": false,
+   "net": true
   },
   {
    "code": "TFS",
    "name": "TFS",
    "transfer_fee": 500,
-   "commission_rate": 0.05
+   "commission_rate": 0.05,
+   "release": "payment",
+   "vat_inclusive": false,
+   "net": false
   },
   {
    "code": "SAFC",
    "name": "SAFC",
    "transfer_fee": 0,
-   "commission_rate": 0.05
+   "commission_rate": 0.05,
+   "release": "ack",
+   "vat_inclusive": false,
+   "net": true
   },
   {
    "code": "INSPIRO",
    "name": "INSPIRO",
    "transfer_fee": 0,
-   "commission_rate": 0.05
+   "commission_rate": 0.05,
+   "release": "ack",
+   "vat_inclusive": false,
+   "net": true
   }
  ],
  "vehicles": [
@@ -201,8 +268,8 @@ window.MOCK_DATA = {
    "cid": "",
    "email": "",
    "status": "Sold",
-   "price": 202650,
-   "transfer_fee": 10000,
+   "price": 211650,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -220,7 +287,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-175121"
+   "vcn": "VCN-175121",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V158",
@@ -233,8 +311,8 @@ window.MOCK_DATA = {
    "cid": "",
    "email": "",
    "status": "Sold",
-   "price": 478000,
-   "transfer_fee": 10000,
+   "price": 487000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -252,7 +330,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-180121"
+   "vcn": "VCN-180121",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V159",
@@ -265,8 +354,8 @@ window.MOCK_DATA = {
    "cid": "",
    "email": "",
    "status": "Sold",
-   "price": 705600,
-   "transfer_fee": 10000,
+   "price": 714600,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -284,7 +373,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-180122"
+   "vcn": "VCN-180122",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V160",
@@ -297,8 +397,8 @@ window.MOCK_DATA = {
    "cid": "",
    "email": "",
    "status": "Sold",
-   "price": 957600,
-   "transfer_fee": 10000,
+   "price": 966600,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -316,7 +416,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-181121"
+   "vcn": "VCN-181121",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V161",
@@ -329,8 +440,8 @@ window.MOCK_DATA = {
    "cid": "",
    "email": "",
    "status": "Sold",
-   "price": 462000,
-   "transfer_fee": 10000,
+   "price": 471000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -348,7 +459,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-181122"
+   "vcn": "VCN-181122",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V162",
@@ -361,8 +483,8 @@ window.MOCK_DATA = {
    "cid": "",
    "email": "",
    "status": "Sold",
-   "price": 378200,
-   "transfer_fee": 10000,
+   "price": 387200,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -380,7 +502,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-181123"
+   "vcn": "VCN-181123",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V163",
@@ -393,8 +526,8 @@ window.MOCK_DATA = {
    "cid": "",
    "email": "",
    "status": "Sold",
-   "price": 457650,
-   "transfer_fee": 10000,
+   "price": 466650,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -412,7 +545,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-181124"
+   "vcn": "VCN-181124",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V164",
@@ -425,8 +569,8 @@ window.MOCK_DATA = {
    "cid": "",
    "email": "",
    "status": "Sold",
-   "price": 620250,
-   "transfer_fee": 10000,
+   "price": 629250,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -444,7 +588,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-181125"
+   "vcn": "VCN-181125",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V165",
@@ -457,8 +612,8 @@ window.MOCK_DATA = {
    "cid": "",
    "email": "",
    "status": "Sold",
-   "price": 655300,
-   "transfer_fee": 10000,
+   "price": 664300,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -476,7 +631,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-181126"
+   "vcn": "VCN-181126",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V166",
@@ -508,7 +674,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-181127"
+   "vcn": "VCN-181127",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V167",
@@ -540,7 +717,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-181128"
+   "vcn": "VCN-181128",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V168",
@@ -572,7 +760,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-181129"
+   "vcn": "VCN-181129",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V169",
@@ -604,7 +803,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-181130"
+   "vcn": "VCN-181130",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V170",
@@ -618,7 +828,7 @@ window.MOCK_DATA = {
    "email": "b9031@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -636,7 +846,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-203121"
+   "vcn": "VCN-203121",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V171",
@@ -650,7 +871,7 @@ window.MOCK_DATA = {
    "email": "b9032@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -668,7 +889,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-203122"
+   "vcn": "VCN-203122",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V172",
@@ -682,7 +914,7 @@ window.MOCK_DATA = {
    "email": "b0193@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -700,7 +932,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-203123"
+   "vcn": "VCN-203123",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V173",
@@ -714,7 +957,7 @@ window.MOCK_DATA = {
    "email": "b9033@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -732,7 +975,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-203124"
+   "vcn": "VCN-203124",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V174",
@@ -746,7 +1000,7 @@ window.MOCK_DATA = {
    "email": "b9031@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -764,7 +1018,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-203125"
+   "vcn": "VCN-203125",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V175",
@@ -778,7 +1043,7 @@ window.MOCK_DATA = {
    "email": "b0193@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -796,7 +1061,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-203126"
+   "vcn": "VCN-203126",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V176",
@@ -810,7 +1086,7 @@ window.MOCK_DATA = {
    "email": "b9031@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -828,7 +1104,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-203127"
+   "vcn": "VCN-203127",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V177",
@@ -842,7 +1129,7 @@ window.MOCK_DATA = {
    "email": "b0313@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -860,7 +1147,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-210121"
+   "vcn": "VCN-210121",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V178",
@@ -874,7 +1172,7 @@ window.MOCK_DATA = {
    "email": "b0313@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -892,7 +1190,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-210122"
+   "vcn": "VCN-210122",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V179",
@@ -906,7 +1215,7 @@ window.MOCK_DATA = {
    "email": "b9034@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -924,7 +1233,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-210123"
+   "vcn": "VCN-210123",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V180",
@@ -938,7 +1258,7 @@ window.MOCK_DATA = {
    "email": "b9022@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -956,7 +1276,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-210124"
+   "vcn": "VCN-210124",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V181",
@@ -970,7 +1301,7 @@ window.MOCK_DATA = {
    "email": "b9034@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -988,7 +1319,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-210125"
+   "vcn": "VCN-210125",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V209",
@@ -1019,7 +1361,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-211001"
+   "vcn": "VCN-211001",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V019",
@@ -1051,7 +1404,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V020",
@@ -1083,7 +1447,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V182",
@@ -1097,7 +1472,7 @@ window.MOCK_DATA = {
    "email": "b0313@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1115,7 +1490,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-211121"
+   "vcn": "VCN-211121",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V183",
@@ -1129,7 +1515,7 @@ window.MOCK_DATA = {
    "email": "b9034@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1147,7 +1533,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-211122"
+   "vcn": "VCN-211122",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V184",
@@ -1161,7 +1558,7 @@ window.MOCK_DATA = {
    "email": "b9021@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1179,7 +1576,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-211123"
+   "vcn": "VCN-211123",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V185",
@@ -1193,7 +1601,7 @@ window.MOCK_DATA = {
    "email": "b0313@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1211,7 +1619,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-211124"
+   "vcn": "VCN-211124",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V155",
@@ -1243,7 +1662,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-212121"
+   "vcn": "VCN-212121",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V186",
@@ -1257,7 +1687,7 @@ window.MOCK_DATA = {
    "email": "b9031@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1275,7 +1705,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-213121"
+   "vcn": "VCN-213121",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V187",
@@ -1289,7 +1730,7 @@ window.MOCK_DATA = {
    "email": "b9031@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1307,7 +1748,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-213122"
+   "vcn": "VCN-213122",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V188",
@@ -1321,7 +1773,7 @@ window.MOCK_DATA = {
    "email": "b9031@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1339,7 +1791,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-213123"
+   "vcn": "VCN-213123",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V189",
@@ -1353,7 +1816,7 @@ window.MOCK_DATA = {
    "email": "b9035@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1371,7 +1834,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-213124"
+   "vcn": "VCN-213124",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V190",
@@ -1385,7 +1859,7 @@ window.MOCK_DATA = {
    "email": "b9031@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1403,7 +1877,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-213125"
+   "vcn": "VCN-213125",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V191",
@@ -1417,7 +1902,7 @@ window.MOCK_DATA = {
    "email": "b9031@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1435,7 +1920,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-213126"
+   "vcn": "VCN-213126",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V192",
@@ -1449,7 +1945,7 @@ window.MOCK_DATA = {
    "email": "b9031@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1467,7 +1963,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-213127"
+   "vcn": "VCN-213127",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V193",
@@ -1481,7 +1988,7 @@ window.MOCK_DATA = {
    "email": "b9031@buyers.example.com",
    "status": "Sold",
    "price": null,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1499,7 +2006,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-213128"
+   "vcn": "VCN-213128",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V208",
@@ -1530,7 +2048,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-214010"
+   "vcn": "VCN-214010",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V156",
@@ -1543,8 +2072,8 @@ window.MOCK_DATA = {
    "cid": "",
    "email": "",
    "status": "Sold",
-   "price": 366900,
-   "transfer_fee": 8500,
+   "price": 375000,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1562,7 +2091,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-214121"
+   "vcn": "VCN-214121",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V206",
@@ -1593,7 +2133,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-215015"
+   "vcn": "VCN-215015",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V102",
@@ -1607,7 +2158,7 @@ window.MOCK_DATA = {
    "email": "b9010@buyers.example.com",
    "status": "Sold",
    "price": 567000,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": 15000,
    "for_baaf": false,
    "print_seller": false,
@@ -1625,7 +2176,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-215031"
+   "vcn": "VCN-215031",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V207",
@@ -1656,7 +2218,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-215045"
+   "vcn": "VCN-215045",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V200",
@@ -1687,7 +2260,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-215092"
+   "vcn": "VCN-215092",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V018",
@@ -1719,7 +2303,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V204",
@@ -1750,7 +2345,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-216009"
+   "vcn": "VCN-216009",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V012",
@@ -1782,7 +2388,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V103",
@@ -1796,7 +2413,7 @@ window.MOCK_DATA = {
    "email": "b9010@buyers.example.com",
    "status": "Sold",
    "price": 542000,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -1814,7 +2431,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-216030"
+   "vcn": "VCN-216030",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V201",
@@ -1845,7 +2473,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-216037"
+   "vcn": "VCN-216037",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V205",
@@ -1876,7 +2515,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-216038"
+   "vcn": "VCN-216038",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V203",
@@ -1907,7 +2557,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-216097"
+   "vcn": "VCN-216097",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V147",
@@ -1938,7 +2599,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-216121"
+   "vcn": "VCN-216121",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V149",
@@ -1969,7 +2641,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-216122"
+   "vcn": "VCN-216122",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V150",
@@ -2000,7 +2683,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-216123"
+   "vcn": "VCN-216123",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V195",
@@ -2031,7 +2725,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217001"
+   "vcn": "VCN-217001",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V123",
@@ -2044,8 +2749,8 @@ window.MOCK_DATA = {
    "cid": "B0193",
    "email": "b0193@buyers.example.com",
    "status": "Sold",
-   "price": 291900,
-   "transfer_fee": 8500,
+   "price": 300000,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2063,7 +2768,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217012"
+   "vcn": "VCN-217012",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V092",
@@ -2077,7 +2793,7 @@ window.MOCK_DATA = {
    "email": "b9007@buyers.example.com",
    "status": "Sold",
    "price": 773100,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": 22100,
    "for_baaf": false,
    "print_seller": false,
@@ -2095,7 +2811,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217015"
+   "vcn": "VCN-217015",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V109",
@@ -2108,8 +2835,8 @@ window.MOCK_DATA = {
    "cid": "B2241",
    "email": "b2241@buyers.example.com",
    "status": "Sold",
-   "price": 582000,
-   "transfer_fee": 8500,
+   "price": 590000,
+   "transfer_fee": 500,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2127,7 +2854,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217020"
+   "vcn": "VCN-217020",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V126",
@@ -2140,8 +2878,8 @@ window.MOCK_DATA = {
    "cid": "B0193",
    "email": "b0193@buyers.example.com",
    "status": "Sold",
-   "price": 229512,
-   "transfer_fee": 8500,
+   "price": 237612,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2159,7 +2897,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217023"
+   "vcn": "VCN-217023",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V108",
@@ -2172,8 +2921,8 @@ window.MOCK_DATA = {
    "cid": "B2241",
    "email": "b2241@buyers.example.com",
    "status": "Sold",
-   "price": 617000,
-   "transfer_fee": 8500,
+   "price": 625000,
+   "transfer_fee": 500,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2191,7 +2940,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217025"
+   "vcn": "VCN-217025",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V124",
@@ -2204,8 +2964,8 @@ window.MOCK_DATA = {
    "cid": "B0193",
    "email": "b0193@buyers.example.com",
    "status": "Sold",
-   "price": 242400,
-   "transfer_fee": 8500,
+   "price": 250500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2223,7 +2983,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217027"
+   "vcn": "VCN-217027",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V202",
@@ -2254,7 +3025,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217048"
+   "vcn": "VCN-217048",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V001",
@@ -2285,7 +3067,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217056"
+   "vcn": "VCN-217056",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V122",
@@ -2298,8 +3091,8 @@ window.MOCK_DATA = {
    "cid": "B0193",
    "email": "b0193@buyers.example.com",
    "status": "Sold",
-   "price": 353116,
-   "transfer_fee": 8500,
+   "price": 361216,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2317,7 +3110,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217058"
+   "vcn": "VCN-217058",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V014",
@@ -2349,7 +3153,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V197",
@@ -2380,7 +3195,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217066"
+   "vcn": "VCN-217066",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V196",
@@ -2411,7 +3237,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217069"
+   "vcn": "VCN-217069",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V194",
@@ -2442,7 +3279,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217070"
+   "vcn": "VCN-217070",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V125",
@@ -2455,8 +3303,8 @@ window.MOCK_DATA = {
    "cid": "B0193",
    "email": "b0193@buyers.example.com",
    "status": "Sold",
-   "price": 241900,
-   "transfer_fee": 8500,
+   "price": 250000,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2474,7 +3322,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217073"
+   "vcn": "VCN-217073",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V110",
@@ -2487,8 +3346,8 @@ window.MOCK_DATA = {
    "cid": "B2241",
    "email": "b2241@buyers.example.com",
    "status": "Sold",
-   "price": 221900,
-   "transfer_fee": 8500,
+   "price": 230000,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2506,7 +3365,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217076"
+   "vcn": "VCN-217076",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V127",
@@ -2519,8 +3389,8 @@ window.MOCK_DATA = {
    "cid": "B0193",
    "email": "b0193@buyers.example.com",
    "status": "Sold",
-   "price": 204900,
-   "transfer_fee": 8500,
+   "price": 213000,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2538,7 +3408,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217078"
+   "vcn": "VCN-217078",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V015",
@@ -2570,7 +3451,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V002",
@@ -2584,7 +3476,7 @@ window.MOCK_DATA = {
    "email": "b0904@buyers.example.com",
    "status": "Sold",
    "price": 353000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2602,7 +3494,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217121"
+   "vcn": "VCN-217121",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V003",
@@ -2616,7 +3519,7 @@ window.MOCK_DATA = {
    "email": "b0313@buyers.example.com",
    "status": "Sold",
    "price": 398000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2634,7 +3537,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217122"
+   "vcn": "VCN-217122",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V004",
@@ -2648,7 +3562,7 @@ window.MOCK_DATA = {
    "email": "b0904@buyers.example.com",
    "status": "Sold",
    "price": 373000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2666,7 +3580,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217123"
+   "vcn": "VCN-217123",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V005",
@@ -2680,7 +3605,7 @@ window.MOCK_DATA = {
    "email": "b0313@buyers.example.com",
    "status": "Sold",
    "price": 400000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2698,7 +3623,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217124"
+   "vcn": "VCN-217124",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V006",
@@ -2712,7 +3648,7 @@ window.MOCK_DATA = {
    "email": "b0313@buyers.example.com",
    "status": "Sold",
    "price": 465000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2730,7 +3666,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217125"
+   "vcn": "VCN-217125",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V007",
@@ -2744,7 +3691,7 @@ window.MOCK_DATA = {
    "email": "b0313@buyers.example.com",
    "status": "Sold",
    "price": 555000,
-   "transfer_fee": 8500,
+   "transfer_fee": 500,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2762,7 +3709,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217126"
+   "vcn": "VCN-217126",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V008",
@@ -2776,7 +3734,7 @@ window.MOCK_DATA = {
    "email": "b0313@buyers.example.com",
    "status": "Sold",
    "price": 420000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -2794,7 +3752,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217127"
+   "vcn": "VCN-217127",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V128",
@@ -2807,10 +3776,9 @@ window.MOCK_DATA = {
    "cid": "B9013",
    "email": "b9013@buyers.example.com",
    "status": "Sold",
-   "price": 463900,
-   "transfer_fee": 8500,
+   "price": 472000,
+   "transfer_fee": 400,
    "rebate": null,
-   "to_jbap": 20439.29,
    "for_baaf": false,
    "print_seller": true,
    "print_comm": false,
@@ -2827,7 +3795,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217128"
+   "vcn": "VCN-217128",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V129",
@@ -2840,10 +3819,9 @@ window.MOCK_DATA = {
    "cid": "B9006",
    "email": "b9006@buyers.example.com",
    "status": "Sold",
-   "price": 562000,
-   "transfer_fee": 8500,
+   "price": 570000,
+   "transfer_fee": 500,
    "rebate": null,
-   "to_jbap": 24683.04,
    "for_baaf": false,
    "print_seller": true,
    "print_comm": false,
@@ -2860,7 +3838,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217129"
+   "vcn": "VCN-217129",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V130",
@@ -2873,10 +3862,9 @@ window.MOCK_DATA = {
    "cid": "B9014",
    "email": "b9014@buyers.example.com",
    "status": "Sold",
-   "price": 179900,
-   "transfer_fee": 8500,
+   "price": 188000,
+   "transfer_fee": 400,
    "rebate": null,
-   "to_jbap": 8141.07,
    "for_baaf": false,
    "print_seller": true,
    "print_comm": false,
@@ -2893,7 +3881,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217130"
+   "vcn": "VCN-217130",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V131",
@@ -2906,10 +3905,9 @@ window.MOCK_DATA = {
    "cid": "B9015",
    "email": "b9015@buyers.example.com",
    "status": "Sold",
-   "price": 313900,
-   "transfer_fee": 8500,
+   "price": 322000,
+   "transfer_fee": 400,
    "rebate": null,
-   "to_jbap": 13943.75,
    "for_baaf": false,
    "print_seller": true,
    "print_comm": false,
@@ -2926,7 +3924,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217131"
+   "vcn": "VCN-217131",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V132",
@@ -2939,10 +3948,9 @@ window.MOCK_DATA = {
    "cid": "B2196",
    "email": "b2196@buyers.example.com",
    "status": "Sold",
-   "price": 77900,
-   "transfer_fee": 8500,
+   "price": 86000,
+   "transfer_fee": 400,
    "rebate": null,
-   "to_jbap": 3724.11,
    "for_baaf": false,
    "print_seller": true,
    "print_comm": false,
@@ -2959,7 +3967,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217132"
+   "vcn": "VCN-217132",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V133",
@@ -2972,10 +3991,9 @@ window.MOCK_DATA = {
    "cid": "B2196",
    "email": "b2196@buyers.example.com",
    "status": "Sold",
-   "price": 221900,
-   "transfer_fee": 8500,
+   "price": 230000,
+   "transfer_fee": 400,
    "rebate": null,
-   "to_jbap": 9959.82,
    "for_baaf": false,
    "print_seller": true,
    "print_comm": false,
@@ -2992,7 +4010,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217133"
+   "vcn": "VCN-217133",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V148",
@@ -3023,7 +4052,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217134"
+   "vcn": "VCN-217134",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V151",
@@ -3054,7 +4094,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217135"
+   "vcn": "VCN-217135",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V152",
@@ -3085,7 +4136,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217136"
+   "vcn": "VCN-217136",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V153",
@@ -3116,7 +4178,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217137"
+   "vcn": "VCN-217137",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V154",
@@ -3147,7 +4220,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-217138"
+   "vcn": "VCN-217138",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V198",
@@ -3178,7 +4262,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-218001"
+   "vcn": "VCN-218001",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V135",
@@ -3191,10 +4286,9 @@ window.MOCK_DATA = {
    "cid": "B9017",
    "email": "b9017@buyers.example.com",
    "status": "Sold",
-   "price": 377100,
-   "transfer_fee": 10000,
+   "price": 386100,
+   "transfer_fee": 1000,
    "rebate": 9100,
-   "to_jbap": 16719.51,
    "for_baaf": false,
    "print_seller": false,
    "print_comm": false,
@@ -3211,7 +4305,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-218005"
+   "vcn": "VCN-218005",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V199",
@@ -3242,7 +4347,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-218013"
+   "vcn": "VCN-218013",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V021",
@@ -3256,7 +4372,7 @@ window.MOCK_DATA = {
    "email": "b1968@buyers.example.com",
    "status": "Sold",
    "price": 596000,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "vcn": "VCN-218014",
    "for_baaf": false,
@@ -3274,7 +4390,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": true
+   "billed": true,
+   "location": "Pasay City",
+   "year": 2015,
+   "color": "BLACK",
+   "fuel": "Gas",
+   "cs_no": "ND8380",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V022",
@@ -3288,7 +4415,7 @@ window.MOCK_DATA = {
    "email": "b0214@buyers.example.com",
    "status": "Sold",
    "price": 883500,
-   "transfer_fee": 9000,
+   "transfer_fee": 0,
    "rebate": null,
    "vcn": "VCN-218015",
    "for_baaf": false,
@@ -3306,7 +4433,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": true
+   "billed": true,
+   "location": "Pasay City",
+   "year": 2022,
+   "color": "RED",
+   "fuel": "Gas",
+   "cs_no": "AA6299",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V111",
@@ -3319,8 +4457,8 @@ window.MOCK_DATA = {
    "cid": "B1445",
    "email": "b1445@buyers.example.com",
    "status": "Sold",
-   "price": 399000,
-   "transfer_fee": 10000,
+   "price": 408000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -3338,7 +4476,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-218023"
+   "vcn": "VCN-218023",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V136",
@@ -3351,10 +4500,9 @@ window.MOCK_DATA = {
    "cid": "B9018",
    "email": "b9018@buyers.example.com",
    "status": "Sold",
-   "price": 281250,
-   "transfer_fee": 10000,
+   "price": 290250,
+   "transfer_fee": 1000,
    "rebate": 2250,
-   "to_jbap": 12568.86,
    "for_baaf": false,
    "print_seller": false,
    "print_comm": false,
@@ -3371,7 +4519,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-218025"
+   "vcn": "VCN-218025",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V096",
@@ -3385,7 +4544,7 @@ window.MOCK_DATA = {
    "email": "b1825@buyers.example.com",
    "status": "Sold",
    "price": 383000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -3403,7 +4562,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-218032"
+   "vcn": "VCN-218032",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V023",
@@ -3435,7 +4605,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": true
+   "billed": true,
+   "location": "Pasay City",
+   "year": 2019,
+   "color": "GRAY",
+   "fuel": "Diesel",
+   "cs_no": "AA4218",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V134",
@@ -3448,10 +4629,9 @@ window.MOCK_DATA = {
    "cid": "B9016",
    "email": "b9016@buyers.example.com",
    "status": "Sold",
-   "price": 370800,
-   "transfer_fee": 10000,
+   "price": 379800,
+   "transfer_fee": 1000,
    "rebate": 10800,
-   "to_jbap": 16446.7,
    "for_baaf": false,
    "print_seller": false,
    "print_comm": false,
@@ -3468,7 +4648,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-218040"
+   "vcn": "VCN-218040",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V121",
@@ -3481,8 +4672,8 @@ window.MOCK_DATA = {
    "cid": "B0136",
    "email": "b0136@buyers.example.com",
    "status": "Sold",
-   "price": 450750,
-   "transfer_fee": 10000,
+   "price": 459750,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -3500,7 +4691,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-218042"
+   "vcn": "VCN-218042",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V024",
@@ -3514,7 +4716,7 @@ window.MOCK_DATA = {
    "email": "b1296@buyers.example.com",
    "status": "Sold",
    "price": 578600,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "vcn": "VCN-218046",
    "for_baaf": false,
@@ -3532,7 +4734,18 @@ window.MOCK_DATA = {
    "orig_docs": "2026-10-07",
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": true
+   "billed": true,
+   "location": "Pasay City",
+   "year": 2016,
+   "color": "BLUE",
+   "fuel": "Diesel",
+   "cs_no": "DA2137",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V087",
@@ -3546,7 +4759,7 @@ window.MOCK_DATA = {
    "email": "b0136@buyers.example.com",
    "status": "Sold",
    "price": 450000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -3564,7 +4777,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-218049"
+   "vcn": "VCN-218049",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V016",
@@ -3596,7 +4820,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V025",
@@ -3610,7 +4845,7 @@ window.MOCK_DATA = {
    "email": "b1897@buyers.example.com",
    "status": "Sold",
    "price": 501000,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "vcn": "VCN-218058",
    "for_baaf": false,
@@ -3628,7 +4863,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": true
+   "billed": true,
+   "location": "Pasay City",
+   "year": 2023,
+   "color": "WHITE",
+   "fuel": "Gas",
+   "cs_no": "NI0056",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V026",
@@ -3642,7 +4888,7 @@ window.MOCK_DATA = {
    "email": "b2001@buyers.example.com",
    "status": "Sold",
    "price": 198500,
-   "transfer_fee": 9000,
+   "transfer_fee": 0,
    "rebate": 3000,
    "vcn": "VCN-218060",
    "for_baaf": false,
@@ -3660,7 +4906,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": "2026-09-25",
-   "billed": true
+   "billed": true,
+   "location": "Pasay City",
+   "year": 2020,
+   "color": "SILVER",
+   "fuel": "Diesel",
+   "cs_no": "NI7975",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V027",
@@ -3692,7 +4949,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": true
+   "billed": true,
+   "location": "Pasay City",
+   "year": 2017,
+   "color": "BLACK",
+   "fuel": "Gas",
+   "cs_no": "NG5894",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V028",
@@ -3706,7 +4974,7 @@ window.MOCK_DATA = {
    "email": "b0389@buyers.example.com",
    "status": "Sold",
    "price": 226500,
-   "transfer_fee": 9000,
+   "transfer_fee": 0,
    "rebate": 3000,
    "vcn": "VCN-218074",
    "for_baaf": false,
@@ -3724,7 +4992,18 @@ window.MOCK_DATA = {
    "orig_docs": "2026-10-06",
    "to_buyer": null,
    "rebate_paid": "2026-09-28",
-   "billed": true
+   "billed": true,
+   "location": "Pasay City",
+   "year": 2024,
+   "color": "RED",
+   "fuel": "Gas",
+   "cs_no": "AA3813",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V097",
@@ -3738,7 +5017,7 @@ window.MOCK_DATA = {
    "email": "b1825@buyers.example.com",
    "status": "Sold",
    "price": 285000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -3756,7 +5035,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-218075"
+   "vcn": "VCN-218075",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V029",
@@ -3770,7 +5060,7 @@ window.MOCK_DATA = {
    "email": "b0110@buyers.example.com",
    "status": "Sold",
    "price": 650000,
-   "transfer_fee": 8500,
+   "transfer_fee": 500,
    "rebate": 5000,
    "vcn": "VCN-218101",
    "for_baaf": false,
@@ -3788,7 +5078,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": "2026-10-03",
-   "billed": true
+   "billed": true,
+   "location": "Pasay City",
+   "year": 2021,
+   "color": "GRAY",
+   "fuel": "Gas",
+   "cs_no": "NK1732",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V030",
@@ -3820,7 +5121,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": true
+   "billed": true,
+   "location": "Pasay City",
+   "year": 2018,
+   "color": "BLUE",
+   "fuel": "Diesel",
+   "cs_no": "GB9651",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V031",
@@ -3834,7 +5146,7 @@ window.MOCK_DATA = {
    "email": "b0734@buyers.example.com",
    "status": "Not Sold",
    "price": 842000,
-   "transfer_fee": 8500,
+   "transfer_fee": 500,
    "rebate": null,
    "vcn": "VCN-218114",
    "for_baaf": false,
@@ -3852,7 +5164,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2015,
+   "color": "WHITE",
+   "fuel": "Gas",
+   "cs_no": "AB7570",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V141",
@@ -3865,10 +5188,9 @@ window.MOCK_DATA = {
    "cid": "B9020",
    "email": "b9020@buyers.example.com",
    "status": "Sold",
-   "price": 857250,
-   "transfer_fee": 10000,
+   "price": 866250,
+   "transfer_fee": 1000,
    "rebate": 22250,
-   "to_jbap": 37511.72,
    "for_baaf": false,
    "print_seller": false,
    "print_comm": false,
@@ -3885,7 +5207,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219001"
+   "vcn": "VCN-219001",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V017",
@@ -3899,7 +5232,7 @@ window.MOCK_DATA = {
    "email": "b9003@buyers.example.com",
    "status": "Sold",
    "price": 1350000,
-   "transfer_fee": 8500,
+   "transfer_fee": 500,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -3917,7 +5250,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219003"
+   "vcn": "VCN-219003",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V107",
@@ -3930,8 +5274,8 @@ window.MOCK_DATA = {
    "cid": "B2241",
    "email": "b2241@buyers.example.com",
    "status": "Sold",
-   "price": 1128000,
-   "transfer_fee": 10000,
+   "price": 1137000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -3949,7 +5293,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219004"
+   "vcn": "VCN-219004",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V139",
@@ -3962,10 +5317,9 @@ window.MOCK_DATA = {
    "cid": "B9019",
    "email": "b9019@buyers.example.com",
    "status": "Sold",
-   "price": 977400,
-   "transfer_fee": 10000,
+   "price": 986400,
+   "transfer_fee": 1000,
    "rebate": 6400,
-   "to_jbap": 42714.64,
    "for_baaf": false,
    "print_seller": false,
    "print_comm": false,
@@ -3982,7 +5336,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219005"
+   "vcn": "VCN-219005",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V093",
@@ -3996,7 +5361,7 @@ window.MOCK_DATA = {
    "email": "b9008@buyers.example.com",
    "status": "Sold",
    "price": 428000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -4014,7 +5379,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219012"
+   "vcn": "VCN-219012",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V098",
@@ -4028,7 +5404,7 @@ window.MOCK_DATA = {
    "email": "b1825@buyers.example.com",
    "status": "Sold",
    "price": 351000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -4046,7 +5422,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219021"
+   "vcn": "VCN-219021",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V032",
@@ -4060,7 +5447,7 @@ window.MOCK_DATA = {
    "email": "b2001@buyers.example.com",
    "status": "Sold",
    "price": 754500,
-   "transfer_fee": 9000,
+   "transfer_fee": 0,
    "rebate": 5000,
    "vcn": "VCN-219026",
    "for_baaf": false,
@@ -4078,7 +5465,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": true
+   "billed": true,
+   "location": "Pasay City",
+   "year": 2022,
+   "color": "SILVER",
+   "fuel": "Diesel",
+   "cs_no": "NC5489",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V086",
@@ -4092,7 +5490,7 @@ window.MOCK_DATA = {
    "email": "b9001@buyers.example.com",
    "status": "Sold",
    "price": 400000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -4110,7 +5508,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219027"
+   "vcn": "VCN-219027",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V033",
@@ -4142,7 +5551,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2019,
+   "color": "BLACK",
+   "fuel": "Gas",
+   "cs_no": "ND3408",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V138",
@@ -4155,10 +5575,9 @@ window.MOCK_DATA = {
    "cid": "B9019",
    "email": "b9019@buyers.example.com",
    "status": "Sold",
-   "price": 925200,
-   "transfer_fee": 10000,
+   "price": 934200,
+   "transfer_fee": 1000,
    "rebate": 25200,
-   "to_jbap": 40454.2,
    "for_baaf": false,
    "print_seller": false,
    "print_comm": false,
@@ -4175,7 +5594,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219035"
+   "vcn": "VCN-219035",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V034",
@@ -4207,7 +5637,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2016,
+   "color": "RED",
+   "fuel": "Gas",
+   "cs_no": "HK1327",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V099",
@@ -4221,7 +5662,7 @@ window.MOCK_DATA = {
    "email": "b1825@buyers.example.com",
    "status": "Sold",
    "price": 309000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -4239,7 +5680,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219041"
+   "vcn": "VCN-219041",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V088",
@@ -4253,7 +5705,7 @@ window.MOCK_DATA = {
    "email": "b9002@buyers.example.com",
    "status": "Sold",
    "price": 375000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -4271,7 +5723,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219044"
+   "vcn": "VCN-219044",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V010",
@@ -4303,7 +5766,18 @@ window.MOCK_DATA = {
    "orig_docs": "2026-10-08",
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V036",
@@ -4317,7 +5791,7 @@ window.MOCK_DATA = {
    "email": "b0556@buyers.example.com",
    "status": "Sold",
    "price": 181500,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "vcn": "VCN-219053",
    "for_baaf": false,
@@ -4335,7 +5809,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2020,
+   "color": "BLUE",
+   "fuel": "Diesel",
+   "cs_no": "CC7165",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V140",
@@ -4348,10 +5833,9 @@ window.MOCK_DATA = {
    "cid": "B9016",
    "email": "b9016@buyers.example.com",
    "status": "Sold",
-   "price": 342000,
-   "transfer_fee": 10000,
+   "price": 351000,
+   "transfer_fee": 1000,
    "rebate": 10000,
-   "to_jbap": 15199.55,
    "for_baaf": false,
    "print_seller": false,
    "print_comm": false,
@@ -4368,7 +5852,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219057"
+   "vcn": "VCN-219057",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V100",
@@ -4382,7 +5877,7 @@ window.MOCK_DATA = {
    "email": "b1825@buyers.example.com",
    "status": "Sold",
    "price": 343000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -4400,7 +5895,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219060"
+   "vcn": "VCN-219060",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V094",
@@ -4414,7 +5920,7 @@ window.MOCK_DATA = {
    "email": "b9008@buyers.example.com",
    "status": "Sold",
    "price": 778000,
-   "transfer_fee": 8500,
+   "transfer_fee": 500,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -4432,7 +5938,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219072"
+   "vcn": "VCN-219072",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V037",
@@ -4464,7 +5981,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2017,
+   "color": "WHITE",
+   "fuel": "Diesel",
+   "cs_no": "NE5084",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V011",
@@ -4496,7 +6024,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V038",
@@ -4510,7 +6049,7 @@ window.MOCK_DATA = {
    "email": "b1968@buyers.example.com",
    "status": "Sold",
    "price": 398000,
-   "transfer_fee": 9000,
+   "transfer_fee": 0,
    "rebate": 10000,
    "vcn": "VCN-219084",
    "for_baaf": false,
@@ -4528,7 +6067,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": "2026-10-07",
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2024,
+   "color": "SILVER",
+   "fuel": "Gas",
+   "cs_no": "EF3003",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V039",
@@ -4542,7 +6092,7 @@ window.MOCK_DATA = {
    "email": "b0541@buyers.example.com",
    "status": "Sold",
    "price": 614000,
-   "transfer_fee": 9000,
+   "transfer_fee": 0,
    "rebate": null,
    "vcn": "VCN-219086",
    "for_baaf": false,
@@ -4560,7 +6110,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2021,
+   "color": "BLACK",
+   "fuel": "Diesel",
+   "cs_no": "C40922",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V040",
@@ -4574,7 +6135,7 @@ window.MOCK_DATA = {
    "email": "b1897@buyers.example.com",
    "status": "Sold",
    "price": 693500,
-   "transfer_fee": 9000,
+   "transfer_fee": 0,
    "rebate": null,
    "vcn": "VCN-219088",
    "for_baaf": false,
@@ -4592,7 +6153,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2018,
+   "color": "RED",
+   "fuel": "Gas",
+   "cs_no": "NG8841",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V041",
@@ -4606,7 +6178,7 @@ window.MOCK_DATA = {
    "email": "b1763@buyers.example.com",
    "status": "Sold",
    "price": 321500,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "vcn": "VCN-219096",
    "for_baaf": false,
@@ -4624,7 +6196,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2015,
+   "color": "GRAY",
+   "fuel": "Gas",
+   "cs_no": "NI6760",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V042",
@@ -4656,7 +6239,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2022,
+   "color": "BLUE",
+   "fuel": "Gas",
+   "cs_no": "NI4679",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V043",
@@ -4670,7 +6264,7 @@ window.MOCK_DATA = {
    "email": "b0537@buyers.example.com",
    "status": "Sold",
    "price": 456500,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": 10000,
    "vcn": "VCN-219109",
    "for_baaf": false,
@@ -4688,7 +6282,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": "2026-10-06",
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2019,
+   "color": "WHITE",
+   "fuel": "Diesel",
+   "cs_no": "NK2598",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V044",
@@ -4702,7 +6307,7 @@ window.MOCK_DATA = {
    "email": "b2001@buyers.example.com",
    "status": "Sold",
    "price": 695000,
-   "transfer_fee": 8500,
+   "transfer_fee": 500,
    "rebate": null,
    "vcn": "VCN-219110",
    "for_baaf": false,
@@ -4720,7 +6325,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2016,
+   "color": "SILVER",
+   "fuel": "Gas",
+   "cs_no": "VA0517",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V045",
@@ -4752,7 +6368,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2023,
+   "color": "BLACK",
+   "fuel": "Gas",
+   "cs_no": "NC8436",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V137",
@@ -4765,10 +6392,9 @@ window.MOCK_DATA = {
    "cid": "B9006",
    "email": "b9006@buyers.example.com",
    "status": "Sold",
-   "price": 321300,
-   "transfer_fee": 10000,
+   "price": 330300,
+   "transfer_fee": 1000,
    "rebate": null,
-   "to_jbap": 14303.17,
    "for_baaf": false,
    "print_seller": false,
    "print_comm": false,
@@ -4785,7 +6411,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219121"
+   "vcn": "VCN-219121",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V142",
@@ -4798,10 +6435,9 @@ window.MOCK_DATA = {
    "cid": "B9021",
    "email": "b9021@buyers.example.com",
    "status": "Sold",
-   "price": 517000,
-   "transfer_fee": 10000,
+   "price": 526000,
+   "transfer_fee": 1000,
    "rebate": null,
-   "to_jbap": 22777.68,
    "for_baaf": false,
    "print_seller": false,
    "print_comm": false,
@@ -4818,7 +6454,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219122"
+   "vcn": "VCN-219122",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V143",
@@ -4831,10 +6478,9 @@ window.MOCK_DATA = {
    "cid": "B9022",
    "email": "b9022@buyers.example.com",
    "status": "Sold",
-   "price": 559000,
-   "transfer_fee": 10000,
+   "price": 568000,
+   "transfer_fee": 1000,
    "rebate": null,
-   "to_jbap": 24596.43,
    "for_baaf": false,
    "print_seller": false,
    "print_comm": false,
@@ -4851,7 +6497,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219123"
+   "vcn": "VCN-219123",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V146",
@@ -4883,7 +6540,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-219124"
+   "vcn": "VCN-219124",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V035",
@@ -4897,7 +6565,7 @@ window.MOCK_DATA = {
    "email": "b1743@buyers.example.com",
    "status": "Sold",
    "price": 719000,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "vcn": "VCN-219125",
    "for_baaf": false,
@@ -4915,7 +6583,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2023,
+   "color": "GRAY",
+   "fuel": "Gas",
+   "cs_no": "ND9246",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V046",
@@ -4947,7 +6626,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2020,
+   "color": "RED",
+   "fuel": "Gas",
+   "cs_no": "NB6355",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V112",
@@ -4979,7 +6669,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220002"
+   "vcn": "VCN-220002",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V047",
@@ -5011,7 +6712,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2017,
+   "color": "GRAY",
+   "fuel": "Gas",
+   "cs_no": "NA4274",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V104",
@@ -5025,7 +6737,7 @@ window.MOCK_DATA = {
    "email": "b9011@buyers.example.com",
    "status": "Sold",
    "price": 800000,
-   "transfer_fee": 8500,
+   "transfer_fee": 500,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -5043,7 +6755,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220007"
+   "vcn": "VCN-220007",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V144",
@@ -5059,7 +6782,6 @@ window.MOCK_DATA = {
    "price": 563000,
    "transfer_fee": 500,
    "rebate": null,
-   "to_jbap": 0,
    "for_baaf": false,
    "print_seller": false,
    "print_comm": false,
@@ -5076,7 +6798,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220014"
+   "vcn": "VCN-220014",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V114",
@@ -5108,7 +6841,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220015"
+   "vcn": "VCN-220015",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V116",
@@ -5140,7 +6884,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220016"
+   "vcn": "VCN-220016",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V120",
@@ -5172,7 +6927,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220017"
+   "vcn": "VCN-220017",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V145",
@@ -5188,7 +6954,6 @@ window.MOCK_DATA = {
    "price": 563000,
    "transfer_fee": 500,
    "rebate": null,
-   "to_jbap": 0,
    "for_baaf": false,
    "print_seller": false,
    "print_comm": false,
@@ -5205,7 +6970,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220018"
+   "vcn": "VCN-220018",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V117",
@@ -5237,7 +7013,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220019"
+   "vcn": "VCN-220019",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V013",
@@ -5269,7 +7056,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220020"
+   "vcn": "VCN-220020",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V050",
@@ -5301,7 +7099,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2018,
+   "color": "SILVER",
+   "fuel": "Gas",
+   "cs_no": "NH8031",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V051",
@@ -5315,7 +7124,7 @@ window.MOCK_DATA = {
    "email": "b0339@buyers.example.com",
    "status": "Sold",
    "price": 975000,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "vcn": "VCN-220025",
    "for_baaf": false,
@@ -5333,7 +7142,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2015,
+   "color": "BLACK",
+   "fuel": "Gas",
+   "cs_no": "NC5950",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V095",
@@ -5347,7 +7167,7 @@ window.MOCK_DATA = {
    "email": "b9009@buyers.example.com",
    "status": "Sold",
    "price": 475150,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": 10150,
    "for_baaf": false,
    "print_seller": false,
@@ -5365,7 +7185,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220032"
+   "vcn": "VCN-220032",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V091",
@@ -5379,7 +7210,7 @@ window.MOCK_DATA = {
    "email": "b9006@buyers.example.com",
    "status": "Sold",
    "price": 714000,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -5397,7 +7228,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220037"
+   "vcn": "VCN-220037",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V105",
@@ -5411,7 +7253,7 @@ window.MOCK_DATA = {
    "email": "b9011@buyers.example.com",
    "status": "Sold",
    "price": 582000,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -5429,7 +7271,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220040"
+   "vcn": "VCN-220040",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V052",
@@ -5443,7 +7296,7 @@ window.MOCK_DATA = {
    "email": "b1976@buyers.example.com",
    "status": "Sold",
    "price": 714600,
-   "transfer_fee": 9000,
+   "transfer_fee": 0,
    "rebate": null,
    "vcn": "VCN-220041",
    "for_baaf": false,
@@ -5461,7 +7314,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2022,
+   "color": "RED",
+   "fuel": "Diesel",
+   "cs_no": "DA3869",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V106",
@@ -5475,7 +7339,7 @@ window.MOCK_DATA = {
    "email": "b9012@buyers.example.com",
    "status": "Sold",
    "price": 270000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -5493,7 +7357,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220043"
+   "vcn": "VCN-220043",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V118",
@@ -5525,7 +7400,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220046"
+   "vcn": "VCN-220046",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V115",
@@ -5557,7 +7443,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220050"
+   "vcn": "VCN-220050",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V053",
@@ -5571,7 +7468,7 @@ window.MOCK_DATA = {
    "email": "b1976@buyers.example.com",
    "status": "Sold",
    "price": 956500,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "vcn": "VCN-220053",
    "for_baaf": false,
@@ -5589,7 +7486,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2019,
+   "color": "GRAY",
+   "fuel": "Gas",
+   "cs_no": "NF1788",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V101",
@@ -5603,7 +7511,7 @@ window.MOCK_DATA = {
    "email": "b1825@buyers.example.com",
    "status": "Sold",
    "price": 358000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -5621,7 +7529,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220056"
+   "vcn": "VCN-220056",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V054",
@@ -5653,7 +7572,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2016,
+   "color": "BLUE",
+   "fuel": "Gas",
+   "cs_no": "NG9707",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V089",
@@ -5667,7 +7597,7 @@ window.MOCK_DATA = {
    "email": "b9004@buyers.example.com",
    "status": "Sold",
    "price": 430000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -5685,7 +7615,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220064"
+   "vcn": "VCN-220064",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V055",
@@ -5717,7 +7658,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2023,
+   "color": "WHITE",
+   "fuel": "Gas",
+   "cs_no": "NI7626",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V056",
@@ -5749,7 +7701,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2020,
+   "color": "SILVER",
+   "fuel": "Gas",
+   "cs_no": "NA5545",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V057",
@@ -5781,7 +7744,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2017,
+   "color": "BLACK",
+   "fuel": "Diesel",
+   "cs_no": "NJ3464",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V113",
@@ -5813,7 +7787,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220082"
+   "vcn": "VCN-220082",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V090",
@@ -5827,7 +7812,7 @@ window.MOCK_DATA = {
    "email": "b9005@buyers.example.com",
    "status": "Sold",
    "price": 650000,
-   "transfer_fee": 8500,
+   "transfer_fee": 500,
    "rebate": null,
    "for_baaf": false,
    "print_seller": false,
@@ -5845,7 +7830,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220083"
+   "vcn": "VCN-220083",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V009",
@@ -5877,7 +7873,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V058",
@@ -5909,7 +7916,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2024,
+   "color": "RED",
+   "fuel": "Gas",
+   "cs_no": "NK1383",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V059",
@@ -5941,7 +7959,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2021,
+   "color": "GRAY",
+   "fuel": "Gas",
+   "cs_no": "DB9302",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V119",
@@ -5973,7 +8002,18 @@ window.MOCK_DATA = {
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
-   "vcn": "VCN-220099"
+   "vcn": "VCN-220099",
+   "location": "Pasay City",
+   "year": null,
+   "color": null,
+   "fuel": null,
+   "cs_no": null,
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V060",
@@ -5987,7 +8027,7 @@ window.MOCK_DATA = {
    "email": "b1743@buyers.example.com",
    "status": "Sold",
    "price": 203500,
-   "transfer_fee": 9000,
+   "transfer_fee": 0,
    "rebate": null,
    "vcn": "VCN-220101",
    "for_baaf": false,
@@ -6005,7 +8045,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2018,
+   "color": "BLUE",
+   "fuel": "Diesel",
+   "cs_no": "NE7221",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V061",
@@ -6037,7 +8088,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2015,
+   "color": "WHITE",
+   "fuel": "Gas",
+   "cs_no": "NG5140",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V062",
@@ -6069,7 +8131,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2022,
+   "color": "SILVER",
+   "fuel": "Diesel",
+   "cs_no": "NH3059",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V063",
@@ -6101,7 +8174,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2019,
+   "color": "BLACK",
+   "fuel": "Diesel",
+   "cs_no": "NY0978",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V048",
@@ -6133,7 +8217,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2024,
+   "color": "BLUE",
+   "fuel": "Gas",
+   "cs_no": "ND2193",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V049",
@@ -6165,7 +8260,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2021,
+   "color": "WHITE",
+   "fuel": "Gas",
+   "cs_no": "NB0112",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V064",
@@ -6197,7 +8303,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2016,
+   "color": "RED",
+   "fuel": "Gas",
+   "cs_no": "NP8897",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V065",
@@ -6229,7 +8346,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2023,
+   "color": "GRAY",
+   "fuel": "Gas",
+   "cs_no": "NF6816",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V066",
@@ -6243,7 +8371,7 @@ window.MOCK_DATA = {
    "email": "b0537@buyers.example.com",
    "status": "Not Sold",
    "price": 940000,
-   "transfer_fee": 9000,
+   "transfer_fee": 0,
    "rebate": null,
    "vcn": "VCN-221015",
    "for_baaf": false,
@@ -6261,7 +8389,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2020,
+   "color": "BLUE",
+   "fuel": "Gas",
+   "cs_no": "EH4735",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V067",
@@ -6293,7 +8432,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2017,
+   "color": "WHITE",
+   "fuel": "Diesel",
+   "cs_no": "NT2654",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V068",
@@ -6307,7 +8457,7 @@ window.MOCK_DATA = {
    "email": "b1059@buyers.example.com",
    "status": "Sold",
    "price": 284000,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "vcn": "VCN-221038",
    "for_baaf": false,
@@ -6325,7 +8475,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2024,
+   "color": "SILVER",
+   "fuel": "Diesel",
+   "cs_no": "NN0573",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V069",
@@ -6357,7 +8518,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2021,
+   "color": "BLACK",
+   "fuel": "Gas",
+   "cs_no": "AF8492",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V070",
@@ -6389,7 +8561,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2018,
+   "color": "RED",
+   "fuel": "Gas",
+   "cs_no": "NU6411",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V071",
@@ -6421,7 +8604,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2015,
+   "color": "GRAY",
+   "fuel": "Gas",
+   "cs_no": "NE4330",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V072",
@@ -6435,7 +8629,7 @@ window.MOCK_DATA = {
    "email": "b1897@buyers.example.com",
    "status": "Sold",
    "price": 877000,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": null,
    "vcn": "VCN-221045",
    "for_baaf": false,
@@ -6453,7 +8647,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2022,
+   "color": "BLUE",
+   "fuel": "Gas",
+   "cs_no": "NZ2249",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V073",
@@ -6485,7 +8690,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2019,
+   "color": "WHITE",
+   "fuel": "Gas",
+   "cs_no": "NJ0168",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V074",
@@ -6517,7 +8733,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2016,
+   "color": "SILVER",
+   "fuel": "Gas",
+   "cs_no": "GW8087",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V075",
@@ -6531,7 +8758,7 @@ window.MOCK_DATA = {
    "email": "b0312@buyers.example.com",
    "status": "Sold",
    "price": 230500,
-   "transfer_fee": 8500,
+   "transfer_fee": 400,
    "rebate": null,
    "vcn": "VCN-221053",
    "for_baaf": false,
@@ -6549,7 +8776,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2023,
+   "color": "BLACK",
+   "fuel": "Diesel",
+   "cs_no": "NX6006",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V076",
@@ -6581,7 +8819,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2020,
+   "color": "RED",
+   "fuel": "Diesel",
+   "cs_no": "NA3925",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V077",
@@ -6595,7 +8844,7 @@ window.MOCK_DATA = {
    "email": "b1763@buyers.example.com",
    "status": "Not Sold",
    "price": 921000,
-   "transfer_fee": 9000,
+   "transfer_fee": 0,
    "rebate": null,
    "vcn": "VCN-221076",
    "for_baaf": false,
@@ -6613,7 +8862,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2017,
+   "color": "GRAY",
+   "fuel": "Gas",
+   "cs_no": "NE1844",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V078",
@@ -6627,7 +8887,7 @@ window.MOCK_DATA = {
    "email": "b0339@buyers.example.com",
    "status": "Sold",
    "price": 237500,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": 10000,
    "vcn": "VCN-221078",
    "for_baaf": false,
@@ -6645,7 +8905,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2024,
+   "color": "BLUE",
+   "fuel": "Gas",
+   "cs_no": "DJ9763",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V079",
@@ -6677,7 +8948,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2021,
+   "color": "WHITE",
+   "fuel": "Gas",
+   "cs_no": "DC7682",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V080",
@@ -6709,7 +8991,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2018,
+   "color": "SILVER",
+   "fuel": "Gas",
+   "cs_no": "NQ5601",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V081",
@@ -6741,7 +9034,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2015,
+   "color": "BLACK",
+   "fuel": "Gas",
+   "cs_no": "NQ3520",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V082",
@@ -6755,7 +9059,7 @@ window.MOCK_DATA = {
    "email": "b1897@buyers.example.com",
    "status": "Sold",
    "price": 545600,
-   "transfer_fee": 10000,
+   "transfer_fee": 1000,
    "rebate": 5000,
    "vcn": "VCN-221092",
    "for_baaf": false,
@@ -6773,7 +9077,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2022,
+   "color": "RED",
+   "fuel": "Diesel",
+   "cs_no": "NI1439",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V083",
@@ -6787,7 +9102,7 @@ window.MOCK_DATA = {
    "email": "b1743@buyers.example.com",
    "status": "Sold",
    "price": 379600,
-   "transfer_fee": 9000,
+   "transfer_fee": 0,
    "rebate": null,
    "vcn": "VCN-221106",
    "for_baaf": false,
@@ -6805,7 +9120,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2019,
+   "color": "GRAY",
+   "fuel": "Gas",
+   "cs_no": "AA9358",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V084",
@@ -6819,7 +9145,7 @@ window.MOCK_DATA = {
    "email": "b1743@buyers.example.com",
    "status": "Sold",
    "price": 536600,
-   "transfer_fee": 8500,
+   "transfer_fee": 500,
    "rebate": null,
    "vcn": "VCN-221109",
    "for_baaf": false,
@@ -6837,7 +9163,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2016,
+   "color": "BLUE",
+   "fuel": "Gas",
+   "cs_no": "DM7277",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   },
   {
    "id": "V085",
@@ -6869,7 +9206,18 @@ window.MOCK_DATA = {
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
-   "billed": false
+   "billed": false,
+   "location": "Pasay City",
+   "year": 2023,
+   "color": "WHITE",
+   "fuel": "Diesel",
+   "cs_no": "EB5196",
+   "vrf_no": null,
+   "docs_received": [],
+   "docs_others": "",
+   "atf_no": null,
+   "for_dispatch_email": false,
+   "print_doc_trans": false
   }
  ],
  "cancellations": [
@@ -6887,7 +9235,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": "ORIX"
   },
   {
    "id": "C-216-108-MBD1875",
@@ -6903,7 +9252,8 @@ window.MOCK_DATA = {
    "bill_date": "2026-09-30",
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-220-055-NKG7810",
@@ -6919,7 +9269,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-220-086-NIG5982",
@@ -6935,7 +9286,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": "TFSPH"
   },
   {
    "id": "C-216-049-DBT3764",
@@ -6951,7 +9303,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-219-048-AIA1465",
@@ -6967,7 +9320,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": "EWB"
   },
   {
    "id": "C-219-076-FAU2169",
@@ -6983,7 +9337,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": "ASIALINK"
   },
   {
    "id": "C-216-020-NHM7031",
@@ -6999,7 +9354,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": "ASIALINK"
   },
   {
    "id": "C-216-055-DCA5856",
@@ -7015,7 +9371,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-217-060-NGS7292",
@@ -7031,7 +9388,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": "ORICO"
   },
   {
    "id": "C-217-081-NIQ9285",
@@ -7047,7 +9405,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": "ORIX"
   },
   {
    "id": "C-218-051-NKH6818",
@@ -7063,7 +9422,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-218-054-NFM7850",
@@ -7079,7 +9439,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": "EWB"
   },
   {
    "id": "C-216-043-FAT2150",
@@ -7095,7 +9456,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-212-108-NLA3154",
@@ -7111,7 +9473,8 @@ window.MOCK_DATA = {
    "bill_date": "2026-09-08",
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-215-102-NBF3316",
@@ -7127,7 +9490,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": "JACCS"
   },
   {
    "id": "C-212-099-NFW4473",
@@ -7143,7 +9507,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-211-113-DBT3764",
@@ -7159,7 +9524,8 @@ window.MOCK_DATA = {
    "bill_date": "2026-08-24",
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-211-081-NKL9749",
@@ -7175,7 +9541,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": "TFSPH"
   },
   {
    "id": "C-211-102-NGB6183",
@@ -7191,7 +9558,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-211-098-DBF7427",
@@ -7207,7 +9575,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": "SBC"
   },
   {
    "id": "C-211-072-NEC2584",
@@ -7223,7 +9592,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-211-072-NEC2584-B1897",
@@ -7239,7 +9609,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-207-044-NKS8531",
@@ -7255,7 +9626,8 @@ window.MOCK_DATA = {
    "bill_date": "2026-07-30",
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-167-x-EF7676",
@@ -7271,7 +9643,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-167-x-CCC6969",
@@ -7287,7 +9660,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-166-x-NDD9015",
@@ -7303,7 +9677,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-154-x-DAV8828",
@@ -7319,7 +9694,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-167-x-NDX6622",
@@ -7335,7 +9711,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-167-x-NEI9202",
@@ -7351,7 +9728,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-170-x-C4U474",
@@ -7367,7 +9745,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-158-x-NGJ2044",
@@ -7383,7 +9762,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-166-x-NCW8148",
@@ -7399,7 +9779,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-168-x-NIU9612",
@@ -7415,7 +9796,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-168-x-NKG3614",
@@ -7431,7 +9813,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-159-x-AAU3413",
@@ -7447,7 +9830,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-168-x-NGB5546",
@@ -7463,7 +9847,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-168-x-NIB1380",
@@ -7479,7 +9864,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-164-x-GBF4509",
@@ -7495,7 +9881,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-167-x-HK883A",
@@ -7511,7 +9898,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-156-x-NIG4195",
@@ -7527,7 +9915,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-164-x-ABG5344",
@@ -7543,7 +9932,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-155-x-AAK8780",
@@ -7559,7 +9949,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-129-x-AAZ6997",
@@ -7575,7 +9966,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-109-x-NDM2209",
@@ -7591,7 +9983,8 @@ window.MOCK_DATA = {
    "bill_date": null,
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   },
   {
    "id": "C-112-x-NCJ5124",
@@ -7607,7 +10000,8 @@ window.MOCK_DATA = {
    "bill_date": "2024-10-04",
    "paid_date": null,
    "amount": null,
-   "for_print": false
+   "for_print": false,
+   "seller": null
   }
  ],
  "billing": [
@@ -7619,7 +10013,8 @@ window.MOCK_DATA = {
    "total": 21500,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "487",
@@ -7629,7 +10024,8 @@ window.MOCK_DATA = {
    "total": 36680,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "488",
@@ -7639,7 +10035,8 @@ window.MOCK_DATA = {
    "total": 74032,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "489",
@@ -7649,7 +10046,8 @@ window.MOCK_DATA = {
    "total": 70280,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "490",
@@ -7659,7 +10057,8 @@ window.MOCK_DATA = {
    "total": 24360,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "491",
@@ -7669,7 +10068,8 @@ window.MOCK_DATA = {
    "total": 117630,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "508",
@@ -7679,7 +10079,8 @@ window.MOCK_DATA = {
    "total": 18765,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "493",
@@ -7689,7 +10090,8 @@ window.MOCK_DATA = {
    "total": 42500,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "494",
@@ -7699,7 +10101,8 @@ window.MOCK_DATA = {
    "total": 41720,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "496",
@@ -7709,7 +10112,8 @@ window.MOCK_DATA = {
    "total": 51576,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "495",
@@ -7719,7 +10123,8 @@ window.MOCK_DATA = {
    "total": 44632,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "497",
@@ -7729,7 +10134,8 @@ window.MOCK_DATA = {
    "total": 39424,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "498",
@@ -7739,7 +10145,8 @@ window.MOCK_DATA = {
    "total": 13200,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "499",
@@ -7749,7 +10156,8 @@ window.MOCK_DATA = {
    "total": 137732,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "500",
@@ -7759,7 +10167,8 @@ window.MOCK_DATA = {
    "total": 37912,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "501",
@@ -7769,7 +10178,8 @@ window.MOCK_DATA = {
    "total": 8960,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "502",
@@ -7779,7 +10189,8 @@ window.MOCK_DATA = {
    "total": 13608,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "507",
@@ -7789,7 +10200,8 @@ window.MOCK_DATA = {
    "total": 9352,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "503",
@@ -7799,7 +10211,8 @@ window.MOCK_DATA = {
    "total": 55776,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "504",
@@ -7809,7 +10222,8 @@ window.MOCK_DATA = {
    "total": 31136,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "505",
@@ -7819,7 +10233,8 @@ window.MOCK_DATA = {
    "total": 52304,
    "trans": "2025-09-02",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "506",
@@ -7829,7 +10244,8 @@ window.MOCK_DATA = {
    "total": 11470.97,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "509",
@@ -7839,7 +10255,8 @@ window.MOCK_DATA = {
    "total": 515536,
    "trans": "2025-09-17",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "510",
@@ -7849,7 +10266,8 @@ window.MOCK_DATA = {
    "total": 27720,
    "trans": "2025-09-17",
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "354",
@@ -7859,7 +10277,8 @@ window.MOCK_DATA = {
    "total": 136808,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "356",
@@ -7869,7 +10288,8 @@ window.MOCK_DATA = {
    "total": 24584,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "357",
@@ -7879,7 +10299,8 @@ window.MOCK_DATA = {
    "total": 15650,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "358",
@@ -7889,7 +10310,8 @@ window.MOCK_DATA = {
    "total": 13888,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "359",
@@ -7899,7 +10321,8 @@ window.MOCK_DATA = {
    "total": 18480,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "360",
@@ -7909,7 +10332,8 @@ window.MOCK_DATA = {
    "total": 36000,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "362",
@@ -7919,7 +10343,8 @@ window.MOCK_DATA = {
    "total": 22288,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "388",
@@ -7929,7 +10354,8 @@ window.MOCK_DATA = {
    "total": 22785,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "389",
@@ -7939,7 +10365,8 @@ window.MOCK_DATA = {
    "total": 102137.5,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "391",
@@ -7949,7 +10376,8 @@ window.MOCK_DATA = {
    "total": 25200,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "392",
@@ -7959,7 +10387,8 @@ window.MOCK_DATA = {
    "total": 51016,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "395",
@@ -7969,7 +10398,8 @@ window.MOCK_DATA = {
    "total": 256984,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "428",
@@ -7979,7 +10409,8 @@ window.MOCK_DATA = {
    "total": 23885,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "428",
@@ -7989,7 +10420,8 @@ window.MOCK_DATA = {
    "total": 23885,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "428",
@@ -7999,7 +10431,8 @@ window.MOCK_DATA = {
    "total": 23885,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "456",
@@ -8009,7 +10442,8 @@ window.MOCK_DATA = {
    "total": 51744,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "459",
@@ -8019,7 +10453,8 @@ window.MOCK_DATA = {
    "total": 134115,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "460",
@@ -8029,7 +10464,8 @@ window.MOCK_DATA = {
    "total": 15767.5,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "462",
@@ -8039,7 +10475,8 @@ window.MOCK_DATA = {
    "total": 50400,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "463",
@@ -8049,7 +10486,8 @@ window.MOCK_DATA = {
    "total": 146715,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "464",
@@ -8059,7 +10497,8 @@ window.MOCK_DATA = {
    "total": 19087.5,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "470",
@@ -8069,7 +10508,8 @@ window.MOCK_DATA = {
    "total": 123088,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "566",
@@ -8079,7 +10519,8 @@ window.MOCK_DATA = {
    "total": 23175,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   },
   {
    "no": "1227",
@@ -8089,7 +10530,8 @@ window.MOCK_DATA = {
    "total": 82687.5,
    "trans": null,
    "pay": null,
-   "cr": ""
+   "cr": "",
+   "print_trans": false
   }
  ],
  "fadResult": [
