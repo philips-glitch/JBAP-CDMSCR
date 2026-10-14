@@ -21,3 +21,15 @@ test('date helpers', () => {
   assert.strictEqual(P.api.shortDate('2026-10-12'), '12-Oct-26');
   assert.strictEqual(P.api.shortDate('2026-09-21'), '21-Sep-26');
 });
+test('payable to seller: totals equal the screen totals', () => {
+  const rows = P.byId['FAD/payment-seller'].rows().filter(r => r.seller === 'EWB');
+  const h = P.REPORTS.payableToSeller('EWB', rows, P.TODAY);
+  assert.match(h, /Computation of Payable to Seller/);
+  const fmt = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  assert.ok(h.includes(fmt(rows.reduce((a, r) => a + r.payable, 0))), 'payable total'); assert.ok(h.includes(fmt(rows.reduce((a, r) => a + r.to_jbap, 0))), 'to JBAP total');
+});
+test('billing computation: billing no, date and commission totals', () => {
+  const rows = P.V().filter(r => ['NKC4711', 'NFM5719'].includes(r.plate));
+  const h = P.REPORTS.billingComputation('SBC', '511', '2026-10-08', rows);
+  assert.match(h, /Billing Computation/); assert.match(h, /511/); assert.match(h, /10\/08\/2026/); assert.match(h, /37,550\.00/);
+});

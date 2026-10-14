@@ -688,14 +688,8 @@ const ACTIONS = {
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Print Payment to Seller</b> on at least one vehicle first.'); render(); return; }
     setMsg(scr, null); render();
     const groups = {}; rows.forEach(r => (groups[r.seller] ||= []).push(r));
-    const body = Object.entries(groups).map(([code, list]) => {
-      const lines = list.map(r => `<tr><td>${esc(r.customer)}</td><td class="c">${esc(r.adate)}</td><td class="c">${esc(r.plate)}</td><td class="r">${money(r.total)}</td><td class="r">${money(r.to_jbap)}</td><td class="r">${money(r.payable)}</td></tr>`).join('');
-      return `<div class="doc" style="margin-bottom:14px"><h2>Seller Payment Report</h2><div class="meta"><span><b>${esc(SELLER[code]?.name || code)}</b></span><span>Prepared ${fmtDate(TODAY)}</span></div>
-        <table><thead><tr><th>Customer</th><th>Auction Date</th><th>Plate</th><th>Total</th><th>To JBAP</th><th>Amount to Seller</th></tr></thead><tbody>${lines}</tbody>
-        <tfoot><tr><td colspan="3">Total</td><td class="r">${money(sumBy(list, 'total'))}</td><td class="r">${money(sumBy(list, 'to_jbap'))}</td><td class="r">${money(sumBy(list, 'payable'))}</td></tr></tfoot></table>
-        <p class="fn">Supporting document for the payment voucher in NOAH. Gross/Net calculation per seller to be confirmed.</p><div class="sign"><div>Prepared by (FAD)</div><div>Checked by (FAD Manager)</div><div>Approved by</div></div></div>`;
-    }).join('');
-    openModal({ title: 'Print payment to seller', icon: 'print', wide: true, body, note: 'Amounts are prototype placeholders.',
+    const body = Object.entries(groups).map(([code, list]) => REPORTS.payableToSeller(code, list, TODAY)).join('');
+    openModal({ title: 'Print payment to seller', icon: 'print', wide: true, body, note: 'Support for the manual disbursement preparation.',
       footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
   },
   printComm(scr) {
@@ -704,12 +698,9 @@ const ACTIONS = {
     const sellers = [...new Set(rows.map(r => r.seller))];
     if (sellers.length > 1) { setMsg(scr, 'error', `Selected vehicles belong to ${sellers.length} sellers (${sellers.join(', ')}). Print one seller at a time: each NOAH billing is per seller (to confirm).`); render(); return; }
     setMsg(scr, null); render();
-    const lines = rows.map(r => `<tr><td>${esc(r.customer)}</td><td class="c">${esc(r.plate)}</td><td class="c">${fmtDate(r.pay_seller)}</td><td class="r">${money(r.price)}</td><td class="r">${money(r.com)}</td><td class="r">${money(r.cvat)}</td><td class="r">${money(r.ctotal)}</td></tr>`).join('');
-    const body = `<div class="fgrid two" style="padding:0 0 12px"><div class="fld"><label for="cb-no">Billing No. (from NOAH)</label><input class="ctl" id="cb-no" placeholder="e.g. 511" required><span class="err" id="cb-no-err"></span></div>
+    const body = `<div class="fgrid two no-print" style="padding:0 0 12px"><div class="fld"><label for="cb-no">Billing No. (from NOAH)</label><input class="ctl" id="cb-no" placeholder="e.g. 511" required><span class="err" id="cb-no-err"></span></div>
       <div class="fld"><label for="cb-date">Billing Date</label><input class="ctl" type="date" id="cb-date" value="${TODAY}" required><span class="err" id="cb-date-err"></span></div></div>
-      <div class="doc"><h2>Commission Billing</h2><div class="meta"><span><b>${esc(SELLER[sellers[0]]?.name || sellers[0])}</b></span><span>Attachment to NOAH billing invoice</span></div>
-      <table><thead><tr><th>Customer</th><th>Plate</th><th>Remittance Date</th><th>Winning Bid</th><th>Commission</th><th>VAT</th><th>Total</th></tr></thead><tbody>${lines}</tbody>
-      <tfoot><tr><td colspan="3">Total</td><td class="r">${money(sumBy(rows, 'price'))}</td><td class="r">${money(sumBy(rows, 'com'))}</td><td class="r">${money(sumBy(rows, 'cvat'))}</td><td class="r">${money(sumBy(rows, 'ctotal'))}</td></tr></tfoot></table></div>`;
+      ${REPORTS.billingComputation(sellers[0], '(entered above)', TODAY, rows)}`;
     openModal({ title: 'Print commission billing', icon: 'print', wide: true, body, note: 'Recording adds the billing to Billing Monitoring and Unpaid Billing.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record billing & print', kind: 'pr', icon: 'print', onClick: () => {
         const no = $('#cb-no').value.trim(), bd = $('#cb-date').value; let ok = true;
@@ -728,7 +719,9 @@ const ACTIONS = {
           logChange(scr, 'Update', r, [['Commission Billing No.', 'text', null, no], ['Print?', 'check', r._raw.print_comm, false]]);
           r._raw.billed = true; r._raw.print_comm = false; delete ui.edits[r.id];
         });
-        printModal(); closeModal(); render(); toast(`Billing #${esc(no)} recorded for ${rows.length} vehicle(s). See Billing Monitoring and Unpaid Billing.`);
+        const html = REPORTS.billingComputation(sellers[0], no, bd, rows);
+        render(); openModal({ title: `Billing computation #${no}`, icon: 'print', wide: true, body: html, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
+        printModal(); toast(`Billing #${esc(no)} recorded for ${rows.length} vehicle(s). See Billing Monitoring and Unpaid Billing.`);
       } }] });
   },
   printCancel(scr) {

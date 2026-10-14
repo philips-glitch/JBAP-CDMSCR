@@ -40,4 +40,22 @@ const REPORTS = {
       <p>This is a limited offer, and we look forward in releasing your unit! Please be reminded that you can settle via our bank account below on or before ${longDate(payBy)}.</p>
       <p>${rptBank()}<br>Please send your payment confirmation to ${esc(CO().emails.finance)}.</p><p>Regards,</p>`);
   },
+  // 3. qryPAYMENTSELLERPrint: Computation of Payable to Seller (one page per seller)
+  payableToSeller(code, lots, date) {
+    const net = SELLER[code]?.net !== false, m = n => (net ? money(n) : '');
+    const rows = lots.map(r => `<tr><td>${esc(r.adate)}</td><td>${esc(r.customer)}</td><td>${esc(r.model)}</td><td class="c">${esc(r.plate)}</td><td class="r">${money(r.price)}</td><td class="r">${money(r.transfer_fee)}</td><td class="r">${m(r.com)}</td><td class="r">${m(r.cvat)}</td><td class="r">${m(r.wtax)}</td><td class="r">${money(r.payable)}</td><td class="r">${money(r.to_jbap)}</td></tr>`).join('');
+    return rptPage('landscape', `<h2>${esc(CO().name.toUpperCase())}</h2><h1>Computation of Payable to Seller</h1><p><b>${esc(code)}</b> · ${esc(SELLER[code]?.name || code)}${net ? '' : ' (GROSS seller: commission billed separately)'}</p>
+      <table><thead><tr><th>Auction Date</th><th>Customer Name</th><th>Make / Model</th><th>Plate #</th><th class="r">Result Price</th><th class="r">Notarial / Transfer / Bond</th><th class="r">Commission</th><th class="r">VAT</th><th class="r">Tax</th><th class="r">Payable to Seller</th><th class="r">To JBAP</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="4">Total</td><td class="r">${money(rptSum(lots, 'price'))}</td><td class="r">${money(rptSum(lots, 'transfer_fee'))}</td><td class="r">${m(rptSum(lots, 'com'))}</td><td class="r">${m(rptSum(lots, 'cvat'))}</td><td class="r">${m(rptSum(lots, 'wtax'))}</td><td class="r">${money(rptSum(lots, 'payable'))}</td><td class="r">${money(rptSum(lots, 'to_jbap'))}</td></tr></tfoot></table>
+      ${rptSign([`Prepared by: ${CO().roles.fadStaff}`, longDate(date)])}`);
+  },
+  // 4. qryBillingSeller: Billing Computation (attachment to the seller's billing invoice)
+  billingComputation(code, billNo, billDate, lots) {
+    const rows = lots.map(r => `<tr><td>${esc(r.adate)}</td><td class="c">${esc(r.year || '')}</td><td class="c">${esc(r.plate)}</td><td>${esc(r.model)}</td><td>${esc(r.color || '')}</td><td>${esc(r.customer)}</td><td class="r">${money(r.price)}</td><td class="r">${money(r.com)}</td><td class="r">${money(r.cvat)}</td><td class="r">${money(r.ctotal)}</td></tr>`).join('');
+    return rptPage('landscape', `<h2>${esc(CO().name.toUpperCase())}</h2><h1>Billing Computation</h1><p><b>${esc(SELLER[code]?.name || code)}</b></p>
+      <div class="kv"><b>Billing date</b><span>${fmtDate(billDate)}</span><b>Billing #</b><span>${esc(billNo)}</span></div>
+      <table><thead><tr><th>Auction Date</th><th>Year</th><th>Plate Number</th><th>Make / Model</th><th>Color</th><th>Customer Name</th><th class="r">Bid Price</th><th class="r">Commission</th><th class="r">VAT</th><th class="r">Total</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="6">Grand total</td><td class="r">${money(rptSum(lots, 'price'))}</td><td class="r">${money(rptSum(lots, 'com'))}</td><td class="r">${money(rptSum(lots, 'cvat'))}</td><td class="r">${money(rptSum(lots, 'ctotal'))}</td></tr></tfoot></table>
+      ${rptSign([`Prepared by: ${CO().roles.fadStaff}`, `Approved by: ${CO().roles.financeHead}`])}<p class="fn">${longDate(billDate)}</p>`);
+  },
 };
