@@ -93,4 +93,16 @@ const REPORTS = {
         ${rptSign([`Prepared: ${CO().roles.vwdStaff}`, `Approved: ${CO().roles.vwdManager}`])}<p>Date out: ______ &nbsp; Time out: ______</p>${rptSign([`Checked: ${CO().roles.guard}`])}</div></div>`;
     return rptPage('landscape', copy + copy);
   },
+  // 8. rptCancellationPenalty: Cancellation Fee Billing letter (one per buyer, emailed as PDF)
+  cancellationLetter(b, rows, date) {
+    const lines = rows.map(r => `<tr><td>${esc(r.adate)}</td><td>${esc(r.model || '')}</td><td class="c">${esc(r.year || '')}</td><td class="c">${esc(r.plate)}</td><td class="c">${fmtDate(r.dcancel)}</td></tr>`).join('');
+    return rptPage('portrait', `<h1>Cancellation Fee Billing</h1><p>${longDate(date)}</p><p><b>${esc(b.customer)}</b></p><p>Greetings from JBAP!</p>
+      <p>This is to request payment of the penalty fee indicated below for the units awarded to you and was subsequently cancelled.</p>
+      <table><thead><tr><th>Auction Date</th><th>Make / Model</th><th>Year</th><th>Plate Number</th><th>Date Cancelled</th></tr></thead><tbody>${lines}</tbody></table>
+      <div class="kv"><b># of units</b><span>${rows.length}</span><b>Penalty fee</b><span>${money(CANCEL_PENALTY)}</span><b>Grand total</b><span>${money(rptSum(rows, 'penalty'))}</span></div>
+      <p>Please deposit payment on or before ____________________.</p>
+      <p>Account Name: ${esc(CO().name)}<br>${esc(CO().bank)}</p>
+      <p>We regret to inform you that we are temporarily suspending your account until this is paid. Failure to pay within the specified time will render your account banned from joining our future auctions.</p>
+      <p>Hope we can continue our partnership in the future.</p><p>${esc(CO().name)}</p>`);
+  },
 };

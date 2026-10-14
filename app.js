@@ -755,11 +755,9 @@ const ACTIONS = {
     const rows = selectedRows(scr, 'for_print');
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For Print?</b> on at least one record first.'); render(); return; }
     setMsg(scr, null); render();
-    const lines = rows.map(r => `<tr><td class="c">${r.auction}</td><td class="c">${esc(r.plate)}</td><td>${esc(r.customer)}</td><td class="c">${fmtDate(r.dcancel)}</td><td>${esc(r.just || '')}</td></tr>`).join('');
-    const body = `<div class="doc"><h2>Cancellation Billing</h2><div class="meta"><span>JBA Philippines Inc.</span><span>Billing Date ${fmtDate(TODAY)}</span></div>
-      <table><thead><tr><th>Auction No.</th><th>Plate</th><th>Customer Name</th><th>Date Cancelled</th><th>Reason</th></tr></thead><tbody>${lines}</tbody></table>
-      <p class="fn">Cancellation fee amount and payment deadline: rule to be confirmed with JBAP.</p></div>`;
-    openModal({ title: 'Print cancellation billing', icon: 'print', wide: true, body, note: 'Recording sets the Cancellation Billing Date to today.',
+    const groups = {}; rows.forEach(r => (groups[r.cid || r.customer] ||= []).push(r));
+    const body = Object.values(groups).map(list => REPORTS.cancellationLetter({ customer: list[0].customer }, list, TODAY)).join('');
+    openModal({ title: 'Print cancellation billing', icon: 'print', wide: true, body, note: 'Recording sets the Cancellation Billing Date to today and the amount due to the penalty. The payment deadline stays blank until JBAP confirms it (Q33).',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record billing date & print', kind: 'pr', icon: 'print', onClick: () => {
         recordCancellationBilling(scr, rows);
         printModal(); closeModal(); render(); toast(`${rows.length} cancellation(s) billed. They moved to Cancellation Payment.`);

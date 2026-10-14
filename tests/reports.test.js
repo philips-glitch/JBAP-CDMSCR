@@ -72,3 +72,8 @@ test('Log Activity texts no longer call VWD view-only', () => {
   assert.match(scr.emptyNote(), /SMD is view-only/);
   delete P.U('log-activity').applied.module;
 });
+test('cancellation letter: penalty × units', () => {
+  const rows = P.byId['FAD/cancellation-billing'].rows().slice(0, 2).map(r => Object.assign({}, r, { customer: 'TEST BUYER' }));
+  const h = P.REPORTS.cancellationLetter({ customer: 'TEST BUYER' }, rows, '2026-10-08');
+  assert.match(h, /Cancellation Fee Billing/); assert.match(h, /20,000\.00/); assert.match(h, /8 October 2026/);
+});
