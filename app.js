@@ -7,7 +7,9 @@
 const D = window.MOCK_DATA;
 // [BEHAVIOR] Fixed demo date so deadlines and penalties stay the same whenever the prototype is opened.
 const TODAY = D ? D.meta.demoToday : '2026-10-09';
-const PENALTY_PER_DAY = 500;     // [MOCK] placeholder; legacy data suggests PHP 500/day after dispatch deadline (to confirm)
+const PENALTY_PER_DAY = 500;     // storage penalty per calendar day after the dispatch deadline (confirmed by Access data, Q15)
+const PENALTY_LOCATIONS = ['Pasay City', 'JBAP'];   // storage penalty applies only to units stored here (JBAP Q15)
+const CANCEL_PENALTY = 10000;    // cancellation penalty per lot (JBAP Q4)
 const COMMISSION_RATE = 0.05;    // default commission rate (seller.commission_rate overrides)
 const VAT_RATE = 0.12;
 const WTAX_RATE = 0.15;          // withholding tax on the commission for NET sellers (Access Payment Seller sample; to confirm Q26)
@@ -84,7 +86,7 @@ function enrichV(v) {
     seller_full: SELLER[v.seller]?.name || v.seller, total: v.price === null ? null : v.price + (v.transfer_fee || 0),
     release_cond: RELEASE_LABEL[releaseOf(v)],
     buyer_deadline, pay_deadline, dispatch_deadline,
-    penalty: overdue ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
+    penalty: overdue && PENALTY_LOCATIONS.includes(v.location || 'Pasay City') ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
     ...sellerMoney(v),
   });
 }
@@ -93,10 +95,21 @@ const sold = () => V().filter(v => v.status === 'Sold');
 // id includes the position: Access has the same Billing # more than once (e.g. 428)
 const B = () => S.billing.map((b, i) => Object.assign({}, b, { _raw: b, id: `${b.no}#${i}`, bill: Math.round(b.total / 1.12 * 100) / 100,
   vat: Math.round((b.total - b.total / 1.12) * 100) / 100, due: addDays(b.bdate, BILL_DUE_DAYS) }));
+// [BEHAVIOR] Cancellation penalty PHP 10,000 per lot: 5,000 to the seller and 5,000 to JBAP; EWB: all to JBAP (Q4). Waived lots: 0.
+function cancelSplit(c) { const p = c.waived ? 0 : CANCEL_PENALTY, toSeller = c.seller === 'EWB' ? 0 : p / 2; return { penalty: p, pen_seller: toSeller, pen_jbap: p - toSeller }; }
 const CX = () => S.cancels.map(c => {
-  const a = D.auctions[String(c.auction)];
-  return Object.assign({}, c, { _raw: c, status: 'Cancelled', adate: a ? `${fmtDate(a[0])} - ${fmtDate(a[1])}` : '' });
+  const a = D.auctions[String(c.auction)], v = S.veh.find(x => x.plate === c.plate && x.auction === c.auction) || {};
+  return Object.assign({}, c, { _raw: c, status: 'Cancelled', adate: a ? `${fmtDate(a[0])} - ${fmtDate(a[1])}` : '', model: v.model || '', year: v.year || '' }, cancelSplit(c));
 });
+// [BEHAVIOR] Billing a cancellation records today's billing date and the penalty as the amount due
+function recordCancellationBilling(scr, rows) {
+  const ui = U(scr.id);
+  rows.forEach(r => {
+    const amount = r._raw.amount ?? r.penalty;
+    logChange(scr, 'Update', r, [['Billing Date', 'date', r._raw.bill_date, TODAY], ['Amount', 'money', r._raw.amount, amount], ['For Print?', 'check', r._raw.for_print, false]]);
+    r._raw.bill_date = TODAY; r._raw.amount = amount; r._raw.for_print = false; delete ui.edits[r.id];
+  });
+}
 const SMD = k => D.smd[k].map((r, i) => Object.assign({ id: `${k}-${i}` }, r));
 // ─── Activity log (one entry per changed field; entries are never edited or deleted) ──
 const LOG_ID = 'log-activity';
@@ -149,8 +162,8 @@ const amTotals = rows => { const s = rows.filter(r => r.status === 'Sold'); retu
 const RESULT_COLS = [C('Auction Number', 'auction', 'code'), C('Sold Units', 'units', 'int'), C('Total Awarded Price', 'total', 'money'), C('Average Price per Unit', 'avg', 'money'),
   C('Total Commission', 'comm', 'money'), C('Rebates', 'rebates', 'money'), C('Month', 'month', 'code')];
 const resultTotals = rows => { const u = sumBy(rows, 'units'), t = sumBy(rows, 'total'); return { units: intf(u), total: money(t), avg: money(u ? t / u : 0), comm: money(sumBy(rows, 'comm')), rebates: money(sumBy(rows, 'rebates')) }; };
-const UNREL_COLS = [C('Customer Name', 'customer', 'text', { w: 300 }), C('Auction Date', 'adate', 'code'), C('Make/Model', 'model', 'text', { w: 260 }), C('Plate Number', 'plate', 'code'),
-  C('Dispatch Deadline', 'dispatch_deadline', 'date', { late: true }), C('Penalty', 'penalty', 'money')];
+const UNREL_COLS = [C('Customer Name', 'customer', 'text', { w: 280 }), C('Auction Date', 'adate', 'code'), C('Make/Model', 'model', 'text', { w: 240 }), C('Plate Number', 'plate', 'code'),
+  C('Location', 'location', 'code'), C('Dispatch Deadline', 'dispatch_deadline', 'date', { late: true }), C('Penalty', 'penalty', 'money')];
 const UNREL_FILTERS = [AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }, { key: 'dispatch_deadline', label: 'Dispatch Deadline', type: 'daterange', w: 'w2' }];
 const CXMON_COLS = [C('Auction No.', 'auction', 'code'), C('Lot No.', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 260 }), C('Customer ID', 'cid', 'code'),
   C('Plate Num', 'plate', 'code'), C('Date Cancelled', 'dcancel', 'date'), C('Waived?', 'waived', 'rocheck'), C('Justification', 'just', 'text', { w: 330 }),
@@ -271,16 +284,17 @@ const SCREENS = [
     cols: [C('Lot', 'lot', 'code'), C('Auction Date', 'adate', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }), C('Status', 'status', 'status'),
       C('Date Cancelled', 'dcancel', 'date'), C('Cancellation Fee Waived', 'waived', 'rocheck'), C('Justification of Waiver', 'just', 'text', { w: 330 }), C('Plate Number', 'plate', 'code')] },
   { dept: 'FAD', slug: 'cancellation-billing', title: 'Cancellation Billing', actions: VSU,
-    rule: 'Result price records with status CANCELLED, fee not waived, and a blank Cancellation Billing Date. Printing records the billing date.',
+    rule: 'Cancelled lots, fee not waived, with a blank Cancellation Billing Date. Penalty PHP 10,000 per lot: PHP 5,000 to the seller and PHP 5,000 to JBAP (EWB: all to JBAP). Printing records the billing date and the amount due.',
     rows: () => CX().filter(c => !c.bill_date && !c.waived), sort: ['auction', 'desc'],
-    cols: [C('Auction No.', 'auction', 'code'), C('Plate', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 380 }), C('Date Cancelled', 'dcancel', 'date'),
-      C('Billing Date', 'bill_date', 'date'), C('For Print?', 'for_print', 'check', { edit: 'check' })],
+    cols: [C('Auction No.', 'auction', 'code'), C('Plate', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 300 }), C('Date Cancelled', 'dcancel', 'date'),
+      C('Penalty', 'penalty', 'money'), C('To Seller', 'pen_seller', 'money'), C('To JBAP', 'pen_jbap', 'money'), C('Billing Date', 'bill_date', 'date'), C('For Print?', 'for_print', 'check', { edit: 'check' })],
+    totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), pen_seller: money(sumBy(rows, 'pen_seller')), pen_jbap: money(sumBy(rows, 'pen_jbap')) }),
     buttons: [{ label: 'Print cancellation billing', kind: 'ol', icon: 'print', act: 'printCancel', count: 'for_print' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },
   { dept: 'FAD', slug: 'cancellation-payment', title: 'Cancellation Payment', actions: VSU,
     rule: 'Result price records with a Cancellation Billing Date and a blank Cancellation Payment.',
     rows: () => CX().filter(c => c.bill_date && !c.paid_date), sort: ['bill_date', 'asc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Plate No.', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 360 }), C('Date Cancelled', 'dcancel', 'date'),
-      C('Billing Date', 'bill_date', 'date'), C('Date Paid', 'paid_date', 'date', { edit: 'date' }), C('Amount', 'amount', 'money', { edit: 'money' })],
+      C('Billing Date', 'bill_date', 'date'), C('Penalty', 'penalty', 'money'), C('Date Paid', 'paid_date', 'date', { edit: 'date' }), C('Amount', 'amount', 'money', { edit: 'money' })],
     validate: (r, e) => { const d = 'paid_date' in e ? e.paid_date : r.paid_date, a = 'amount' in e ? e.amount : r.amount;
       return { paid_date: notFuture(d) || notBefore(d, r.bill_date, 'the Billing Date') || (!d && a ? 'is required with an Amount' : null), amount: d && !(Number(a) > 0) ? 'must be more than 0' : null }; },
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid cancellations removed from the list.' },
@@ -333,7 +347,7 @@ const SCREENS = [
   { dept: 'VWD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS, rule: 'Dispatched vehicles with no penalty yet (still within the dispatch deadline).',
     rows: () => sold().filter(v => v.dispatch && !v.release && v.dispatch_deadline >= TODAY), sort: ['dispatch_deadline', 'asc'],
     cols: [C('Customer Name', 'customer', 'text', { w: 330 }), C('Auction No.', 'auction', 'code'), C('Make/Model', 'model', 'text', { w: 280 }), C('Plate Number', 'plate', 'code'),
-      C('Dispatch Deadline', 'dispatch_deadline', 'date')], filters: UNREL_FILTERS },
+      C('Location', 'location', 'code'), C('Dispatch Deadline', 'dispatch_deadline', 'date')], filters: UNREL_FILTERS },
   { dept: 'VWD', slug: 'for-dispatch', title: 'For Dispatch', actions: VFS, rule: 'Vehicles with status SOLD and a blank Dispatch Date (all stages before dispatch).',
     rows: () => sold().filter(v => !v.dispatch), sort: ['awarding', 'asc'],
     cols: [C('Vehicle Control Number', 'vcn', 'code'), C('Plate Number', 'plate', 'code'), C('Auction No.', 'auction', 'code'), C('Buyer', 'customer', 'text', { w: 250 }),
@@ -709,10 +723,7 @@ const ACTIONS = {
       <p class="fn">Cancellation fee amount and payment deadline: rule to be confirmed with JBAP.</p></div>`;
     openModal({ title: 'Print cancellation billing', icon: 'print', wide: true, body, note: 'Recording sets the Cancellation Billing Date to today.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record billing date & print', kind: 'pr', icon: 'print', onClick: () => {
-        const ui = U(scr.id); rows.forEach(r => {
-          logChange(scr, 'Update', r, [['Billing Date', 'date', r._raw.bill_date, TODAY], ['For Print?', 'check', r._raw.for_print, false]]);
-          r._raw.bill_date = TODAY; r._raw.for_print = false; delete ui.edits[r.id];
-        });
+        recordCancellationBilling(scr, rows);
         printModal(); closeModal(); render(); toast(`${rows.length} cancellation(s) billed. They moved to Cancellation Payment.`);
       } }] });
   },
