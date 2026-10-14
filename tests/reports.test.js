@@ -40,3 +40,11 @@ test('billing transmittal: report lists each billing and recording sets the tran
   P.recordBillingTransmittal(scr, rows);
   for (const b of rows) assert.strictEqual(P.B().find(x => x.id === b.id).trans, P.TODAY);
 });
+test('dispatch form: deadline, remarks, location; recording moves the lot to Unreleased', () => {
+  const scr = P.byId['FAD/for-dispatch'], r = scr.rows().find(x => x.plate === 'NKR1470');
+  const h = P.REPORTS.dispatchForm({ customer: r.customer, cid: r.cid, email: r.email }, [r], '2026-10-08');
+  assert.match(h, /Vehicle Dispatch Clearance Form/); assert.match(h, /13-Oct-26/); assert.match(h, /Required DOAS/); assert.match(h, /Pasay City/);
+  P.recordDispatch(scr, [r], () => '2026-10-08');
+  assert.ok(!scr.rows().some(x => x.plate === 'NKR1470'));
+  assert.ok(P.byId['FAD/unreleased-unit'].rows().some(x => x.plate === 'NKR1470'));
+});

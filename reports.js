@@ -66,4 +66,15 @@ const REPORTS = {
       <tfoot><tr><td colspan="4">Total</td><td class="r">${money(rptSum(bills, 'total'))}</td><td></td></tr></tfoot></table>
       ${rptSign(['Received by', 'Date received'])}`);
   },
+  // 6. VEHICLE_DISPATCH: Vehicle Dispatch Clearance Form (attached to the "JBAP VEHICLE FOR RELEASE" email)
+  dispatchForm(b, lots, issued) {
+    const rows = lots.map(r => `<tr><td class="c">${esc(r.seller)}</td><td class="c">${esc(r.auction)}</td><td>${esc(r.model)}</td><td class="c">${esc(r.plate)}</td><td>${esc(r.location || '')}</td><td>${esc(r.release_cond)}</td></tr>`).join('');
+    return rptPage('portrait', `<h1>Vehicle Dispatch Clearance Form</h1>
+      <div class="kv"><b>Date issued</b><span>${shortDate(issued)}</span><b>Pull-out deadline*</b><span>${shortDate(addWorkdays(issued, 3))}</span><b>Customer name</b><span>${esc(b.customer)}</span><b>Email</b><span>${esc(b.email)}</span></div>
+      <p class="fn">*Except Saturday and Sunday</p>
+      <table><thead><tr><th>Seller</th><th>Auction #</th><th>Make / Model</th><th>Plate</th><th>Location</th><th>Remarks</th></tr></thead><tbody>${rows}</tbody></table>
+      <h3>Finance and Admin Dept.</h3><p>1. Buyer has no pending accounts payable<br>2. Sales is approved by seller<br>3. Seller authorize release of vehicle</p>
+      <p>Upon failure to remove the Vehicle within the aforementioned period, the Buyer agrees and accepts that a storage fee of Php ${money(PENALTY_PER_DAY)} per day, including weekends, shall be charged until the Vehicle is removed from JBAP's Storage. JBAP shall release the Vehicle only upon full payment of the total computed storage fee.</p>
+      ${rptSign([CO().roles.financeManager])}`);
+  },
 };

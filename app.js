@@ -229,10 +229,10 @@ const SCREENS = [
     rows: () => sold().filter(v => !v.dispatch && dispatchReady(v)), sort: ['adate', 'asc'],
     cols: [C('Seller Full Name', 'seller_full', 'text', { w: 250 }), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction Date', 'adate', 'code'),
       C('Make/Model', 'model', 'text', { w: 190 }), C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Release Condition', 'release_cond', 'text', { w: 220 }),
-      C('Dispatch Date', 'dispatch', 'date', { edit: 'date' })],
+      C('For Dispatch Email?', 'for_dispatch_email', 'check', { edit: 'check' }), C('Dispatch Date', 'dispatch', 'date', { edit: 'date' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ dispatch: notFuture(e.dispatch) || (releaseOf(r) === 'ack' ? notBefore(e.dispatch, r.seller_ack, 'Seller Acknowledgement') : notBefore(e.dispatch, r.buyer_paid, 'Buyer Paid')) }),
-    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Dispatched vehicles moved to Unreleased Unit (FAD and VWD).' },
+    buttons: [{ label: 'Email dispatch form', kind: 'ol', icon: 'mail', act: 'emailDispatch', count: 'for_dispatch_email' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Dispatched vehicles moved to Unreleased Unit (FAD and VWD).' },
   { dept: 'FAD', slug: 'document-monitoring', title: 'Document Monitoring', actions: VFSU,
     rule: 'Sold lots with a Buyer Paid date whose documents are not yet released to the buyer. Sellers released on Buyer Payment (TFS) skip the DOAS steps. DOAS dates go in order: received for signing, signed by the buyer, receipt by the seller.',
     rows: () => sold().filter(v => v.buyer_paid && releaseOf(v) !== 'payment' && !v.to_buyer), sort: ['buyer_paid', 'asc'],
@@ -650,6 +650,11 @@ function recordBillingTransmittal(scr, rows) {
   const ui = U(scr.id);
   rows.forEach(r => { logChange(scr, 'Update', r, [['Transmittal Date', 'date', r._raw.trans, TODAY], ['Print Transmittal?', 'check', r._raw.print_trans, false]]); r._raw.trans = TODAY; r._raw.print_trans = false; delete ui.edits[r.id]; });
 }
+// [BEHAVIOR] Sending the dispatch notice sets the Dispatch Date (date entered on the row, else today); pull-out deadline = 3 working days later
+function recordDispatch(scr, rows, dateFor) {
+  const ui = U(scr.id);
+  rows.forEach(r => { const d = dateFor(r); logChange(scr, 'Update', r, [['Dispatch Date', 'date', r._raw.dispatch, d], ['For Dispatch Email?', 'check', r._raw.for_dispatch_email, false]]); r._raw.dispatch = d; r._raw.for_dispatch_email = false; delete ui.edits[r.id]; });
+}
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
@@ -754,6 +759,27 @@ const ACTIONS = {
     openModal({ title: `Billing transmittal: ${Object.keys(groups).length} customer(s)`, icon: 'print', wide: true, body, note: 'Recording sets the Transmittal Date to today.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record transmittal date & print', kind: 'pr', icon: 'print', onClick: () => {
         recordBillingTransmittal(scr, rows); printModal(); closeModal(); render(); toast(`Transmittal Date recorded on ${rows.length} billing(s).`);
+      } }] });
+  },
+  emailDispatch(scr) {
+    const rows = selectedRows(scr, 'for_dispatch_email'), ui = U(scr.id);
+    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For Dispatch Email?</b> on at least one vehicle first.'); render(); return; }
+    const errs = validateEdits(scr, rows.map(r => r.id).filter(id => ui.edits[id]));
+    if (errs.length) { setMsg(scr, 'error', `Please fix before sending:<br>${errs.join('<br>')}`); render(); return; }
+    setMsg(scr, null); render();
+    const dateFor = r => (ui.edits[r.id] || {}).dispatch || TODAY, groups = {}; rows.forEach(r => (groups[r.cid] ||= []).push(r));
+    const docs = {}, co = D.meta.company;
+    const mails = Object.values(groups).map(list => {
+      const b = { customer: list[0].customer, cid: list[0].cid, email: list[0].email };
+      docs[b.cid] = () => REPORTS.dispatchForm(b, list, dateFor(list[0]));
+      return REPORTS.email({ from: co.emails.finance, to: `${b.customer} <${b.email}>`, cc: `${co.emails.sales}; ${co.emails.vwd}; ${co.emails.finance}`, subject: 'JBAP VEHICLE FOR RELEASE',
+        atts: [{ key: b.cid, name: 'VEHICLE DISPATCH.pdf' }],
+        body: `We are pleased to inform you that the vehicle(s) listed in the attached Vehicle Dispatch Form are now available for release. Kindly ensure that vehicles are pulled out on or before the specified deadline to avoid Storage Penalties amounting to Php ${money(PENALTY_PER_DAY)} per day, including weekends and until removal of vehicle. For vehicles requiring the signing of Deed of Absolute Sale (DOAS) and other Legal Documents prior to release, please proceed to the JBAP Office within the prescribed period to complete the signing. Please note that vehicles cannot be released without a signed DOAS / Legal Documents.` });
+    }).join('');
+    openModal({ title: `Email dispatch form: ${Object.keys(groups).length} buyer(s), ${rows.length} vehicle(s)`, icon: 'mail', wide: true, body: mails,
+      note: 'Simulated: no email is actually sent. Click the attachment to preview it.', onAtt: key => openReport('VEHICLE DISPATCH.pdf', docs[key](), () => ACTIONS.emailDispatch(scr)),
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Send ${Object.keys(groups).length} email(s)`, kind: 'pr', icon: 'mail', onClick: () => {
+        recordDispatch(scr, rows, dateFor); closeModal(); render(); toast(`Dispatch form sent to ${Object.keys(groups).length} buyer(s). ${rows.length} vehicle(s) moved to Unreleased Unit.`);
       } }] });
   },
   resetFilter(scr) { const ui = U(scr.id); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); },
