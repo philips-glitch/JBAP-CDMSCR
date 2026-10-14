@@ -152,7 +152,7 @@ function docValidate(r, e) {
   const val = k => (k in e ? e[k] : r[k]) || null, out = {};
   ['rcv_doas', 'buyer_doas', 'seller_doas', 'orig_docs', 'to_buyer'].forEach(k => { out[k] = notFuture(val(k)) || notBefore(val(k), r.buyer_paid, 'Buyer Paid'); });
   out.buyer_doas ||= notBefore(val('buyer_doas'), val('rcv_doas'), 'Received DOAS for Signing');
-  out.seller_doas ||= notBefore(val('seller_doas'), val('buyer_doas'), 'Buyer Signed DOAS');
+  out.seller_doas ||= notBefore(val('seller_doas'), val('buyer_doas') || val('rcv_doas'), val('buyer_doas') ? 'Buyer Signed DOAS' : 'Received DOAS for Signing');
   out.to_buyer ||= notBefore(val('to_buyer'), val('orig_docs'), 'Original Docs Received from Seller');
   return out;
 }
@@ -662,10 +662,11 @@ function releaseBlock(v) {
   if (v.penalty > 0) return `Storage penalty of PHP ${money(v.penalty)} is unpaid. Recording penalty payments comes with step 2 (holidays and extensions).`;
   return null;
 }
-// Records the release on the lot and returns the new VRF No. (running number, 5 digits)
+// [BEHAVIOR] Records the release on the lot (date, VRF No., released to, type, checklist) and returns the new VRF No. (running number, 5 digits)
 function recordRelease(scr, v, f) {
   const co = D.meta.company, vrf = String(co.next.vrf++).padStart(5, '0');
-  logChange(scr, 'Update', v, [['Vehicle Release Date', 'date', v._raw.release, f.date], ['VRF No.', 'text', v._raw.vrf_no, vrf], ['Released To', 'text', null, f.to]]);
+  logChange(scr, 'Update', v, [['Vehicle Release Date', 'date', v._raw.release, f.date], ['VRF No.', 'text', v._raw.vrf_no, vrf],
+    ['Released To', 'text', v._raw.release_to, f.to], ['Release Type', 'text', v._raw.release_type, f.type], ['Release Checklist', 'text', (v._raw.release_items || []).join(', '), f.items.join(', ')]]);
   Object.assign(v._raw, { release: f.date, vrf_no: vrf, release_to: f.to, release_type: f.type, release_items: f.items });
   return vrf;
 }
@@ -677,7 +678,8 @@ function recordDocTransmittal(scr, v, docs, others, remarks = '') {
   const co = D.meta.company, atf = v._raw.atf_no || `HRAD-ATF-${co.next.atf++}`;
   logChange(scr, 'Update', v, [['Documents Received', 'text', (v._raw.docs_received || []).join(', '), docs.join(', ')], ['Documents Others', 'text', v._raw.docs_others, others], ['Documents Remarks', 'text', v._raw.docs_remarks, remarks],
     ['ATF Control No.', 'text', v._raw.atf_no, atf], ['Print Transmittal?', 'check', v._raw.print_doc_trans, false]]);
-  Object.assign(v._raw, { docs_received: docs, docs_others: others, docs_remarks: remarks, atf_no: atf, print_doc_trans: false }); delete U(scr.id).edits[v.id];
+  Object.assign(v._raw, { docs_received: docs, docs_others: others, docs_remarks: remarks, atf_no: atf, print_doc_trans: false });
+  const ed = U(scr.id).edits; if (ed[v.id]) { delete ed[v.id].print_doc_trans; if (!Object.keys(ed[v.id]).length) delete ed[v.id]; }   // unsaved date edits on the row stay pending
   return atf;
 }
 const ACTIONS = {
@@ -840,7 +842,7 @@ const ACTIONS = {
         const vrf = recordRelease(scr, v, f); render();
         openModal({ title: `Vehicle release form VRF No. ${vrf}`, icon: 'print', wide: true, body: REPORTS.releaseForm(enrichV(v._raw), f, vrf),
           footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
-        printModal(); toast(`${v.plate} released (VRF No. ${vrf}).`);
+        printModal(); toast(`${esc(v.plate)} released (VRF No. ${vrf}).`);
       } }] });
   },
   resetFilter(scr) { const ui = U(scr.id); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); },

@@ -84,9 +84,13 @@ test('VWD release: DOAS block, then release with the next VRF number', () => {
   const v = scr.rows().find(x => P.releaseOf(x) === 'doas') || P.V().find(x => P.releaseOf(x) === 'doas' && x.dispatch && !x.release && !(x.penalty > 0));
   v._raw.buyer_doas = null; assert.match(P.releaseBlock(P.enrichV(v._raw)), /DOAS/);
   v._raw.buyer_doas = v.buyer_paid; assert.strictEqual(P.releaseBlock(P.enrichV(v._raw)), null);
-  const vrf = P.recordRelease(scr, v, { date: P.TODAY, to: v.customer, type: 'Sold', items: ['No. of Keys'] });
+  const f = { date: P.TODAY, to: v.customer, type: 'Sold', items: ['No. of Keys', 'Spare Tire'] }, before = P.S.log.length;
+  const vrf = P.recordRelease(scr, v, f);
   assert.strictEqual(vrf, '04583'); assert.strictEqual(P.D.meta.company.next.vrf, 4584); assert.strictEqual(v._raw.release, P.TODAY);
-  const h = P.REPORTS.releaseForm(P.enrichV(v._raw), { date: P.TODAY, to: v.customer, type: 'Sold', items: ['No. of Keys'] }, vrf);
+  const added = P.S.log.slice(before), entry = k => added.find(e => e.field === k) || {};
+  assert.deepStrictEqual([entry('Released To').new, entry('Release Type').new, entry('Release Checklist').new], [v.customer, 'Sold', 'No. of Keys, Spare Tire']);
+  assert.ok(added.every(e => e.module === 'VWD'), 'logged under VWD');
+  const h = P.REPORTS.releaseForm(P.enrichV(v._raw), f, vrf);
   assert.match(h, /Vehicle Release Form/); assert.match(h, /Gate Pass/); assert.match(h, /04583/);
 });
 test('VWD release is blocked while a storage penalty is unpaid', () => {
@@ -135,4 +139,12 @@ test('document transmittal: Others and Remarks are saved, logged and printed (es
   const x = P.REPORTS.documentTransmittal(P.enrichV(v._raw), ['Spare Key'], '<b>x</b>', atf, '<i>r</i>');
   assert.match(x, /&lt;b&gt;x/); assert.match(x, /&lt;i&gt;r/); assert.doesNotMatch(x, /<b>x<\/b>/);
   assert.match(x, /rbox">✓<\/span>Others: /, 'typed Others text prints with the Others box ticked');
+});
+test('document transmittal keeps unsaved date edits on the row and clears only Print Transmittal?', () => {
+  const scr = P.byId['FAD/document-monitoring'], [v, w] = scr.rows().slice(2), edits = P.U(scr.id).edits;
+  edits[v.id] = { to_buyer: '2026-10-08', print_doc_trans: true }; edits[w.id] = { print_doc_trans: true };
+  P.recordDocTransmittal(scr, v, ['Spare Key'], ''); P.recordDocTransmittal(scr, w, ['Spare Key'], '');
+  assert.deepStrictEqual(edits[v.id], { to_buyer: '2026-10-08' });
+  assert.ok(!(w.id in edits), 'a row with no other edit is no longer dirty');
+  delete edits[v.id];
 });

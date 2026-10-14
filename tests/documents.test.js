@@ -11,6 +11,7 @@ test('validation: order, buyer paid, future', () => {
   assert.match(P.docValidate(r, { rcv_doas: '2026-09-10' }).rcv_doas, /Buyer Paid/);
   assert.match(P.docValidate(r, { orig_docs: '2026-12-01' }).orig_docs, /after today/);
   assert.match(P.docValidate(r, { orig_docs: '2026-09-30', to_buyer: '2026-09-25' }).to_buyer, /Original Docs/);
+  assert.match(P.docValidate(r, { rcv_doas: '2026-10-05', seller_doas: '2026-10-01' }).seller_doas || '', /Received DOAS/, 'Buyer Signed DOAS blank: seller receipt checked against Received DOAS');
   assert.deepStrictEqual(Object.values(P.docValidate(r, { rcv_doas: '2026-09-21', buyer_doas: '2026-09-22', seller_doas: '2026-09-23' })).filter(Boolean), []);
 });
 test('the 5 document dates are editable, and a lot leaves the list once documents are released', () => {
