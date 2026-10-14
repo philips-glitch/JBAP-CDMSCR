@@ -251,6 +251,11 @@ button.att{cursor:pointer;font-family:inherit;color:inherit}button.att:hover{bac
   body.printing .modal-b{max-height:none;overflow:visible;padding:0}
   body.printing .no-print{display:none!important}
   .rpt{border:0;margin:0;padding:0;max-width:none;page-break-after:always}
+  .rpt.portrait{page:rpt-portrait}
+  .rpt.landscape{page:rpt-landscape}
   @page{size:A4 landscape;margin:12mm}
 }
+/* Named pages for the reports (top level: named @page rules are not reliably accepted inside @media) */
+@page rpt-portrait{size:A4 portrait;margin:12mm}
+@page rpt-landscape{size:A4 landscape;margin:12mm}
 table.cmp th{font-size:11.5px}table.cmp th .hb{padding:5px 4px}table.cmp td{padding:0 5px;font-size:12px}

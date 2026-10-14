@@ -4,7 +4,8 @@
    Every report returns HTML for one or more A4 pages (<section class="rpt">). Role titles and a placeholder bank account, no real names. */
 const CO = () => D.meta.company;
 const longDate = iso => toDate(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-const shortDate = iso => toDate(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' }).replace(/ /g, '-');
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];   // fixed list: toLocaleDateString month names differ per Node/ICU version ("Sept")
+const shortDate = iso => { const [y, m, d] = iso.split('-'); return `${d}-${MON[+m - 1]}-${y.slice(2)}`; };
 const rptPage = (cls, html) => `<section class="rpt ${cls}">${html}</section>`;
 const rptSum = (rows, k) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
 const rptSign = labels => `<div class="rsign">${labels.map(l => `<div>${esc(l)}</div>`).join('')}</div>`;

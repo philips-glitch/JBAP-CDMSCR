@@ -19,4 +19,5 @@ test('email preview lists attachments as buttons', () => {
 test('date helpers', () => {
   assert.strictEqual(P.api.longDate('2026-10-12'), '12 October 2026');
   assert.strictEqual(P.api.shortDate('2026-10-12'), '12-Oct-26');
+  assert.strictEqual(P.api.shortDate('2026-09-21'), '21-Sep-26');
 });
