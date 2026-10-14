@@ -593,13 +593,17 @@ function render() {
 // ─── Toast & modal ────────────────────────────────────────────────────
 function toast(text, kind = '') { const t = document.createElement('div'); t.className = `toast ${kind}`; t.setAttribute('role', 'status'); t.innerHTML = `${IC.info}<span>${text}</span>`; $('#toasts').appendChild(t); setTimeout(() => t.remove(), 4200); }
 let modalKeyHandler = null;
-function openModal({ title, icon = 'info', body, footer = [], note = '', wide = false }) {
+function openModal({ title, icon = 'info', body, footer = [], note = '', wide = false, onAtt = null }) {
   closeModal();
   const bg = document.createElement('div'); bg.className = 'modal-bg'; bg.id = 'modal';
   bg.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="modal-t"><div class="modal-h">${IC[icon] || ''}<span id="modal-t">${esc(title)}</span><button type="button" class="x" data-close aria-label="Close">×</button></div>
     <div class="modal-b">${body}</div><div class="modal-f"><span class="left">${note}</span>${footer.map((f, i) => `<button type="button" class="btn ${f.kind}" data-mbtn="${i}">${f.icon ? IC[f.icon] : ''}${esc(f.label)}</button>`).join('')}</div></div>`;
   document.body.appendChild(bg);
-  bg.addEventListener('click', ev => { if (ev.target === bg || ev.target.closest('[data-close]')) closeModal(); const b = ev.target.closest('[data-mbtn]'); if (b) footer[+b.dataset.mbtn].onClick(); });
+  bg.addEventListener('click', ev => {
+    if (ev.target === bg || ev.target.closest('[data-close]')) closeModal();
+    const b = ev.target.closest('[data-mbtn]'); if (b) footer[+b.dataset.mbtn].onClick();
+    const a = ev.target.closest('[data-att]'); if (a && onAtt) onAtt(a.dataset.att);
+  });
   modalKeyHandler = ev => { if (ev.key === 'Escape') closeModal(); }; document.addEventListener('keydown', modalKeyHandler);
   (bg.querySelector('input,button.btn') || bg).focus();
 }
@@ -634,6 +638,11 @@ function applyEdits(scr, ids) {
   });
   return n;
 }
+// Opens one report from an email preview; "Back" returns to the emails
+function openReport(title, html, back) {
+  openModal({ title, icon: 'print', wide: true, body: html, note: 'Preview of the attached PDF.',
+    footer: [{ label: 'Back to email', kind: 'gh', onClick: back }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
+}
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
@@ -651,17 +660,20 @@ const ACTIONS = {
     setMsg(scr, null); render();
     const groups = {}; rows.forEach(r => (groups[r.cid] ||= []).push(r));
     const eff = (r, k) => (k in (ui.edits[r.id] || {}) ? ui.edits[r.id][k] : r[k]);
+    const lotsOf = list => list.map(r => Object.assign({}, r, { transfer_fee: Number(eff(r, 'transfer_fee') || 0) }));
+    const buyerOf = list => ({ customer: list[0].customer, cid: list[0].cid, email: list[0].email });
+    const docs = {};
     const mails = Object.values(groups).map(list => {
-      const b = list[0], award = eff(b, 'awarding') || TODAY, due = addWorkdays(award, 3);
-      const lines = list.map(r => { const tf = Number(eff(r, 'transfer_fee') || 0); return `<tr><td class="c">${r.auction}</td><td class="c">${esc(r.lot)}</td><td class="c">${esc(r.plate)}</td><td>${esc(r.model)}</td><td class="r">${money(r.price)}</td><td class="r">${money(tf)}</td><td class="r">${r.rebate ? money(r.rebate) : ''}</td><td class="r"><b>${money(r.price + tf)}</b></td></tr>`; }).join('');
-      return `<article class="mail"><div class="mail-h"><b>From</b><span>finance@jbap.com.ph</span><b>To</b><span>${esc(b.customer)} &lt;${esc(b.email)}&gt;</span><b>Subject</b><span>Buyer Awarding Acknowledgement Form (BAAF), Auction ${b.auction}</span>
-        <b>Attached</b><span>${list.map(r => `<span class="att">${IC.clip}BAAF_${r.auction}-${esc(r.lot)}.pdf</span>`).join(' ')}</span></div>
-        <div class="mail-b">Dear ${esc(b.customer)},<br><br>You have been awarded the vehicle(s) below. Please settle the total amount on or before <b>${fmtDate(due)}</b> (3 working days).<br><br>
-        <table><thead><tr><th>Auction</th><th>Lot</th><th>Plate</th><th>Make/Model</th><th>Winning Bid</th><th>Transfer Fees</th><th>Rebate</th><th>Total</th></tr></thead><tbody>${lines}</tbody></table>
-        <br>Thank you,<br>JBA Philippines Finance and Admin</div></article>`;
+      const b = buyerOf(list), award = eff(list[0], 'awarding') || TODAY, lots = lotsOf(list), withRebate = lots.filter(r => r.rebate);
+      docs[`aw:${b.cid}`] = ['JBAP AWARDING.pdf', () => REPORTS.awarding(b, lots, award)];
+      const atts = [{ key: `aw:${b.cid}`, name: 'JBAP AWARDING.pdf' }];
+      if (withRebate.length) { docs[`rb:${b.cid}`] = [`${b.customer}-rebate.pdf`, () => REPORTS.rebate(b, withRebate, addWorkdays(award, 3))]; atts.push({ key: `rb:${b.cid}`, name: `${b.customer}-rebate.pdf` }); }
+      return REPORTS.email({ from: D.meta.company.emails.finance, to: `${b.customer} <${b.email}>`, cc: D.meta.company.emails.sales,
+        subject: `NOTICE OF AWARDING - ${fmtDate(award)}`, atts,
+        body: 'Congratulations!!<br>We are pleased to inform you that you have been awarded with the vehicles as attached. Please pay on or before the deadline indicated in the notice. Thank you!' });
     }).join('');
     openModal({ title: `Email BAAF: ${Object.keys(groups).length} buyer(s), ${rows.length} vehicle(s)`, icon: 'mail', wide: true, body: mails,
-      note: 'Simulated: no email is actually sent.',
+      note: 'Simulated: no email is actually sent. Click an attachment to preview it.', onAtt: key => openReport(docs[key][0], docs[key][1](), () => ACTIONS.emailBaaf(scr)),
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Send ${Object.keys(groups).length} email(s)`, kind: 'pr', icon: 'mail', onClick: () => {
         rows.forEach(r => {
           const e = ui.edits[r.id] || {}, award = e.awarding || TODAY, tf = 'transfer_fee' in e && e.transfer_fee !== '' ? Number(e.transfer_fee) : r._raw.transfer_fee;
