@@ -128,11 +128,21 @@ const VFS = ['View', 'Filter', 'Sort'], VFSU = ['View', 'Filter', 'Sort', 'Updat
 const notFuture = d => d && d > TODAY ? `cannot be after today (${fmtDate(TODAY)})` : null;
 const notBefore = (d, ref, refLabel) => d && ref && d < ref ? `cannot be before ${refLabel} (${fmtDate(ref)})` : null;
 
+// [BEHAVIOR] Document dates: not in the future, not before Buyer Paid, DOAS steps in order (received → buyer signed → seller receipt),
+// documents released to the buyer only after the originals arrive from the seller.
+function docValidate(r, e) {
+  const val = k => (k in e ? e[k] : r[k]) || null, out = {};
+  ['rcv_doas', 'buyer_doas', 'seller_doas', 'orig_docs', 'to_buyer'].forEach(k => { out[k] = notFuture(val(k)) || notBefore(val(k), r.buyer_paid, 'Buyer Paid'); });
+  out.buyer_doas ||= notBefore(val('buyer_doas'), val('rcv_doas'), 'Received DOAS for Signing');
+  out.seller_doas ||= notBefore(val('seller_doas'), val('buyer_doas'), 'Buyer Signed DOAS');
+  out.to_buyer ||= notBefore(val('to_buyer'), val('orig_docs'), 'Original Docs Received from Seller');
+  return out;
+}
 const AM_COLS = [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 150 }),
   C('Seller', 'seller', 'code'), C('Status', 'status', 'status'), C('Result Price', 'price', 'money'), C('Awarding Date', 'awarding', 'date'), C('Buyer Paid', 'buyer_paid', 'date'),
   C('Payment to Seller', 'pay_seller', 'date'), C('Seller Acknowl\u00adedgement', 'seller_ack', 'date'), C('Dispatch Date', 'dispatch', 'date'), C('Release Date', 'release', 'date'),
-  C('Received DOAS', 'rcv_doas', 'date'), C('Buyer Sign DOAS', 'buyer_doas', 'date'), C('Seller Receipt of Signed DOAS', 'seller_doas', 'date'),
-  C('Receipt of Original Docs from Seller', 'orig_docs', 'date'), C('Release to the Buyer', 'to_buyer', 'date')];
+  C('Received DOAS for Signing', 'rcv_doas', 'date'), C('Buyer Signed DOAS', 'buyer_doas', 'date'), C('Seller Receipt of Signed DOAS', 'seller_doas', 'date'),
+  C('Original Docs Received from Seller', 'orig_docs', 'date'), C('Documents Released to Buyer', 'to_buyer', 'date')];
 const AM_FILTERS = [AUCTION_FILTER, { key: 'lot', label: 'Lot', type: 'text', w: 'w1' }, { key: 'plate', label: 'Plate Number' }, { key: 'customer', label: 'Customer Name' },
   { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'status', label: 'Status', type: 'select', options: () => ['Sold', 'Not Sold', 'Cancelled'] }];
 const amTotals = rows => { const s = rows.filter(r => r.status === 'Sold'); return { customer: `${rows.length} lots, ${s.length} sold`, price: money(sumBy(s, 'price')) }; };
@@ -205,6 +215,16 @@ const SCREENS = [
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ dispatch: notFuture(e.dispatch) || (releaseOf(r) === 'ack' ? notBefore(e.dispatch, r.seller_ack, 'Seller Acknowledgement') : notBefore(e.dispatch, r.buyer_paid, 'Buyer Paid')) }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Dispatched vehicles moved to Unreleased Unit (FAD and VWD).' },
+  { dept: 'FAD', slug: 'document-monitoring', title: 'Document Monitoring', actions: VFSU,
+    rule: 'Sold lots with a Buyer Paid date whose documents are not yet released to the buyer. Sellers released on Buyer Payment (TFS) skip the DOAS steps. DOAS dates go in order: received for signing, signed by the buyer, receipt by the seller.',
+    rows: () => sold().filter(v => v.buyer_paid && releaseOf(v) !== 'payment' && !v.to_buyer), sort: ['buyer_paid', 'asc'],
+    cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 210 }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
+      C('Buyer Paid', 'buyer_paid', 'date'), C('Received DOAS for Signing', 'rcv_doas', 'date', { edit: 'date' }), C('Buyer Signed DOAS', 'buyer_doas', 'date', { edit: 'date' }),
+      C('Seller Receipt of Signed DOAS', 'seller_doas', 'date', { edit: 'date' }), C('Original Docs Received from Seller', 'orig_docs', 'date', { edit: 'date' }),
+      C('Documents Released to Buyer', 'to_buyer', 'date', { edit: 'date' })],
+    filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
+    validate: docValidate,
+    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Lots with Documents Released to Buyer were removed from the list.' },
   { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
     rule: `Dispatched vehicles not yet released to the buyer. Penalty shows once the dispatch deadline has passed (prototype rule: PHP ${PENALTY_PER_DAY}/day, to confirm).`,
     rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'], cols: UNREL_COLS, filters: UNREL_FILTERS,
