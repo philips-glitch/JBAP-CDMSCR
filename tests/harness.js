@@ -4,7 +4,7 @@ const ROOT = path.join(__dirname, '..');
 // Top-level names from app.js / reports.js that tests may use (missing ones are returned as undefined).
 const EXPORTS = ['D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enrichV', 'ACTIONS', 'logChange', 'TODAY',
   'sellerMoney', 'dispatchReady', 'releaseOf', 'docValidate', 'cancelSplit', 'recordCancellationBilling', 'recordBillingTransmittal',
-  'recordDispatch', 'releaseBlock', 'recordRelease', 'recordDocTransmittal', 'REPORTS', 'DOC_TYPES', 'longDate', 'shortDate'];
+  'recordDispatch', 'releaseBlock', 'recordRelease', 'recordDocTransmittal', 'REPORTS', 'DOC_TYPES', 'longDate', 'shortDate', 'cancelLetterGroups'];
 function load() {
   const window = { addEventListener() {} };
   new Function('window', fs.readFileSync(path.join(ROOT, 'data.js'), 'utf8'))(window);

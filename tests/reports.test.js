@@ -77,3 +77,9 @@ test('cancellation letter: penalty × units', () => {
   const h = P.REPORTS.cancellationLetter({ customer: 'TEST BUYER' }, rows, '2026-10-08');
   assert.match(h, /Cancellation Fee Billing/); assert.match(h, /20,000\.00/); assert.match(h, /8 October 2026/);
 });
+test('cancellation letters: one letter per buyer name, even when some lots have no cid', () => {
+  const rows = P.byId['FAD/cancellation-billing'].rows().filter(r => r.customer === 'ANGEL ANN CEREZO MONTES');
+  assert.ok(rows.length >= 2, 'need at least two unbilled lots for this buyer');
+  assert.ok(rows.some(r => !r.cid) && rows.some(r => r.cid), 'lots should mix cid and no cid');
+  assert.strictEqual(P.cancelLetterGroups(rows).length, 1);
+});

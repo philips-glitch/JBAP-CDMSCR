@@ -670,6 +670,8 @@ function recordRelease(scr, v, f) {
   return vrf;
 }
 const RELEASE_ITEMS = ['No. of Keys', 'Copy of OR/CR', "Owner's Manual", 'Warranty booklet', 'Spare Tire', 'Tools', 'Jack', 'Radio', 'A/C', 'Accessories'];
+// [BEHAVIOR] One cancellation billing letter per buyer name, the name printed on the letter (cid is missing on some lots).
+const cancelLetterGroups = rows => { const g = {}; rows.forEach(r => (g[r.customer] ||= []).push(r)); return Object.values(g); };
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
@@ -755,8 +757,7 @@ const ACTIONS = {
     const rows = selectedRows(scr, 'for_print');
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For Print?</b> on at least one record first.'); render(); return; }
     setMsg(scr, null); render();
-    const groups = {}; rows.forEach(r => (groups[r.cid || r.customer] ||= []).push(r));
-    const body = Object.values(groups).map(list => REPORTS.cancellationLetter({ customer: list[0].customer }, list, TODAY)).join('');
+    const body = cancelLetterGroups(rows).map(list => REPORTS.cancellationLetter({ customer: list[0].customer }, list, TODAY)).join('');
     openModal({ title: 'Print cancellation billing', icon: 'print', wide: true, body, note: 'Recording sets the Cancellation Billing Date to today and the amount due to the penalty. The payment deadline stays blank until JBAP confirms it (Q33).',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record billing date & print', kind: 'pr', icon: 'print', onClick: () => {
         recordCancellationBilling(scr, rows);
