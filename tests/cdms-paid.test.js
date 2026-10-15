@@ -43,3 +43,26 @@ test('Unpaid shows Paid in CDMS, Confirm and its button only with the switch on'
   assert.ok(keys().includes('cdms_status') && keys().includes('cdms_confirm'));
   assert.ok(scr.buttons.filter(P.shown).some(b => b.act === 'confirmPaid'));
 });
+test('an untick holds the lot back through Save; Save counts and writes only other edits', () => {
+  const P = load(), scr = P.byId['FAD/unpaid']; P.setProposed(true); const ed = P.U(scr.id).edits;
+  ed.V123 = { cdms_confirm: false }; ed.V121 = { buyer_paid: '2026-10-05' };
+  assert.strictEqual(P.dirtyCount(scr), 1);
+  assert.strictEqual(P.applyEdits(scr), 1);
+  assert.deepStrictEqual(ed.V123, { cdms_confirm: false });
+  assert.ok(!('cdms_confirm' in P.S.veh.find(v => v.id === 'V123')), 'nothing written');
+  assert.ok(!P.selectedRows(scr, 'cdms_confirm').some(r => r.id === 'V123'), 'still held back');
+  assert.strictEqual(P.S.veh.find(v => v.id === 'V121').buyer_paid, '2026-10-05');
+});
+test('switch off: Save counts every edit as before', () => {
+  const P = load(), scr = P.byId['FAD/unpaid']; P.U(scr.id).edits.V123 = { cdms_confirm: false };
+  assert.strictEqual(P.dirtyCount(scr), 1);
+});
+test('a CDMS paid date before awarding or in the future is not confirmable', () => {
+  const P = load(), scr = P.byId['FAD/unpaid']; P.setProposed(true);
+  P.D.cdmsPayments.V121 = [{ date: '2026-09-01', amount: 460750, or_no: 'X' }];
+  P.D.cdmsPayments.V122 = [{ date: '2026-12-01', amount: 361616, or_no: 'Y' }];
+  const ids = P.selectedRows(scr, 'cdms_confirm').map(r => r.id);
+  assert.ok(!ids.includes('V121') && !ids.includes('V122'));
+  const before = P.S.log.length; P.recordCdmsPaid(scr, scr.rows().filter(r => ['V121', 'V122'].includes(r.id)));
+  assert.strictEqual(P.S.log.length, before);
+});

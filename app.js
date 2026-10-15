@@ -98,6 +98,8 @@ function cdmsPaid(id, due) {
   pays.forEach(p => { paid = r2(paid + p.amount); if (!fullDate && due !== null && due !== undefined && paid >= due) fullDate = p.date; });
   return { paid, due, fullDate };
 }
+// [BEHAVIOR] P1: same date rules as typed Buyer Paid (not in the future, not before the Awarding Date)
+const cdmsConfirmable = r => !!r.cdms_full && r.cdms_full <= TODAY && (!r.awarding || r.cdms_full >= r.awarding);
 function enrichV(v) {
   const [as, ae] = D.auctions[String(v.auction)] || [null, null];
   const buyer_deadline = v.awarding ? addWorkdays(v.awarding, 3) : null;     // 3 working days after awarding
@@ -228,14 +230,14 @@ const SCREENS = [
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Buyer ID', 'cid', 'code'), C('Seller', 'seller', 'code'),
       C('Make/Model', 'model', 'text', { w: 200 }), C('Plate Number', 'plate', 'code'), C('Total (Awarded Price + Transfer Fees)', 'total', 'money'),
       C('Paid in CDMS', 'cdms_status', 'text', { w: 230, proposed: true, tag: 'P1', warn: r => !r.cdms_full }),
-      C('Confirm', 'cdms_confirm', 'check', { edit: 'check', proposed: true, tag: 'P1', disabledWhen: r => !r.cdms_full }),
+      C('Confirm', 'cdms_confirm', 'check', { edit: 'check', proposed: true, tag: 'P1', disabledWhen: r => !cdmsConfirmable(r) }),
       C('Buyer Paid', 'buyer_paid', 'date', { edit: 'date' }), C('Buyer Deadline', 'buyer_deadline', 'date', { late: true })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', keys: ['customer', 'cid'], label: 'Customer Name / Buyer ID', w: 'w2' }, { key: 'plate', label: 'Plate Number' }],
     totals: rows => ({ total: money(sumBy(rows, 'total')) }),
     validate: (r, e) => ({ buyer_paid: notFuture(e.buyer_paid) || notBefore(e.buyer_paid, r.awarding, 'the Awarding Date') }),
     buttons: [{ label: 'Confirm Buyer Paid', kind: 'ol', icon: 'check', act: 'confirmPaid', count: 'cdms_confirm', proposed: true, tag: 'P1' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Paid vehicles moved to Payment Seller.',
-    ready: { key: 'cdms_confirm', when: r => !!r.cdms_full },
+    ready: { key: 'cdms_confirm', when: cdmsConfirmable },
     saveWarn: { test: (r, e) => !!e.buyer_paid && !r.cdms_full, text: n => `${n} lot(s) saved without full payment in CDMS.` },
     ruleP: ['P1', 'Paid in CDMS shows the payments CDMS recorded per lot. Fully paid lots are pre-ticked under Confirm; Confirm Buyer Paid sets Buyer Paid to the date CDMS shows the lot fully paid. Typing Buyer Paid still works, with a warning when CDMS does not show the lot fully paid.'] },
   { dept: 'FAD', slug: 'payment-seller', title: 'Payment Seller', actions: VFSU, rule: 'Vehicles with status SOLD, a Buyer Paid date, and a blank Payment to Seller date. Deadline = 3 working days after Buyer Paid. To JBAP = commission + VAT − 15% withholding tax (NET sellers); Payable to Seller = total − To JBAP.',
@@ -506,6 +508,9 @@ function filterCard(scr) {
 // or logged; unticking stores an edit like any other change. With the switch off a tick shows the saved value only.
 const tickDefault = (scr, r, key) => !!r[key] || (PROPOSED && scr.ready?.key === key && !!scr.ready.when(r));
 const tickValue = (scr, r, key) => { const e = U(scr.id).edits[r.id] || {}; return key in e ? e[key] : tickDefault(scr, r, key); };
+// [BEHAVIOR] P4: an untick on the ready key holds the lot back for this session. It is never saved, logged or counted as a change.
+const holdKey = scr => PROPOSED && scr.ready ? scr.ready.key : null;
+const dirtyCount = scr => Object.values(U(scr.id).edits).filter(e => Object.keys(e).some(k => k !== holdKey(scr))).length;
 function cellHtml(scr, r, c, upd) {
   const ui = U(scr.id), ed = ui.edits[r.id] || {}, err = (ui.errors[r.id] || {})[c.key];
   const cls = [RIGHT.has(c.type) ? 'r' : '', CEN.has(c.type) ? 'c' : ''].join(' ');
@@ -536,7 +541,7 @@ function dataCard(scr, title) {
   const all = sortRows(scr, applyFilters(scr, scr.rows()));
   const pages = Math.max(1, Math.ceil(all.length / ui.size)); ui.page = Math.min(ui.page, pages);
   const rows = all.slice((ui.page - 1) * ui.size, ui.page * ui.size);
-  const dirty = Object.keys(ui.edits).length;
+  const dirty = dirtyCount(scr);
   const btns = (upd ? (scr.buttons || []).filter(shown) : []).map(b => {
     const n = b.act === 'save' ? dirty : effectiveCount(scr, b.count);
     return `<button type="button" class="btn ${b.kind}" data-act="${b.act}">${IC[b.icon]}${esc(b.label)}${tagHtml(b)}${n ? `<span class="n" data-count="${b.act}">${n}</span>` : `<span class="n" data-count="${b.act}" hidden></span>`}</button>`;
@@ -666,15 +671,16 @@ function validateEdits(scr, ids) {
   return lines;
 }
 function applyEdits(scr, ids) {
-  const ui = U(scr.id), map = Object.fromEntries(scr.rows().map(r => [r.id, r])); let n = 0;
+  const ui = U(scr.id), map = Object.fromEntries(scr.rows().map(r => [r.id, r])), hold = holdKey(scr); let n = 0;
   (ids || Object.keys(ui.edits)).forEach(id => {
     const r = map[id], e = ui.edits[id]; if (!r || !e) return;
-    const changes = Object.entries(e).map(([k, val]) => {
-      const col = scr.cols.find(c => c.key === k), nv = val === '' ? null : (col?.edit === 'money' && val !== null ? Number(val) : val);
+    const keys = Object.keys(e).filter(k => k !== hold); if (!keys.length) return;   // a hold-back alone is not saved: no write, no log, no count
+    const changes = keys.map(k => {
+      const val = e[k], col = scr.cols.find(c => c.key === k), nv = val === '' ? null : (col?.edit === 'money' && val !== null ? Number(val) : val);
       const ch = [col?.label || k, col?.edit, r._raw[k], nv]; r._raw[k] = nv; return ch;
     });
     logChange(scr, 'Update', r, changes);
-    delete ui.edits[id]; n++;
+    keys.forEach(k => delete e[k]); if (!Object.keys(e).length) delete ui.edits[id]; n++;
   });
   return n;
 }
@@ -722,7 +728,7 @@ function recordDocTransmittal(scr, v, docs, others, remarks = '') {
 // [BEHAVIOR] P1: Buyer Paid takes the date CDMS shows the lot fully paid; logged with action Confirm so Log Activity shows the source
 function recordCdmsPaid(scr, rows) {
   const ed = U(scr.id).edits;
-  rows.filter(r => r.cdms_full).forEach(r => { logChange(scr, 'Confirm', r, [['Buyer Paid', 'date', r._raw.buyer_paid, r.cdms_full]]); r._raw.buyer_paid = r.cdms_full; delete ed[r.id]; });
+  rows.filter(cdmsConfirmable).forEach(r => { logChange(scr, 'Confirm', r, [['Buyer Paid', 'date', r._raw.buyer_paid, r.cdms_full]]); r._raw.buyer_paid = r.cdms_full; delete ed[r.id]; });
 }
 // [BEHAVIOR] P1: typing Buyer Paid stays allowed; the save message counts lots CDMS does not show fully paid (switch on only)
 function saveWarnCount(scr) {
@@ -733,17 +739,24 @@ function saveWarnCount(scr) {
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
-    if (!Object.keys(ui.edits).length) { setMsg(scr, 'info', 'There are no changes to save.'); render(); return; }
+    if (!dirtyCount(scr)) { setMsg(scr, 'info', 'There are no changes to save.'); render(); return; }
     const errs = validateEdits(scr);
     if (errs.length) { setMsg(scr, 'error', `Please fix ${errs.length} item(s) before saving:<br>${errs.slice(0, 6).join('<br>')}${errs.length > 6 ? '<br>…' : ''}`); render(); return; }
     const warn = saveWarnCount(scr), n = applyEdits(scr); setMsg(scr, null); ui.errors = {}; render();
     toast(`${n} record(s) saved. ${scr.savedNote || ''}${warn ? ` ${scr.saveWarn.text(warn)}` : ''}`, warn ? 'warn' : '');
   },
   confirmPaid(scr) {
-    const rows = selectedRows(scr, 'cdms_confirm').filter(r => r.cdms_full);
+    const rows = selectedRows(scr, 'cdms_confirm').filter(cdmsConfirmable);
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Confirm</b> on at least one lot that CDMS shows as fully paid.'); render(); return; }
-    recordCdmsPaid(scr, rows); setMsg(scr, null); render();
-    toast(`Buyer Paid confirmed from CDMS for ${rows.length} lot(s). They moved to Payment Seller.`);
+    setMsg(scr, null); render();
+    // [BEHAVIOR] P1: FAD previews the lots before anything is recorded
+    const th = h => `<th style="padding:6px 8px">${h}</th>`, tr = r => `<tr><td>${esc(r.plate)}</td><td>${esc(r.customer)}</td><td class="r">${esc(money(r.total))}</td><td>${esc(fmtDate(r.cdms_full))}</td></tr>`;
+    const body = `<p>Buyer Paid will be set to the date CDMS shows each lot fully paid.</p><table><thead><tr>${th('Plate')}${th('Customer')}${th('Total')}${th('Paid in CDMS')}</tr></thead><tbody>${rows.map(tr).join('')}</tbody></table>`;
+    openModal({ title: `Confirm Buyer Paid: ${rows.length} lot(s)`, icon: 'check', wide: true, body,
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Confirm ${rows.length} lot(s)`, kind: 'pr', icon: 'check', onClick: () => {
+        recordCdmsPaid(scr, rows); closeModal(); render();
+        toast(`Buyer Paid confirmed from CDMS for ${rows.length} lot(s). They moved to Payment Seller.`);
+      } }] });
   },
   emailBaaf(scr) {
     const rows = selectedRows(scr, 'for_baaf'), ui = U(scr.id);
@@ -915,7 +928,7 @@ function onEdit(el) {
   el.classList.toggle('is-dirty', !same); el.classList.remove('is-invalid');
   el.closest('tr')?.classList.toggle('is-dirty', !!ui.edits[id]);
   // refresh button counters without re-rendering (keeps focus in the table)
-  (scr.buttons || []).forEach(b => { const n = b.act === 'save' ? Object.keys(ui.edits).length : effectiveCount(scr, b.count); const s = $(`[data-count="${b.act}"]`); if (s) { s.textContent = n; s.hidden = !n; } });
+  (scr.buttons || []).forEach(b => { const n = b.act === 'save' ? dirtyCount(scr) : effectiveCount(scr, b.count); const s = $(`[data-count="${b.act}"]`); if (s) { s.textContent = n; s.hidden = !n; } });
 }
 function bind() {
   const content = $('#content'), menu = $('#menu');

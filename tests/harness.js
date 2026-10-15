@@ -8,7 +8,7 @@ const EXPORTS = ['D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enric
   'addWorkdays', 'fmtDate',
   // proposed improvements and wishes 4–5 (spec 2026-10-15)
   'isProposed', 'setProposed', 'shown', 'colsOf', 'tagHtml', 'SCREENS', 'selectedRows', 'applyEdits', 'tickDefault', 'tickValue',
-  'cdmsPaid', 'recordCdmsPaid', 'saveWarnCount', 'cdmsCancelsPending', 'recordCancellation', 'recordCommissionBilling', 'recordSaafSent',
+  'cdmsPaid', 'recordCdmsPaid', 'saveWarnCount', 'dirtyCount', 'cdmsConfirmable', 'cdmsCancelsPending', 'recordCancellation', 'recordCommissionBilling', 'recordSaafSent',
   'dispatchCc', 'queueCounts', 'PROPOSALS', 'LATEST_AUCTION', 'rtsEligible', 'recordReturnClearance'];
 function load() {
   const window = { addEventListener() {} };
