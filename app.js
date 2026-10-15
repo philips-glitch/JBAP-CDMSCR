@@ -224,7 +224,9 @@ const SCREENS = [
     validate: (r, e) => ({ awarding: notFuture(e.awarding) || notBefore(e.awarding, r.auction_end, 'the auction end'),
       transfer_fee: 'transfer_fee' in e && (e.transfer_fee === '' || Number(e.transfer_fee) < 0) ? 'must be 0 or more' : null }),
     buttons: [{ label: 'Email BAAF', kind: 'ol', icon: 'mail', act: 'emailBaaf', count: 'for_baaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
-    savedNote: 'Vehicles with an Awarding Date moved to Unpaid.' },
+    savedNote: 'Vehicles with an Awarding Date moved to Unpaid.',
+    ready: { key: 'for_baaf', when: r => !!r.saaf_approved },
+    ruleP: ['P4', 'Lots the seller approved (SAAF, recorded by SMD) arrive pre-ticked for BAAF; untick a lot to hold it back.'] },
   { dept: 'FAD', slug: 'unpaid', title: 'Unpaid', actions: VFSU, rule: 'Vehicles with status SOLD, an Awarding Date, and a blank Buyer Paid date. Total = Awarded price + Transfer fees. Buyer deadline = 3 working days after awarding.',
     rows: () => sold().filter(v => v.awarding && !v.buyer_paid), sort: ['buyer_deadline', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Buyer ID', 'cid', 'code'), C('Seller', 'seller', 'code'),
@@ -243,13 +245,15 @@ const SCREENS = [
   { dept: 'FAD', slug: 'payment-seller', title: 'Payment Seller', actions: VFSU, rule: 'Vehicles with status SOLD, a Buyer Paid date, and a blank Payment to Seller date. Deadline = 3 working days after Buyer Paid. To JBAP = commission + VAT − 15% withholding tax (NET sellers); Payable to Seller = total − To JBAP.',
     rows: () => sold().filter(v => v.buyer_paid && !v.pay_seller), sort: ['pay_deadline', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction Date', 'adate', 'code'), C('Plate Number', 'plate', 'code'),
-      C('Total (Awarded Price + Transfer Fees)', 'total', 'money'), C('To JBAP', 'to_jbap', 'money'), C('Payable to Seller', 'payable', 'money'), C('Payment to Seller Date', 'pay_seller', 'date', { edit: 'date' }),
+      C('Total (Awarded Price + Transfer Fees)', 'total', 'money'), C('To JBAP', 'to_jbap', 'money'), C('Payable to Seller', 'payable', 'money'), C('Payment to Seller Date', 'pay_seller', 'date', { edit: 'date' }), C('Payment Voucher No.', 'voucher_no', 'text', { edit: 'text', proposed: true, tag: 'P3' }),
       C('Payment to Seller Deadline', 'pay_deadline', 'date', { late: true }), C('Print Payment to Seller', 'print_seller', 'check', { edit: 'check' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'auction_start', label: 'Auction Date', type: 'daterange', w: 'w2' }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     totals: rows => ({ total: money(sumBy(rows, 'total')), to_jbap: money(sumBy(rows, 'to_jbap')), payable: money(sumBy(rows, 'payable')) }),
     validate: (r, e) => ({ pay_seller: notFuture(e.pay_seller) || notBefore(e.pay_seller, r.buyer_paid, 'Buyer Paid') }),
     buttons: [{ label: 'Print payment to seller', kind: 'ol', icon: 'print', act: 'printSeller', count: 'print_seller' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
-    savedNote: 'Paid sellers moved to Seller Acknowledgement and Commission Billing.' },
+    savedNote: 'Paid sellers moved to Seller Acknowledgement and Commission Billing.',
+    ready: { key: 'print_seller', when: () => true },
+    ruleP: ['P4', 'Every lot arrives pre-ticked for printing; untick a lot to hold it back. Payment Voucher No. (P3) is typed for now and will come from NOAH once the connection is confirmed.'] },
   { dept: 'FAD', slug: 'seller-acknowledgement', title: 'Seller Acknowledgement', actions: VFSU,
     rule: 'Vehicles with status SOLD, Buyer Paid and Payment to Seller filled in, and a blank Seller Acknowledgement date.',
     rows: () => sold().filter(v => v.pay_seller && !v.seller_ack), sort: ['pay_deadline', 'asc'],
@@ -266,7 +270,9 @@ const SCREENS = [
       C('For Dispatch Email?', 'for_dispatch_email', 'check', { edit: 'check' }), C('Dispatch Date', 'dispatch', 'date', { edit: 'date' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ dispatch: notFuture(e.dispatch) || (releaseOf(r) === 'ack' ? notBefore(e.dispatch, r.seller_ack, 'Seller Acknowledgement') : notBefore(e.dispatch, r.buyer_paid, 'Buyer Paid')) }),
-    buttons: [{ label: 'Email dispatch form', kind: 'ol', icon: 'mail', act: 'emailDispatch', count: 'for_dispatch_email' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Dispatched vehicles moved to Unreleased Unit (FAD and VWD).' },
+    buttons: [{ label: 'Email dispatch form', kind: 'ol', icon: 'mail', act: 'emailDispatch', count: 'for_dispatch_email' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Dispatched vehicles moved to Unreleased Unit (FAD and VWD).',
+    ready: { key: 'for_dispatch_email', when: () => true },
+    ruleP: ['P4', 'Every lot arrives pre-ticked for the dispatch email; untick a lot to hold it back.'] },
   { dept: 'FAD', slug: 'document-monitoring', title: 'Document Monitoring', actions: VFSU,
     rule: 'Sold lots with a Buyer Paid date whose documents are not yet released to the buyer. Sellers released on Buyer Payment (TFS) skip the DOAS steps. DOAS dates go in order: received for signing, signed by the buyer, receipt by the seller.',
     rows: () => sold().filter(v => v.buyer_paid && releaseOf(v) !== 'payment' && !v.to_buyer), sort: ['buyer_paid', 'asc'],
@@ -276,7 +282,9 @@ const SCREENS = [
       C('Documents Released to Buyer', 'to_buyer', 'date', { edit: 'date' }), C('ATF No.', 'atf_no', 'code'), C('Print Transmittal?', 'print_doc_trans', 'check', { edit: 'check' })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     validate: docValidate,
-    buttons: [{ label: 'Print document transmittal', kind: 'ol', icon: 'print', act: 'printDocTrans', count: 'print_doc_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Lots with Documents Released to Buyer were removed from the list.' },
+    buttons: [{ label: 'Print document transmittal', kind: 'ol', icon: 'print', act: 'printDocTrans', count: 'print_doc_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Lots with Documents Released to Buyer were removed from the list.',
+    ready: { key: 'print_doc_trans', when: r => !!r.orig_docs && !r.atf_no },
+    ruleP: ['P4', 'Lots with original documents received and no ATF No. yet arrive pre-ticked.'] },
   { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
     rule: `Dispatched vehicles not yet released to the buyer. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15).`,
     rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'], cols: UNREL_COLS, filters: UNREL_FILTERS,
@@ -301,22 +309,27 @@ const SCREENS = [
     rows: B, sort: ['bdate', 'desc'],
     cols: [C('Billing #', 'no', 'code'), C('Customer', 'customer', 'text', { w: 320 }), C('Auction Date / Particulars', 'particular', 'text', { w: 230 }), C('Billing Date', 'bdate', 'date'), C('Total', 'total', 'money'),
       C('Transmittal Date', 'trans', 'date'), C('Print Transmittal?', 'print_trans', 'check', { edit: 'check' })],
-    buttons: [{ label: 'Print billing transmittal', kind: 'ol', icon: 'print', act: 'printTransmittal', count: 'print_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },
+    buttons: [{ label: 'Print billing transmittal', kind: 'ol', icon: 'print', act: 'printTransmittal', count: 'print_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
+    ready: { key: 'print_trans', when: r => !r.trans },
+    ruleP: ['P4', 'Billings with no Transmittal Date arrive pre-ticked.'] },
   { dept: 'FAD', slug: 'unpaid-billing', title: 'Unpaid Billing', actions: VSU, rule: `Billing records with a blank Payment Date. Due date = billing date + ${BILL_DUE_DAYS} days.`,
     rows: () => B().filter(b => !b.pay), sort: ['bdate', 'asc'],
     cols: [C('Customer', 'customer', 'text', { w: 240 }), C('Auction Date / Particulars', 'particular', 'text', { w: 180 }), C('Billing Date', 'bdate', 'date'), C('Bill Amount', 'bill', 'money'),
       C('VAT', 'vat', 'money'), C('Total', 'total', 'money'), C('Transmittal Date', 'trans', 'date'), C('Due Date', 'due', 'date', { late: true }),
-      C('Payment Date', 'pay', 'date', { edit: 'date' }), C('Collection Receipt', 'cr', 'text', { edit: 'text' })],
+      C('Payment Date', 'pay', 'date', { edit: 'date' }), C('Collection Receipt', 'cr', 'text', { edit: 'text', tag: 'P3' })],
     validate: (r, e) => { const p = 'pay' in e ? e.pay : r.pay, cr = 'cr' in e ? e.cr : r.cr;
       return { pay: notFuture(p) || notBefore(p, r.bdate, 'the Billing Date') || (!p && cr ? 'is required with a Collection Receipt' : null), cr: p && !cr ? 'is required with a Payment Date' : null }; },
-    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid billings removed from the list.' },
+    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid billings removed from the list.',
+    ruleP: ['P3', 'Collection Receipt is typed for now; it will be read from NOAH once the connection is confirmed.'] },
   { dept: 'FAD', slug: 'commission-billing', title: 'Commission Billing', actions: VSU,
     rule: 'Result price records with a Remittance Date and no commission billing yet. Tick Print?, then Print commission billing to record the NOAH billing number and date.',
     rows: () => sold().filter(v => v.pay_seller && !v.billed), sort: ['customer', 'asc'],
     cols: [C('Customer Name', 'customer', 'text', { w: 300 }), C('Plate Number', 'plate', 'code'), C('Print?', 'print_comm', 'check', { edit: 'check' }), C('Remittance Date', 'pay_seller', 'date'),
       C('Winning Bid', 'price', 'money'), C('Commission', 'com', 'money'), C('VAT', 'cvat', 'money'), C('Total', 'ctotal', 'money')],
     totals: rows => ({ plate: `${rows.length} units`, price: money(sumBy(rows, 'price')), com: money(sumBy(rows, 'com')), cvat: money(sumBy(rows, 'cvat')), ctotal: money(sumBy(rows, 'ctotal')) }),
-    buttons: [{ label: 'Print commission billing', kind: 'ol', icon: 'print', act: 'printComm', count: 'print_comm' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },
+    buttons: [{ label: 'Print commission billing', kind: 'ol', icon: 'print', act: 'printComm', count: 'print_comm' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
+    ready: { key: 'print_comm', when: () => true },
+    ruleP: ['P4', 'Every lot arrives pre-ticked. Printing records one billing per seller in one go, each with its own NOAH billing number (P3: typed for now).'] },
   { dept: 'FAD', slug: 'cancellation-monitoring', title: 'Cancellation Monitoring', actions: VS, rule: 'Information on cancelled vehicles.',
     rows: CX, cols: CXMON_COLS, sort: ['dcancel', 'desc'] },
   { dept: 'FAD', slug: 'cancellation-entry', title: 'Cancellation Entry', actions: VSU, layout: 'entry',
@@ -331,7 +344,9 @@ const SCREENS = [
     cols: [C('Auction No.', 'auction', 'code'), C('Plate', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 300 }), C('Date Cancelled', 'dcancel', 'date'),
       C('Penalty', 'penalty', 'money'), C('To Seller', 'pen_seller', 'money'), C('To JBAP', 'pen_jbap', 'money'), C('Billing Date', 'bill_date', 'date'), C('For Print?', 'for_print', 'check', { edit: 'check' })],
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), pen_seller: money(sumBy(rows, 'pen_seller')), pen_jbap: money(sumBy(rows, 'pen_jbap')) }),
-    buttons: [{ label: 'Print cancellation billing', kind: 'ol', icon: 'print', act: 'printCancel', count: 'for_print' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },
+    buttons: [{ label: 'Print cancellation billing', kind: 'ol', icon: 'print', act: 'printCancel', count: 'for_print' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
+    ready: { key: 'for_print', when: () => true },
+    ruleP: ['P4', 'Every lot arrives pre-ticked for billing.'] },
   { dept: 'FAD', slug: 'cancellation-payment', title: 'Cancellation Payment', actions: VSU,
     rule: 'Result price records with a Cancellation Billing Date and a blank Cancellation Payment.',
     rows: () => CX().filter(c => c.bill_date && !c.paid_date), sort: ['bill_date', 'asc'],
@@ -760,6 +775,15 @@ function recordCancellation(scr, v, f) {
 }
 // [MOCK] P2: lots cancelled in CDMS (data-extra.js > cdmsCancels) that FAD has not recorded yet (the vehicle is still Sold)
 const cdmsCancelsPending = () => (D.cdmsCancels || []).map(c => ({ c, v: V().find(x => x.id === c.vid) })).filter(x => x.v && x.v.status === 'Sold');
+// [BEHAVIOR] One commission billing per seller: adds the billing (Billing Monitoring, Unpaid Billing), marks the lots billed, logs both
+function recordCommissionBilling(scr, code, no, bd, rows) {
+  const bill = { no, customer: SELLER[code]?.name || code, particular: [...new Set(rows.map(r => r.adate))].join('; '), bdate: bd, total: Math.round(sumBy(rows, 'ctotal') * 100) / 100, trans: null, pay: null, cr: '' };
+  S.billing.push(bill);
+  logChange(scr, 'Create', bill, [['Customer', 'text', null, bill.customer], ['Billing Date', 'date', null, bd], ['Total', 'money', null, bill.total]]);
+  const ed = U(scr.id).edits;
+  rows.forEach(r => { logChange(scr, 'Update', r, [['Commission Billing No.', 'text', null, no], ['Print?', 'check', r._raw.print_comm, false]]); r._raw.billed = true; r._raw.print_comm = false; delete ed[r.id]; });
+  return bill;
+}
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
@@ -839,33 +863,29 @@ const ACTIONS = {
   printComm(scr) {
     const rows = selectedRows(scr, 'print_comm');
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Print?</b> on at least one vehicle first.'); render(); return; }
-    const sellers = [...new Set(rows.map(r => r.seller))];
-    if (sellers.length > 1) { setMsg(scr, 'error', `Selected vehicles belong to ${sellers.length} sellers (${sellers.join(', ')}). Print one seller at a time: each NOAH billing is per seller (to confirm).`); render(); return; }
+    const sellers = [...new Set(rows.map(r => r.seller))], of = code => rows.filter(r => r.seller === code), many = sellers.length > 1;
+    // [BEHAVIOR] CR scope: one seller at a time. P4 (switch on): several sellers in one go, one NOAH billing number each.
+    if (many && !PROPOSED) { setMsg(scr, 'error', `Selected vehicles belong to ${sellers.length} sellers (${sellers.join(', ')}). Print one seller at a time: each NOAH billing is per seller (to confirm).`); render(); return; }
     setMsg(scr, null); render();
-    const body = `<div class="fgrid two no-print" style="padding:0 0 12px"><div class="fld"><label for="cb-no">Billing No. (from NOAH)</label><input class="ctl" id="cb-no" placeholder="e.g. 511" required><span class="err" id="cb-no-err"></span></div>
-      <div class="fld"><label for="cb-date">Billing Date</label><input class="ctl" type="date" id="cb-date" value="${TODAY}" required><span class="err" id="cb-date-err"></span></div></div>
-      ${REPORTS.billingComputation(sellers[0], '(entered above)', TODAY, rows)}`;
-    openModal({ title: 'Print commission billing', icon: 'print', wide: true, body, note: 'Recording adds the billing to Billing Monitoring and Unpaid Billing.',
-      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record billing & print', kind: 'pr', icon: 'print', onClick: () => {
-        const no = $('#cb-no').value.trim(), bd = $('#cb-date').value; let ok = true;
-        $('#cb-no-err').textContent = ''; $('#cb-date-err').textContent = ''; $('#cb-no').classList.remove('is-invalid'); $('#cb-date').classList.remove('is-invalid');
-        if (!no) { $('#cb-no-err').textContent = 'Billing No. is required.'; $('#cb-no').classList.add('is-invalid'); ok = false; }
-        else if (S.billing.some(b => b.no === no)) { $('#cb-no-err').textContent = `Billing No. ${no} already exists.`; $('#cb-no').classList.add('is-invalid'); ok = false; }
+    const nos = sellers.map((code, i) => `<div class="fld"><label for="cb-no-${i}">Billing No. (from NOAH)${many ? ` · ${esc(code)}` : ''}</label><input class="ctl" id="cb-no-${i}" placeholder="e.g. 511" required><span class="err" id="cb-no-${i}-err"></span></div>`).join('');
+    const p3 = PROPOSED ? `<p class="note no-print">${tagHtml({ tag: 'P3' })} Typed for now; read from NOAH once the connection is confirmed.</p>` : '';
+    const body = `<div class="fgrid two no-print" style="padding:0 0 12px">${nos}<div class="fld"><label for="cb-date">Billing Date</label><input class="ctl" type="date" id="cb-date" value="${TODAY}" required><span class="err" id="cb-date-err"></span></div></div>${p3}
+      ${sellers.map(code => REPORTS.billingComputation(code, '(entered above)', TODAY, of(code))).join('')}`;
+    openModal({ title: many ? `Print commission billing: ${sellers.length} sellers` : 'Print commission billing', icon: 'print', wide: true, body, note: 'Recording adds the billing to Billing Monitoring and Unpaid Billing.',
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: many ? `Record ${sellers.length} billings & print` : 'Record billing & print', kind: 'pr', icon: 'print', onClick: () => {
+        const bd = $('#cb-date').value, entered = sellers.map((_, i) => $(`#cb-no-${i}`).value.trim()); let ok = true;
+        $('#cb-date-err').textContent = ''; $('#cb-date').classList.remove('is-invalid');
+        sellers.forEach((_, i) => {
+          const no = entered[i], err = !no ? 'Billing No. is required.' : S.billing.some(b => b.no === no) ? `Billing No. ${no} already exists.` : entered.indexOf(no) !== i ? `Billing No. ${no} is entered twice.` : '';
+          $(`#cb-no-${i}-err`).textContent = err; $(`#cb-no-${i}`).classList.toggle('is-invalid', !!err); if (err) ok = false;
+        });
         const lastRemit = rows.map(r => r.pay_seller).sort().pop();
         if (!bd) { $('#cb-date-err').textContent = 'Billing Date is required.'; ok = false; }
         else if (bd > TODAY || bd < lastRemit) { $('#cb-date-err').textContent = `Must be between ${fmtDate(lastRemit)} and ${fmtDate(TODAY)}.`; $('#cb-date').classList.add('is-invalid'); ok = false; }
         if (!ok) return;
-        const parts = [...new Set(rows.map(r => r.adate))].join('; ');
-        const bill = { no, customer: SELLER[sellers[0]]?.name || sellers[0], particular: parts, bdate: bd, total: Math.round(sumBy(rows, 'ctotal') * 100) / 100, trans: null, pay: null, cr: '' };
-        S.billing.push(bill);
-        logChange(scr, 'Create', bill, [['Customer', 'text', null, bill.customer], ['Billing Date', 'date', null, bd], ['Total', 'money', null, bill.total]]);
-        const ui = U(scr.id); rows.forEach(r => {
-          logChange(scr, 'Update', r, [['Commission Billing No.', 'text', null, no], ['Print?', 'check', r._raw.print_comm, false]]);
-          r._raw.billed = true; r._raw.print_comm = false; delete ui.edits[r.id];
-        });
-        const html = REPORTS.billingComputation(sellers[0], no, bd, rows);
-        render(); openModal({ title: `Billing computation #${no}`, icon: 'print', wide: true, body: html, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
-        printModal(); toast(`Billing #${esc(no)} recorded for ${rows.length} vehicle(s). See Billing Monitoring and Unpaid Billing.`);
+        const html = sellers.map((code, i) => { recordCommissionBilling(scr, code, entered[i], bd, of(code)); return REPORTS.billingComputation(code, entered[i], bd, of(code)); }).join('');
+        render(); openModal({ title: many ? `Billing computation: ${sellers.length} billings` : `Billing computation #${entered[0]}`, icon: 'print', wide: true, body: html, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
+        printModal(); toast(`${many ? `${sellers.length} billings` : `Billing #${esc(entered[0])}`} recorded for ${rows.length} vehicle(s). See Billing Monitoring and Unpaid Billing.`);
       } }] });
   },
   printCancel(scr) {
