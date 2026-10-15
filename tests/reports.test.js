@@ -26,7 +26,8 @@ test('render sweep: no report prints null, undefined or NaN', () => {
     add(`release ${v.plate}`, Q.REPORTS.releaseForm(Q.enrichV(v._raw), { date: T, to: v.customer || '', type: 'Sold', items: [] }, '00001')));
   Q.cancelLetterGroups(rows('FAD/cancellation-billing')).forEach(list => add(`cancellation ${list[0].customer}`, Q.REPORTS.cancellationLetter({ customer: list[0].customer }, list, T)));
   rows('FAD/document-monitoring').forEach(v => add(`document ${v.plate}`, Q.REPORTS.documentTransmittal(Q.enrichV(v._raw), [], '', 'HRAD-ATF-0', '')));
-  for (const id of ['FAD/pending-awarding', 'FAD/payment-seller', 'FAD/commission-billing', 'FAD/billing-monitoring', 'FAD/for-dispatch', 'VWD/unreleased-unit-overdue', 'FAD/cancellation-billing', 'FAD/document-monitoring'])
+  groupBy(rows('SMD/saaf'), 'seller').forEach(list => add(`saaf ${list[0].seller}`, Q.REPORTS.saaf(list[0].seller, list, T)));
+  for (const id of ['SMD/saaf', 'FAD/pending-awarding', 'FAD/payment-seller', 'FAD/commission-billing', 'FAD/billing-monitoring', 'FAD/for-dispatch', 'VWD/unreleased-unit-overdue', 'FAD/cancellation-billing', 'FAD/document-monitoring'])
     assert.ok(rows(id).length > 0, `${id} has rows to render`);
   const bad = out.map(([name, h]) => [name, h.replace(/<[^>]*>/g, ' ').match(/.{0,30}(\bnull\b|undefined|NaN).{0,30}/)]).filter(([, m]) => m).map(([name, m]) => `${name}: ${m[0].trim()}`);
   assert.deepStrictEqual(bad, []);

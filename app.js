@@ -217,7 +217,7 @@ const SCREENS = [
   { dept: 'FAD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFSU,
     rule: 'Vehicles with status SOLD and a blank Awarding Date. Tick For BAAF and press Email BAAF to award. Transfer fees default from the seller settings; override when the actual fee differs.',
     rows: () => sold().filter(v => !v.awarding), sort: ['lot', 'asc'],
-    cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('For BAAF', 'for_baaf', 'check', { edit: 'check' }),
+    cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('For BAAF', 'for_baaf', 'check', { edit: 'check' }), C('Seller Approved', 'saaf_approved', 'date', { proposed: true, tag: 'P5' }),
       C('Awarding Date', 'awarding', 'date', { edit: 'date' }), C('Rebate', 'rebate', 'money'), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
       C('Make/Model', 'model', 'text', { w: 210 }), C('Result Price', 'price', 'money'), C('Transfer Fees', 'transfer_fee', 'money', { edit: 'money' })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
@@ -272,7 +272,7 @@ const SCREENS = [
     validate: (r, e) => ({ dispatch: notFuture(e.dispatch) || (releaseOf(r) === 'ack' ? notBefore(e.dispatch, r.seller_ack, 'Seller Acknowledgement') : notBefore(e.dispatch, r.buyer_paid, 'Buyer Paid')) }),
     buttons: [{ label: 'Email dispatch form', kind: 'ol', icon: 'mail', act: 'emailDispatch', count: 'for_dispatch_email' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Dispatched vehicles moved to Unreleased Unit (FAD and VWD).',
     ready: { key: 'for_dispatch_email', when: () => true },
-    ruleP: ['P4', 'Every lot arrives pre-ticked for the dispatch email; untick a lot to hold it back.'] },
+    ruleP: ['P4', 'Every lot arrives pre-ticked for the dispatch email; untick a lot to hold it back. The email is copied to Finance only (P5): VWD sees the lot in its own list.'] },
   { dept: 'FAD', slug: 'document-monitoring', title: 'Document Monitoring', actions: VFSU,
     rule: 'Sold lots with a Buyer Paid date whose documents are not yet released to the buyer. Sellers released on Buyer Payment (TFS) skip the DOAS steps. DOAS dates go in order: received for signing, signed by the buyer, receipt by the seller.',
     rows: () => sold().filter(v => v.buyer_paid && releaseOf(v) !== 'payment' && !v.to_buyer), sort: ['buyer_paid', 'asc'],
@@ -366,6 +366,17 @@ const SCREENS = [
     rows: () => SMD('auction'), cols: AM_COLS.map(c => c.key === 'customer' ? C('Customer Name', 'customer', 'text', { w: 190 }) : c), sort: ['auction', 'desc'],
     filters: AM_FILTERS, initial: { plate: 'NFW4473' },
     totals: rows => ({ customer: `${rows.length} lots`, price: money(sumBy(rows, 'price')) }) },
+  // P5 (switch on): SMD's only update screen; live data, unlike the legacy SMD snapshot screens
+  { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU, proposed: true, tag: 'P5',
+    rule: 'Sold lots with no Awarding Date (live data; the other SMD screens show the legacy snapshot). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; approved lots arrive pre-ticked in FAD Pending Awarding.',
+    rows: () => sold().filter(v => !v.awarding), sort: ['seller', 'asc'],
+    cols: [C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
+      C('Awarded Price', 'price', 'money'), C('For SAAF', 'for_saaf', 'check', { edit: 'check' }), C('SAAF Sent', 'saaf_sent', 'date'), C('Seller Approved', 'saaf_approved', 'date', { edit: 'date' })],
+    filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }],
+    validate: (r, e) => ({ saaf_approved: notFuture(e.saaf_approved) || (e.saaf_approved && !r.saaf_sent ? 'needs the SAAF to be sent first' : notBefore(e.saaf_approved, r.saaf_sent, 'SAAF Sent')) }),
+    buttons: [{ label: 'Email SAAF', kind: 'ol', icon: 'mail', act: 'emailSaaf', count: 'for_saaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
+    savedNote: 'Approved lots are ready in FAD Pending Awarding.',
+    ready: { key: 'for_saaf', when: r => !r.saaf_sent } },
   { dept: 'SMD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFS, rule: 'Vehicles with status SOLD and a blank Awarding Date.',
     rows: () => SMD('pending'), sort: ['customer', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 200 }), C('For BAAF', 'for_baaf', 'rocheck'),
@@ -743,13 +754,15 @@ function recordRelease(scr, v, f) {
 const RELEASE_ITEMS = ['No. of Keys', 'Copy of OR/CR', "Owner's Manual", 'Warranty booklet', 'Spare Tire', 'Tools', 'Jack', 'Radio', 'A/C', 'Accessories'];
 // [BEHAVIOR] One cancellation billing letter per buyer name, the name printed on the letter (cid is missing on some lots).
 const cancelLetterGroups = rows => { const g = {}; rows.forEach(r => (g[r.customer] ||= []).push(r)); return Object.values(g); };
+// Removes one tick from a row's unsaved edits; other unsaved edits on the row stay pending
+const clearTick = (scr, id, key) => { const ed = U(scr.id).edits; if (ed[id]) { delete ed[id][key]; if (!Object.keys(ed[id]).length) delete ed[id]; } };
 // [BEHAVIOR] Saves the documents received and returns the ATF control number (HRAD-ATF-<running no.>); a reprint keeps the existing number.
 function recordDocTransmittal(scr, v, docs, others, remarks = '') {
   const co = D.meta.company, atf = v._raw.atf_no || `HRAD-ATF-${co.next.atf++}`;
   logChange(scr, 'Update', v, [['Documents Received', 'text', (v._raw.docs_received || []).join(', '), docs.join(', ')], ['Documents Others', 'text', v._raw.docs_others, others], ['Documents Remarks', 'text', v._raw.docs_remarks, remarks],
     ['ATF Control No.', 'text', v._raw.atf_no, atf], ['Print Transmittal?', 'check', v._raw.print_doc_trans, false]]);
   Object.assign(v._raw, { docs_received: docs, docs_others: others, docs_remarks: remarks, atf_no: atf, print_doc_trans: false });
-  const ed = U(scr.id).edits; if (ed[v.id]) { delete ed[v.id].print_doc_trans; if (!Object.keys(ed[v.id]).length) delete ed[v.id]; }   // unsaved date edits on the row stay pending
+  clearTick(scr, v.id, 'print_doc_trans');   // unsaved date edits on the row stay pending
   return atf;
 }
 // [BEHAVIOR] P1: Buyer Paid takes the date CDMS shows the lot fully paid; logged with action Confirm so Log Activity shows the source
@@ -784,6 +797,13 @@ function recordCommissionBilling(scr, code, no, bd, rows) {
   rows.forEach(r => { logChange(scr, 'Update', r, [['Commission Billing No.', 'text', null, no], ['Print?', 'check', r._raw.print_comm, false]]); r._raw.billed = true; r._raw.print_comm = false; delete ed[r.id]; });
   return bill;
 }
+// [BEHAVIOR] P5: sending the SAAF records SAAF Sent = today on each lot (logged under SMD); SMD then enters the seller's approval
+function recordSaafSent(scr, rows) {
+  rows.forEach(r => { logChange(scr, 'Update', r, [['SAAF Sent', 'date', r._raw.saaf_sent, TODAY], ['For SAAF', 'check', r._raw.for_saaf, false]]);
+    r._raw.saaf_sent = TODAY; r._raw.for_saaf = false; clearTick(scr, r.id, 'for_saaf'); });
+}
+// [BEHAVIOR] P5: with the switch on the dispatch email is copied to Finance only; VWD sees the lot in its own list
+const dispatchCc = () => { const e = D.meta.company.emails; return PROPOSED ? e.finance : `${e.sales}; ${e.vwd}; ${e.finance}`; };
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
@@ -849,6 +869,21 @@ const ACTIONS = {
           r._raw.awarding = award; r._raw.transfer_fee = tf; r._raw.for_baaf = false; delete ui.edits[r.id];
         });
         closeModal(); render(); toast(`BAAF sent to ${Object.keys(groups).length} buyer(s). ${rows.length} vehicle(s) moved to Unpaid.`);
+      } }] });
+  },
+  emailSaaf(scr) {
+    const rows = selectedRows(scr, 'for_saaf');
+    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For SAAF</b> on at least one lot first.'); render(); return; }
+    setMsg(scr, null); render();
+    const groups = {}; rows.forEach(r => (groups[r.seller] ||= []).push(r));
+    const co = D.meta.company, n = Object.keys(groups).length;
+    const mails = Object.entries(groups).map(([code, list]) => REPORTS.email({ from: co.emails.sales, to: `${SELLER[code]?.name || code} <${code.toLowerCase()}@sellers.example.com>`, cc: '',
+      subject: `SELLER AWARDING ACKNOWLEDGEMENT - ${fmtDate(TODAY)}`, atts: [{ key: code, name: 'SAAF.pdf' }],
+      body: `Please review the ${list.length} awarded lot(s) in the attached Seller Awarding Acknowledgement Form and reply to confirm, so we can send the notice of awarding to the buyers.` })).join('');
+    openModal({ title: `Email SAAF: ${n} seller(s), ${rows.length} lot(s)`, icon: 'mail', wide: true, body: mails,
+      note: 'Simulated: no email is actually sent. The SAAF layout is a placeholder until JBAP shares a sample.', onAtt: code => openReport('SAAF.pdf', REPORTS.saaf(code, groups[code], TODAY), () => ACTIONS.emailSaaf(scr)),
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Send ${n} email(s)`, kind: 'pr', icon: 'mail', onClick: () => {
+        recordSaafSent(scr, rows); closeModal(); render(); toast(`SAAF sent to ${n} seller(s). Enter Seller Approved when the seller replies.`);
       } }] });
   },
   printSeller(scr) {
@@ -939,7 +974,7 @@ const ACTIONS = {
     const mails = Object.values(groups).map(list => {
       const b = { customer: list[0].customer, cid: list[0].cid, email: list[0].email };
       docs[b.cid] = () => REPORTS.dispatchForm(b, list, dateFor(list[0]));
-      return REPORTS.email({ from: co.emails.finance, to: `${b.customer} <${b.email}>`, cc: `${co.emails.sales}; ${co.emails.vwd}; ${co.emails.finance}`, subject: 'JBAP VEHICLE FOR RELEASE',
+      return REPORTS.email({ from: co.emails.finance, to: `${b.customer} <${b.email}>`, cc: dispatchCc(), subject: 'JBAP VEHICLE FOR RELEASE',
         atts: [{ key: b.cid, name: 'VEHICLE DISPATCH.pdf' }],
         body: `We are pleased to inform you that the vehicle(s) listed in the attached Vehicle Dispatch Form are now available for release. Kindly ensure that vehicles are pulled out on or before the specified deadline to avoid Storage Penalties amounting to Php ${money(PENALTY_PER_DAY)} per day, including weekends and until removal of vehicle. For vehicles requiring the signing of Deed of Absolute Sale (DOAS) and other Legal Documents prior to release, please proceed to the JBAP Office within the prescribed period to complete the signing. Please note that vehicles cannot be released without a signed DOAS / Legal Documents.` });
     }).join('');

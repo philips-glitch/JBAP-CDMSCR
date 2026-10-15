@@ -21,4 +21,8 @@
     { vid: 'V109', date: '2026-09-30', reason: 'Buyer withdrew the bid' },
     { vid: 'V112', date: '2026-10-05', reason: 'Buyer did not pay within the buyer deadline' },
   ];
+  // [MOCK] P5: SAAF state on Pending Awarding lots: 4 approved by the seller (ready for FAD), 3 sent and awaiting the seller, the rest not sent
+  const saaf = { V102: ['2026-08-20', '2026-08-24'], V103: ['2026-08-27', '2026-08-31'], V092: ['2026-09-03', '2026-09-07'], V096: ['2026-09-10', '2026-09-14'],
+    V087: ['2026-09-10', null], V097: ['2026-09-10', null], V017: ['2026-09-17', null] };
+  D.vehicles.forEach(v => { const s = saaf[v.id]; if (s) { v.saaf_sent = s[0]; v.saaf_approved = s[1]; } });
 })(window.MOCK_DATA);

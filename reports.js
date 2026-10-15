@@ -122,4 +122,14 @@ const REPORTS = {
       <h3>Documents</h3><div class="cols2">${list}</div>
       <h3>Acknowledgement</h3>${rptSign(['Received by (signature over printed name)', 'Date / time received'])}`);
   },
+  // P5 (proposed): Seller Awarding Acknowledgement Form. [MOCK] layout in the BAAF style until JBAP shares a sample (spec 2026-10-15 §6)
+  saaf(code, lots, date) {
+    const rows = lots.map(r => `<tr><td>${esc(r.adate)}</td><td class="c">${esc(r.lot)}</td><td>${esc(r.model)}</td><td class="c">${esc(r.plate)}</td><td class="r">${money(r.price)}</td></tr>`).join('');
+    return rptPage('portrait', `<h1>Seller Awarding Acknowledgement Form</h1><p class="fn">Layout to be confirmed: JBAP has not shared a SAAF sample yet.</p>
+      <div class="kv"><b>Date</b><span>${longDate(date)}</span><b>Seller</b><span>${esc(SELLER[code]?.name || code)}</span></div>
+      <table><thead><tr><th>Auction Date</th><th>Lot</th><th>Make / Model</th><th>Plate Number</th><th class="r">Awarded Price</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="4">Total</td><td class="r">${money(rptSum(lots, 'price'))}</td></tr></tfoot></table>
+      <p>We acknowledge the award of the vehicles listed above at the awarded prices and authorize JBAP to send the notice of awarding to the winning buyers.</p>
+      ${rptSign([`Prepared by: ${CO().roles.smdStaff}`, "Seller's authorized representative"])}`);
+  },
 };
