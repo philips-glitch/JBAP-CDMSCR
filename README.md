@@ -33,7 +33,7 @@ Sample data for the proposed improvements and the wish-list screens sits in `dat
 9. **Log Activity**: every change from steps 1 to 8, every VWD release or return and every SMD Return to Seller clearance appears here as user `system`, one row per changed field with the old and new value (newest first). Filter by date, user, module, action or record/plate. Prints and emails that record a value (Awarding Date, Billing #, Transmittal Date, Dispatch Date, cancellation billing date and amount, vehicle release with type and checklist, documents received with Others/Remarks and ATF No.) are logged; previews that change nothing and *Generate* are not.
 10. **Return to Seller** (SMD, wish 4): tick *For Return* on units that are not sold and not in the latest auction > **Print & email clearance form** > **Send & print**. The units move to VWD **For Return to Seller** > **Release vehicle** (type *Return to Seller*).
 11. **Inventory** (VWD, also in SMD, wish 5): one row per vehicle with Date of Entry, status, release or return date and days in yard. Filter *In yard / Out* or *Not in latest auction*.
-12. **Security Bond** (FAD, JBAP feedback): lots with a bond appear once paid. Enter the ORCR and refund dates, Refund Via, or Forfeited. Tip: enter Buyer Receipt of Documents for lot V063 in Document Monitoring to see *Waiting ORCR*.
+12. **Security Bond** (FAD, JBAP feedback): lots with a bond appear once paid. Enter the ORCR and refund dates, Refund Via, or Forfeited. Tip: enter JBAP Receipt of Documents and Buyer Receipt of Documents for Auction 220, Lot 119 (plate NYL9684) in Document Monitoring, any date from 10/04 to 10/08/2026, to see *Waiting ORCR*.
 13. **Proposed improvements**: turn on the switch in the header (see *Proposed improvements* below).
 
 ## Reports and emails (layouts of the MS Access samples, 12 Oct 2026)
@@ -70,9 +70,9 @@ With the switch **off**, every screen works as the CR form describes. With it **
 
 | Change | Where | What it does |
 |---|---|---|
-| Document Monitoring on JBAP's sheet | FAD › Document Monitoring | JBAP's columns: Seller Payment, EWB Call Out, Date DOAS Signed (EWB), EWB HO/Store, Receipt of DOAS, DOAS Aging, JBAP / Seller Receipt of Signed DOAS, JBAP / Buyer Receipt of Documents, Docs Aging, Status, Remarks. Every sold or cancelled lot, TFS included. Status is the furthest step reached; aging counts working days while a step waits. EWB columns apply to EWB only; DOAS columns show n/a for TFS and TFSPH |
+| Document Monitoring on JBAP's sheet | FAD › Document Monitoring | JBAP's columns: Seller Payment, EWB Call Out, Date DOAS Signed (EWB), EWB HO/Store, Receipt of DOAS, DOAS Aging, JBAP Receipt of Signed DOAS, Seller Receipt of Signed DOAS, JBAP Receipt of Documents, Buyer Receipt of Documents, Docs Aging, Status, Remarks. Every sold or cancelled lot, TFS included. Status is the furthest step reached; aging counts working days while a step waits. EWB columns apply to EWB only; DOAS columns show n/a for TFS and TFSPH |
 | DOAS signing per seller | Seller settings | `doas_signing`: at JBAP (default), at the seller's branch (EWB), none (sellers released on Buyer Payment) |
-| Security Bond billing | Pending Awarding, BAAF, Unpaid, Payment Seller, Liability to Seller | Seller setting `security_bond` (sample: PHP 20,000 for INSPIRO, ORICO, ASIALINK), editable per lot; on the BAAF only when a lot has one; inside *Notarial / Transfer / Bond* and Payable to Seller |
+| Security Bond billing | Pending Awarding, BAAF, Unpaid, Payment Seller, Liability to Seller | Seller setting `security_bond` (sample: PHP 20,000 for INSPIRO, ORICO, ASIALINK), editable per lot; on the BAAF only when a lot has one; inside *Notarial / Transfer / Bond* and Payable to Seller. Only INSPIRO bills a bond in JBAP's sheet; ORICO and ASIALINK carry a sample bond for the demo. Access lots keep their Access amounts (no bond) |
 | Security Bond monitor | FAD › Security Bond (Wish list) | ORCR transfer, refund (with Refund Via), forfeiture; status worked out from the dates; Open view hides Complete and Forfeited |
 | Billing menu | FAD › Billing | Billing Monitoring and Unpaid Billing as two tabs of one menu entry |
 
@@ -88,7 +88,7 @@ With the switch **off**, every screen works as the CR form describes. With it **
 ## Seeded test data (`data.js` > `window.MOCK_DATA`)
 
 - **vehicles**: 209 lots. **134 come from the MS Access FAD Maintenance screenshots of 10/08/2026** (Pending Awarding, Unpaid, Payment Seller, Seller Acknowledgement, For Dispatch, Unreleased Units, Liability to Seller, Rebate Monitoring, Commission Billing). The other 75 are the earlier generated sample lots, kept so every walkthrough step has data. Lots were merged by plate number: a generated lot whose plate appears in Access now holds the Access data (10 of them are now the cancelled sale from Access Cancellation Monitoring).
-- **JBAP Document Monitoring dates**: the 122 lots that match JBAP's *2026 Documents Monitoring (updated)* sheet (received 15 Oct 2026) on plate and auction carry its EWB, DOAS and document dates and remarks. Seller Payment stays the Access value; dates after the demo day are left out; EWB and DOAS columns only where the seller uses them.
+- **JBAP Document Monitoring dates**: the 122 lots that match JBAP's *2026 Documents Monitoring (updated)* sheet (received 15 Oct 2026) on plate and auction carry its EWB, DOAS and document dates and remarks. Seller Payment stays the Access value, because JBAP's sheet agrees with Access on only 12 of 46 lots where both are filled (Q48); dates after the demo day are left out; EWB and DOAS columns only where the seller uses them.
 - **sellers**: release condition, VAT handling, NET/GROSS and notarial fees per seller (ORICO, ASIALINK and the sample code TFSPH are not in JBAP's list: marked unconfirmed). TFSPH (Toyota Financial Services Philippines) uses the TFS settings: Buyer Payment release, GROSS
 - **location**: every lot is "Pasay City" until JBAP lists its storage locations (Q31)
 - **year, color, fuel, CS no.**: sample values on generated lots; blank on Access lots (not in the screenshots)
@@ -99,7 +99,7 @@ With the switch **off**, every screen works as the CR form describes. With it **
 - **billing**: 48 records: Access Billing Monitoring (#486 to #510) and Unpaid Billing (24 rows, including #428 three times as in Access)
 - **smd**: legacy SMD screenshots (Result Summary, Auction Monitoring, Pending Awarding, Unpaid, Pending Seller Ack., For Dispatch, Unreleased Units, Rebates, Cancellations)
 - **activityLog**: 38 sample Log Activity entries (09/01 to 10/06/2026) by 3 sample users (`fad.ana`, `fad.rico`, `fad.lea`), built from the lot and cancellation dates above so every new value matches the lists. Includes one correction (old value to new value) and one cancellation
-- **data-extra.js** ([MOCK], not Access): 3 lots cancelled in CDMS (P2), SAAF dates on 7 Pending Awarding lots (P5: 4 approved, 3 awaiting the seller), a Date of Entry on every vehicle (wish 5), a sample Security Bond of PHP 20,000 for INSPIRO, ORICO and ASIALINK with sample progress on V166 (Complete), V030 (Pending Refund) and V054 (Forfeited) and the SMD/FAD role titles for the new forms
+- **data-extra.js** ([MOCK], not Access): 3 lots cancelled in CDMS (P2), SAAF dates on 7 Pending Awarding lots (P5: 4 approved, 3 awaiting the seller), a Date of Entry on every vehicle (wish 5), a sample Security Bond of PHP 20,000 for INSPIRO, ORICO and ASIALINK (only INSPIRO bills a bond in JBAP's sheet; ORICO and ASIALINK carry one for the demo; Access lots keep their Access amounts, no bond) with sample progress on three lots (Auction 218 Lot 107, plate GBF4509: Complete; Auction 220 Lot 022, plate NHT5509: Pending Refund; Auction 220 Lot 062, plate NGU3045: Forfeited) and the SMD/FAD role titles for the new forms
 - **Demo date** is fixed at **10/08/2026** (`meta.demoToday`), the day the Access screenshots were taken, so deadlines and penalties match Access. Buyer emails are placeholders (example.com).
 
 ### Values not visible in the Access screenshots (inferred)
@@ -133,12 +133,12 @@ Qn = question n in JBAP's Open Questions document.
 | Billing due date | Billing date + 10 days | Access DB notes (the Due Date column is empty in the Access screenshots) |
 | Seller settings | Release condition, VAT inside 5% (EWB, SBC) or on top (others), NET (all except TFS) / GROSS (TFS and its sample code TFSPH), notarial fee (EWB 1,000; SBC 400 up to 499,999.99 then 500; TFS 500; JACCS 0) | Dispatch Condition per seller.xlsx, Access samples; Q25 to Q29 to confirm |
 | Commission, VAT, W/TAX | Commission 5% (÷1.12 when VAT is inside); VAT 12%; W/TAX 15% of commission for NET sellers | Q1, Access Payment Seller sample; Q25, Q26 to confirm |
-| To JBAP / Payable to Seller | Commission + VAT − W/TAX (0 for GROSS) / price + fee − To JBAP | Matches all 18 Access Payment Seller rows to the centavo |
+| To JBAP / Payable to Seller | Commission + VAT − W/TAX (0 for GROSS) / price + transfer fee + security bond − To JBAP | Matches all 18 Access Payment Seller rows to the centavo |
 | For Dispatch | Seller condition met: Buyer Payment and DOAS sellers after Buyer Paid, others after Seller Acknowledgement | Dispatch Condition per seller; DOAS date for release: Q28 |
 | Storage penalty | PHP 500 per calendar day after the dispatch deadline, only at Pasay City / JBAP | Confirmed by Access data, Q15; locations Q31 |
 | Cancellation penalty | PHP 10,000 per lot; 5,000 seller / 5,000 JBAP; EWB all JBAP; waived 0 | Q4 |
 | Vehicle release (VWD) | Blocked for DOAS sellers until *JBAP Receipt of Signed DOAS* is entered (EWB: *Date DOAS Signed (EWB)*), and while a storage penalty is unpaid. VRF No. and ATF No. are running numbers (seed values in `data.js` > `meta.company.next`). Returns to the seller are never blocked. | **Assumption** (dispatch after payment, release needs the signed DOAS); JBAP Q9, Q28 |
-| Liability to Seller amount | Result price + transfer fees | Matches Access *SumOfTOTAL* |
+| Liability to Seller amount | Result price + transfer fees + security bond | Matches Access *SumOfTOTAL*; the sample bond is not applied to Access lots |
 | Liability lots on Payment Seller | The 15 Access Liability lots (Nov 2025 to Aug 2026) also show on Payment Seller | Access does not list them on Payment Seller: **to confirm** which filter Access uses |
 | Billing # unique | Not enforced for existing rows | Access lists Billing #428 three times: **data issue to check** |
 | "Sold - Accounting" menu | Not in the prototype | Exists in Access FAD but not in the CR form: **to confirm** if needed |
@@ -148,9 +148,9 @@ Qn = question n in JBAP's Open Questions document.
 | Log Activity records data changes only (not views, or prints that change nothing), one row per changed field | Update, Create, Cancel | Prototype suggestion, **to confirm** |
 | Return to Seller (wish 4) | Units not Sold or Pending, not in the latest auction (the last auction started by the demo date: 221), no clearance yet; one form per seller, signatures on paper | Wish 4, Q18, Q19; **assumption**: latest auction and paper signatures (Q32) |
 | Inventory Days in Yard (wish 5) | Date of Entry to the release or return date, or to today while in the yard | Wish 5; columns to check against VWD's Excel file |
-| Document status | Furthest step reached: Pending Payment, Pending DOAS, DOAS for Signing, Pending Documents, For Releasing, Complete, Cancelled | JBAP's Documents Monitoring sheet: same as the typed status on 1,644 of 1,674 lots; differences sent to JBAP (Q49) |
+| Document status | Furthest step reached: Pending Payment, Pending DOAS, DOAS for Signing, Pending Documents, For Releasing, Complete, Cancelled | JBAP's Documents Monitoring sheet: same as the typed status on 1,644 of 1,674 non-cancelled lots; differences listed for JBAP (Q49) |
 | DOAS signing per seller | EWB at its HO or store; TFS and TFSPH none; others at JBAP | JBAP's sheet; **to confirm** (Q50) |
-| Aging | Working days (Mon to Fri, both days counted) while a step waits; blank once done or when the start date is blank | JBAP's sheet formula, without its blank-date and EWB issues |
+| Aging | Working days (Mon to Fri, both days counted) while a step waits; blank once done or when the start date is blank | JBAP's sheet formula; a blank start date shows blank (JBAP's sheet shows about 33,000 days), and EWB aging stops when the DOAS is signed at EWB |
 | Security Bond | Seller setting (sample amounts), billed with the vehicle, passed to the seller in Payable to Seller; refunded after the ORCR transfer or forfeited | JBAP feedback; amounts Q44, seller codes Q45, flow Q46, forfeiture Q47 |
 
 ## Not simulated

@@ -53,12 +53,23 @@ test('validation: order, Buyer Paid, future; EWB and DOAS columns only where the
   assert.match(P.docValidate(r, { ewb_place: 'HO' }).ewb_place, /branch/);
   assert.match(P.docValidate(tfs, { rcv_doas: '2026-09-25' }).rcv_doas, /no DOAS/);
 });
+test('validation: a row with out-of-order dates from the JBAP sheet still saves other edits; ordering is checked when one of its dates is edited', () => {
+  const r = P.enrichV(lot('SBC', { buyer_paid: '2026-09-20', rcv_doas: '2026-10-05', buyer_doas: '2026-10-01' })), bad = o => Object.values(o).filter(Boolean);
+  assert.deepStrictEqual(bad(P.docValidate(r, { doc_remarks: 'x' })), [], 'Remarks saves');
+  assert.deepStrictEqual(bad(P.docValidate(r, { orig_docs: '2026-10-06' })), [], 'an unrelated date saves');
+  assert.match(P.docValidate(r, { rcv_doas: '2026-10-06' }).buyer_doas, /Receipt of DOAS/, 'editing a date in the pair still checks the order');
+  assert.match(P.docValidate(r, { buyer_doas: '2026-10-02' }).buyer_doas, /Receipt of DOAS/);
+  assert.match(P.docValidate(r, { seller_doas: '2026-09-30' }).seller_doas, /JBAP Receipt of Signed DOAS/, 'seller date against the stored JBAP date');
+  assert.match(P.docValidate(r, { doc_remarks: 'x', orig_docs: '2026-12-01' }).orig_docs, /after today/, 'an edited date is still checked');
+});
 test('rows: every sold or cancelled lot, TFS included; the Open view hides Complete and Cancelled', () => {
   const s = scr(), rows = s.rows(), f = s.filters.find(x => x.key === 'doc_status');
   assert.strictEqual(rows.length, P.V().filter(v => ['Sold', 'Cancelled'].includes(v.status)).length);
   assert.ok(rows.some(r => r.seller === 'TFS') && rows.some(r => r.status === 'Cancelled'));
   assert.deepStrictEqual(s.initial, { doc_status: 'Open' });
   assert.ok(P.applyFilters(s, rows).every(r => !['Complete', 'Cancelled'].includes(r.doc_status)), 'Open view');
+  const done = rows.filter(r => r.doc_status === 'Complete'), open = new Set(P.applyFilters(s, rows).map(r => r.id));
+  assert.ok(done.length > 0, 'the merged data has Complete lots'); assert.ok(done.every(r => !open.has(r.id)), 'none of them is in the Open view');
   assert.ok(rows.filter(r => f.match(r, 'Cancelled')).every(r => r.doc_status === 'Cancelled'));
   assert.deepStrictEqual(f.options(), ['Open', 'Pending Payment', 'Pending DOAS', 'DOAS for Signing', 'Pending Documents', 'For Releasing', 'Complete', 'Cancelled']);
 });
@@ -76,4 +87,11 @@ test('JBAP column order, the editable fields and n/a cells', () => {
 test('VWD release: an EWB lot signed at EWB counts as signed', () => {
   assert.strictEqual(P.releaseBlock(P.enrichV(lot('EWB', { ewb_signed: '2026-09-10' }))), null);
   assert.match(P.releaseBlock(P.enrichV(lot('EWB'))), /JBAP Receipt of Signed DOAS is missing/);
+});
+test('VWD release: the seller receipt of the signed DOAS counts, an EWB date alone does not for a non-branch seller', () => {
+  assert.strictEqual(P.releaseOf(lot('SBC')), 'doas');
+  assert.strictEqual(P.releaseBlock(P.enrichV(lot('SBC', { seller_doas: '2026-09-10' }))), null);
+  assert.strictEqual(P.releaseBlock(P.enrichV(lot('SBC', { buyer_doas: '2026-09-10' }))), null);
+  assert.match(P.releaseBlock(P.enrichV(lot('SBC', { ewb_signed: '2026-09-10' }))), /JBAP Receipt of Signed DOAS is missing/);
+  assert.match(P.releaseBlock(P.enrichV(lot('SBC'))), /JBAP Receipt of Signed DOAS is missing/);
 });

@@ -205,13 +205,15 @@ const notBefore = (d, ref, refLabel) => d && ref && d < ref ? `cannot be before 
 
 // [BEHAVIOR] Document dates: not in the future, not before Buyer Paid, steps in order (EWB call out → signed; receipt → JBAP signed → seller receipt),
 // documents to the buyer only after JBAP has them. EWB columns only for sellers who sign at their branch; DOAS columns not for sellers without a DOAS.
+// Only what is being saved is checked: a date check runs on the dates in the edit, an order check when either of its two dates is in the edit,
+// so a row that carries JBAP's own out-of-order dates (e.g. V110) can still save other edits such as Remarks.
 function docValidate(r, e) {
-  const val = k => (k in e ? e[k] : r[k]) || null, out = {}, doas = doasOf(r);
-  ['ewb_callout', 'ewb_signed', 'rcv_doas', 'buyer_doas', 'seller_doas', 'orig_docs', 'to_buyer'].forEach(k => { out[k] = notFuture(val(k)) || notBefore(val(k), r.buyer_paid, 'Buyer Paid'); });
-  out.ewb_signed ||= notBefore(val('ewb_signed'), val('ewb_callout'), 'EWB Call Out');
-  out.buyer_doas ||= notBefore(val('buyer_doas'), val('rcv_doas'), 'Receipt of DOAS');
-  out.seller_doas ||= notBefore(val('seller_doas'), val('buyer_doas') || val('rcv_doas'), val('buyer_doas') ? 'JBAP Receipt of Signed DOAS' : 'Receipt of DOAS');
-  out.to_buyer ||= notBefore(val('to_buyer'), val('orig_docs'), 'JBAP Receipt of Documents');
+  const val = k => (k in e ? e[k] : r[k]) || null, has = (...ks) => ks.some(k => k in e), out = {}, doas = doasOf(r);
+  ['ewb_callout', 'ewb_signed', 'rcv_doas', 'buyer_doas', 'seller_doas', 'orig_docs', 'to_buyer'].forEach(k => { if (k in e) out[k] = notFuture(val(k)) || notBefore(val(k), r.buyer_paid, 'Buyer Paid'); });
+  if (has('ewb_callout', 'ewb_signed')) out.ewb_signed ||= notBefore(val('ewb_signed'), val('ewb_callout'), 'EWB Call Out');
+  if (has('rcv_doas', 'buyer_doas')) out.buyer_doas ||= notBefore(val('buyer_doas'), val('rcv_doas'), 'Receipt of DOAS');
+  if (has('rcv_doas', 'buyer_doas', 'seller_doas')) out.seller_doas ||= notBefore(val('seller_doas'), val('buyer_doas') || val('rcv_doas'), val('buyer_doas') ? 'JBAP Receipt of Signed DOAS' : 'Receipt of DOAS');
+  if (has('orig_docs', 'to_buyer')) out.to_buyer ||= notBefore(val('to_buyer'), val('orig_docs'), 'JBAP Receipt of Documents');
   ['ewb_callout', 'ewb_signed', 'ewb_place'].forEach(k => { if (doas !== 'branch' && e[k]) out[k] = 'is only for sellers whose DOAS is signed at their branch (EWB)'; });
   ['rcv_doas', 'buyer_doas', 'seller_doas'].forEach(k => { if (doas === 'none' && e[k]) out[k] = 'does not apply: this seller has no DOAS'; });
   return out;
@@ -672,7 +674,7 @@ function cellHtml(scr, r, c, upd) {
   if (c.type === 'rowbtn') return `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}" aria-label="${esc(c.btn)} ${esc(r.plate || '')}">${esc(c.btn)}</button></td>`;
   if (c.type === 'logval' && (v ?? '') === '') return '<td><span class="blank">(blank)</span></td>';
   let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : c.type === 'datetime' ? `${fmtDate(v.slice(0, 10))} ${v.slice(11)}` : (v ?? '');
-  const late = (c.late && v && v < TODAY) || c.warn?.(r) ? ' late' : '';   // warn: red text for a row that needs attention
+  const late = c.late && v && v < TODAY ? ' late' : '';
   if (c.w) return `<td class="${cls}${late}"><div class="tx" style="max-width:${c.w}px" title="${esc(t)}">${esc(t)}</div></td>`;
   return `<td class="${cls}${late}">${esc(t)}</td>`;
 }
@@ -873,7 +875,7 @@ function recordAwarding(scr, rows) {
 // [BEHAVIOR] VWD releases only when the seller's DOAS is signed (DOAS sellers) and no storage penalty is unpaid (JBAP Q17).
 function releaseBlock(v) {
   if (v.status !== 'Sold') return null;   // [BEHAVIOR] wish 4: a unit returned to the seller was never sold, so DOAS and storage penalty do not apply
-  if (releaseOf(v) === 'doas' && !v.buyer_doas && !(doasOf(v) === 'branch' && v.ewb_signed)) return 'JBAP Receipt of Signed DOAS is missing: this seller requires DOAS / legal documents signing. FAD records it in Document Monitoring (EWB: Date DOAS Signed).';
+  if (releaseOf(v) === 'doas' && !v.buyer_doas && !v.seller_doas && !(doasOf(v) === 'branch' && v.ewb_signed)) return 'JBAP Receipt of Signed DOAS is missing: this seller requires DOAS / legal documents signing. FAD records it in Document Monitoring (EWB: Date DOAS Signed).';
   if (v.penalty > 0) return `Storage penalty of PHP ${money(v.penalty)} is unpaid. Recording penalty payments comes with step 2 (holidays and extensions).`;
   return null;
 }
