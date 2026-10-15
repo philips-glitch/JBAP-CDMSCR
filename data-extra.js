@@ -4,7 +4,7 @@
   if (!D) return;
   // Role titles for the SAAF and Return to Seller forms (titles only, no names)
   Object.assign(D.meta.company.roles, { smdStaff: 'SMD staff', smdManager: 'SMD Manager', fadManager: 'FAD Manager' });
-  // P1: payments CDMS recorded per lot (Unpaid lots). Fully paid: V110, V111, V123, V124, V126 (two parts); partly paid: V108, V121, V122; the rest none
+  // [MOCK] P1: payments CDMS recorded per lot (Unpaid lots). Fully paid: V110, V111, V123, V124, V126 (two parts); partly paid: V108, V121, V122; the rest none
   D.cdmsPayments = {
     V110: [{ date: '2026-09-25', amount: 230400, or_no: 'OR-50101' }],
     V111: [{ date: '2026-09-29', amount: 409000, or_no: 'OR-50102' }],

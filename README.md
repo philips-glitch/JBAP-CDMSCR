@@ -33,7 +33,7 @@ Sample data for the proposed improvements and the wish-list screens sits in `dat
 9. **Log Activity**: every change from steps 1 to 8, every VWD release or return and every SMD Return to Seller clearance appears here as user `system`, one row per changed field with the old and new value (newest first). Filter by date, user, module, action or record/plate. Prints and emails that record a value (Awarding Date, Billing #, Transmittal Date, Dispatch Date, cancellation billing date and amount, vehicle release with type and checklist, documents received with Others/Remarks and ATF No.) are logged; previews that change nothing and *Generate* are not.
 10. **Return to Seller** (SMD, wish 4): tick *For Return* on units that are not sold and not in the latest auction > **Print & email clearance form** > **Send & print**. The units move to VWD **For Return to Seller** > **Release vehicle** (type *Return to Seller*).
 11. **Inventory** (VWD, also in SMD, wish 5): one row per vehicle with Date of Entry, status, release or return date and days in yard. Filter *In yard / Out* or *Not in latest auction*.
-12. **Proposed improvements**: turn on the switch in the header (see the next section).
+12. **Proposed improvements**: turn on the switch in the header (see *Proposed improvements* below).
 
 ## Reports and emails (layouts of the MS Access samples, 12 Oct 2026)
 
@@ -44,9 +44,11 @@ Sample data for the proposed improvements and the wish-list screens sits in `dat
 | qryBillingSeller | Commission Billing › Print commission billing | Billing # and date |
 | BILLING TRANSMITTAL | Billing Monitoring › Print Transmittal? › Print billing transmittal | Transmittal Date |
 | VEHICLE_DISPATCH (email + form) | For Dispatch › For Dispatch Email? › Email dispatch form | Dispatch Date |
-| rptVehiclerelease (release form + gate pass) | VWD Unreleased Unit / Overdue › Release vehicle | Release date, VRF No. |
+| rptVehiclerelease (release form + gate pass) | VWD Unreleased Unit / Overdue › Release vehicle; VWD For Return to Seller › Release vehicle (type Return to Seller) | Release date, VRF No. |
 | rptCancellationPenalty | Cancellation Billing › Print cancellation billing (one letter per buyer) | Billing date, amount due |
 | DocumentTransmittalPrint | Document Monitoring › Print Transmittal? › Print document transmittal | Documents received, ATF control no. |
+| SAAF (proposed P5; layout to be confirmed, no Access sample) | SMD Seller Awarding Acknowledgement › For SAAF › Email SAAF (switch on) | SAAF Sent |
+| Vehicle Dispatch Clearance Form (Return to Seller), wish 4 | SMD Return to Seller › For Return › Print & email clearance form | Return Clearance Date |
 
 Reports print role titles and a placeholder bank account, not JBAP's staff names or account number. Print or save as PDF with the browser's print dialog.
 
@@ -123,7 +125,7 @@ Qn = question n in JBAP's Open Questions document.
 | For Dispatch | Seller condition met: Buyer Payment and DOAS sellers after Buyer Paid, others after Seller Acknowledgement | Dispatch Condition per seller; DOAS date for release: Q28 |
 | Storage penalty | PHP 500 per calendar day after the dispatch deadline, only at Pasay City / JBAP | Confirmed by Access data, Q15; locations Q31 |
 | Cancellation penalty | PHP 10,000 per lot; 5,000 seller / 5,000 JBAP; EWB all JBAP; waived 0 | Q4 |
-| Vehicle release (VWD) | Blocked for DOAS sellers until *Buyer Signed DOAS* is entered, and while a storage penalty is unpaid. VRF No. and ATF No. are running numbers (seed values in `data.js` > `meta.company.next`) | **Assumption** (dispatch after payment, release needs the signed DOAS); JBAP Q9, Q28 |
+| Vehicle release (VWD) | Blocked for DOAS sellers until *Buyer Signed DOAS* is entered, and while a storage penalty is unpaid. VRF No. and ATF No. are running numbers (seed values in `data.js` > `meta.company.next`). Returns to the seller are never blocked. | **Assumption** (dispatch after payment, release needs the signed DOAS); JBAP Q9, Q28 |
 | Liability to Seller amount | Result price + transfer fees | Matches Access *SumOfTOTAL* |
 | Liability lots on Payment Seller | The 15 Access Liability lots (Nov 2025 to Aug 2026) also show on Payment Seller | Access does not list them on Payment Seller: **to confirm** which filter Access uses |
 | Billing # unique | Not enforced for existing rows | Access lists Billing #428 three times: **data issue to check** |
