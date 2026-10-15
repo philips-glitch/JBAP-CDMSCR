@@ -25,4 +25,7 @@
   const saaf = { V102: ['2026-08-20', '2026-08-24'], V103: ['2026-08-27', '2026-08-31'], V092: ['2026-09-03', '2026-09-07'], V096: ['2026-09-10', '2026-09-14'],
     V087: ['2026-09-10', null], V097: ['2026-09-10', null], V017: ['2026-09-17', null] };
   D.vehicles.forEach(v => { const s = saaf[v.id]; if (s) { v.saaf_sent = s[0]; v.saaf_approved = s[1]; } });
+  // [MOCK] Wish 5: Date of Entry (CDMS Cars > Car List). Inferred: start of the lot's auction minus 7 to 21 days
+  const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  D.vehicles.forEach(v => { const a = D.auctions[String(v.auction)]; if (a) v.entry_date = addDays(a[0], -(7 + Number(v.id.slice(1)) % 15)); });
 })(window.MOCK_DATA);

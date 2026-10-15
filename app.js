@@ -10,6 +10,8 @@ const TODAY = D ? D.meta.demoToday : '2026-10-09';
 const PENALTY_PER_DAY = 500;     // storage penalty per calendar day after the dispatch deadline (confirmed by Access data, Q15)
 const PENALTY_LOCATIONS = ['Pasay City', 'JBAP'];   // storage penalty applies only to units stored here (JBAP Q15)
 const CANCEL_PENALTY = 10000;    // cancellation penalty per lot (JBAP Q4)
+// [BEHAVIOR] Latest auction = the last auction that has started by the demo date ("current auction" of wish 4 and the inventory filter; to confirm, Q32)
+const LATEST_AUCTION = D ? Object.keys(D.auctions).filter(k => D.auctions[k][0] <= TODAY).sort((a, b) => a - b).pop() : null;
 const COMMISSION_RATE = 0.05;    // default commission rate (seller.commission_rate overrides)
 const VAT_RATE = 0.12;
 const WTAX_RATE = 0.15;          // withholding tax on the commission for NET sellers (Access Payment Seller sample; to confirm Q26)
@@ -113,6 +115,10 @@ function enrichV(v) {
     release_cond: RELEASE_LABEL[releaseOf(v)],
     cdms_paid: cdms.paid, cdms_full: cdms.fullDate,
     cdms_status: cdms.fullDate ? `Fully paid ${fmtDate(cdms.fullDate)}` : cdms.paid ? `Partly paid ${money(cdms.paid)} of ${money(total)}` : 'No payment',
+    // Wish 5: a release with type Return to Seller is the return date; any other release is the release to the buyer
+    days_in_yard: v.entry_date ? daysBetween(v.entry_date, v.release || TODAY) : null,
+    released_buyer: v.release && v.release_type !== 'Return to Seller' ? v.release : null, returned_seller: v.release_type === 'Return to Seller' ? v.release : null,
+    yard: v.release ? 'Out' : 'In yard', latest: String(v.auction) === LATEST_AUCTION ? 'In latest auction' : 'Not in latest auction',
     buyer_deadline, pay_deadline, dispatch_deadline,
     penalty: overdue && PENALTY_LOCATIONS.includes(v.location || 'Pasay City') ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
     ...sellerMoney(v),
@@ -203,6 +209,16 @@ const CXMON_COLS = [C('Auction No.', 'auction', 'code'), C('Lot No.', 'lot', 'co
   C('Cancellation Fee Remitted', 'remitted', 'date')];
 const REBMON_COLS = [C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 320 }), C('Plate', 'plate', 'code'),
   C('Rebate', 'rebate', 'money'), C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date')];
+// Wish 5: Inventory report (VWD, also viewable by SMD). Replaces VWD's Excel file; check the columns against it when JBAP sends it.
+const INVENTORY = { slug: 'inventory', title: 'Inventory', actions: VFS, tag: 'Wish',
+  rule: `One row per vehicle: Date of Entry (CDMS Cars > Car List; sample dates inferred), status, and the date it left the yard. Days in Yard runs to the release or return date, or to today while the unit is in the yard. "Not in latest auction" (auction ${LATEST_AUCTION}) helps SMD spot units to return.`,
+  rows: V, sort: ['entry_date', 'asc'], initial: { yard: 'In yard' },
+  cols: [C('Date of Entry', 'entry_date', 'date'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Seller', 'seller', 'code'), C('Location', 'location', 'code'),
+    C('Status', 'status', 'status'), C('Released to Buyer', 'released_buyer', 'date'), C('Returned to Seller', 'returned_seller', 'date'), C('Days in Yard', 'days_in_yard', 'int')],
+  filters: [{ key: 'yard', label: 'In yard / Out', type: 'select', w: 'w1', options: () => ['In yard', 'Out'] }, { key: 'status', label: 'Status', type: 'select', w: 'w1', options: () => ['Sold', 'Not Sold', 'Cancelled'] },
+    { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'location', label: 'Location', type: 'select', options: () => [...new Set(S.veh.map(v => v.location || 'Pasay City'))].sort() },
+    { key: 'latest', label: 'Latest auction', type: 'select', options: () => ['In latest auction', 'Not in latest auction'] }, { key: 'plate', label: 'Plate Number' }],
+  totals: rows => ({ plate: `${rows.length} units`, model: ['Sold', 'Not Sold', 'Cancelled'].map(s => `${s} ${rows.filter(r => r.status === s).length}`).join(' · ') }) };
 
 const SCREENS = [
   // ===================== FAD =====================
@@ -411,6 +427,7 @@ const SCREENS = [
     rows: () => SMD('rebates'), cols: REBMON_COLS, sort: ['buyer_paid', 'desc'] },
   { dept: 'SMD', slug: 'cancellation-monitoring', title: 'Cancellation Monitoring', actions: VS, rule: 'Information on cancelled vehicles.',
     rows: () => SMD('cancellations'), cols: CXMON_COLS, sort: ['dcancel', 'desc'] },
+  { dept: 'SMD', ...INVENTORY },
 
   // ===================== VWD (live data shared with FAD; the Unreleased screens release vehicles) =====================
   { dept: 'VWD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFSU, queue: true, rule: 'Dispatched vehicles with no penalty yet (still within the dispatch deadline). VWD releases a vehicle with Release vehicle (JBAP Q9).',
@@ -433,6 +450,7 @@ const SCREENS = [
       C('Status', 'status', 'status'), C('Awarding Date', 'awarding', 'date'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller', 'pay_seller', 'date'),
       C('Seller Acknowledgement', 'seller_ack', 'date'), C('Dispatch Date', 'dispatch', 'date'), C('Vehicle Release Date', 'release', 'date')],
     totals: rows => ({ customer: `${rows.length} lots, ${rows.filter(r => r.status === 'Sold').length} sold` }) },
+  { dept: 'VWD', ...INVENTORY },
 
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
