@@ -14,7 +14,7 @@ test('switch off: nothing is pre-ticked beyond the saved ticks', () => {
 test('switch on: ready rows are pre-ticked as in the spec table', () => {
   const P = load(); P.setProposed(true);
   const sel = id => ids(P.selectedRows(P.byId[id], READY[id])), rows = id => P.byId[id].rows();
-  for (const id of ['FAD/payment-seller', 'FAD/commission-billing', 'FAD/for-dispatch', 'FAD/cancellation-billing']) assert.deepStrictEqual(sel(id), ids(rows(id)), id);
+  for (const id of ['FAD/payment-seller', 'FAD/commission-billing', 'FAD/for-dispatch', 'FAD/cancellation-billing']) { assert.deepStrictEqual(sel(id), ids(rows(id)), id); assert.ok(sel(id).length > 0, `${id}: pre-ticked rows exist (not vacuous)`); }
   assert.deepStrictEqual(sel('FAD/billing-monitoring'), ids(rows('FAD/billing-monitoring').filter(b => !b.trans || b.print_trans)));
   assert.deepStrictEqual(sel('FAD/document-monitoring'), ids(rows('FAD/document-monitoring').filter(v => (v.orig_docs && !v.atf_no) || v.print_doc_trans)));
   assert.deepStrictEqual(sel('FAD/pending-awarding'), ids(rows('FAD/pending-awarding').filter(v => v.saaf_approved || v.for_baaf)));
@@ -25,7 +25,7 @@ test('unticking a pre-ticked row holds it back', () => {
   assert.ok(!P.selectedRows(scr, 'print_seller').some(x => x.id === r.id));
 });
 test('commission billing: one billing per seller in one go', () => {
-  const P = load(), scr = P.byId['FAD/commission-billing'], rows = scr.rows(), sellers = [...new Set(rows.map(r => r.seller))].slice(0, 2), n = P.S.billing.length;
+  const P = load(), scr = P.byId['FAD/commission-billing'], rows = scr.rows(), sellers = [...new Set(rows.map(r => r.seller))].slice(0, 2), n = P.S.billing.length, log0 = P.S.log.length;
   assert.strictEqual(sellers.length, 2, 'need two sellers');
   sellers.forEach((code, i) => P.recordCommissionBilling(scr, code, `T-${i}`, P.TODAY, rows.filter(r => r.seller === code)));
   assert.strictEqual(P.S.billing.length, n + 2);
@@ -33,6 +33,31 @@ test('commission billing: one billing per seller in one go', () => {
   assert.strictEqual(b0.total, Math.round(lots0.reduce((a, r) => a + r.ctotal, 0) * 100) / 100);
   assert.strictEqual(b0.customer, P.SELLER[sellers[0]].name);
   assert.ok(!scr.rows().some(r => sellers.includes(r.seller)), 'billed lots leave the list');
+  // Log Activity: each billing is logged once as a Create (one entry per recorded field), each lot once as an Update with its billing number
+  const log = P.S.log.slice(log0), lotRecord = r => `Auction ${r.auction}, Lot ${r.lot || '-'}${r.plate ? ` · ${r.plate}` : ''}`;
+  sellers.forEach((code, i) => {
+    const creates = log.filter(e => e.action === 'Create' && e.record === `Billing #T-${i}`);
+    assert.deepStrictEqual(creates.map(e => e.field), ['Customer', 'Billing Date', 'Total'], `Create entries of billing T-${i}`);
+    const updates = log.filter(e => e.action === 'Update' && e.field === 'Commission Billing No.' && e.new === `T-${i}`);
+    assert.deepStrictEqual(updates.map(e => e.record).sort(), rows.filter(r => r.seller === code).map(lotRecord).sort(), `one Update per lot of ${code}`);
+  });
+  assert.strictEqual(log.filter(e => e.action === 'Create').length, 6, 'no other Create entries');
+  assert.strictEqual(log.filter(e => e.field === 'Commission Billing No.').length, rows.filter(r => sellers.includes(r.seller)).length, 'no other billing-number entries');
+});
+test('spec: Commission Billing keeps the one-seller rule with the switch off and lifts it with the switch on', () => {
+  // the harness DOM stub makes render() / openModal throw after the message is set: the message is what is asserted
+  const run = on => {
+    const P = load(); if (on) P.setProposed(true);
+    const scr = P.byId['FAD/commission-billing'], rows = scr.rows(), s0 = rows[0].seller, other = rows.find(r => r.seller !== s0);
+    assert.ok(other, 'need lots of two different sellers');
+    [rows[0], other].forEach(r => { P.U(scr.id).edits[r.id] = { print_comm: true }; });
+    assert.ok(new Set(P.selectedRows(scr, 'print_comm').map(r => r.seller)).size > 1, 'two sellers are ticked');
+    try { P.ACTIONS.printComm(scr); } catch (e) { /* DOM stub */ }
+    return P.U(scr.id).msg;
+  };
+  const off = run(false);
+  assert.ok(off && off.type === 'error', 'switch off: an error is shown'); assert.match(off.html, /one seller at a time/);
+  assert.strictEqual(run(true), null, 'switch on: no one-seller error');
 });
 test('P3: Payment Voucher No. only with the switch on; saved and logged like other edits', () => {
   const P = load(), scr = P.byId['FAD/payment-seller'];
