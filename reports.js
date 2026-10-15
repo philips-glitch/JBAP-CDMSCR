@@ -21,13 +21,13 @@ const REPORTS = {
   },
   // 1. JBAP_AWARDING: Buyer's Winning Bid Confirmation
   awarding(b, lots, award) {
-    const due = addWorkdays(award, 3), tot = r => r.price + (r.transfer_fee || 0);
-    const rows = lots.map(r => `<tr><td>${esc(r.adate)}</td><td>${esc(r.model)}</td><td class="c">${esc(r.plate)}</td><td class="c">${esc(r.year || '')}</td><td class="r">${money(r.price)}</td><td class="r">${money(r.transfer_fee)}</td><td class="r">${money(tot(r))}</td></tr>`).join('');
+    const due = addWorkdays(award, 3), bond = lots.some(r => r.security_bond > 0), tot = r => r.price + (r.transfer_fee || 0) + (r.security_bond || 0);
+    const rows = lots.map(r => `<tr><td>${esc(r.adate)}</td><td>${esc(r.model)}</td><td class="c">${esc(r.plate)}</td><td class="c">${esc(r.year || '')}</td><td class="r">${money(r.price)}</td><td class="r">${money(r.transfer_fee)}</td>${bond ? `<td class="r">${money(r.security_bond || 0)}</td>` : ''}<td class="r">${money(tot(r))}</td></tr>`).join('');
     return rptPage('portrait', `<h1>Buyer's Winning Bid Confirmation</h1>
       <div class="kv"><b>Date awarded</b><span>${longDate(award)}</span><b>Payment deadline</b><span>${longDate(due)}</span>
         <b>Buyer name</b><span>${esc(b.customer)}</span><b>Customer ID</b><span>${esc(b.cid)}</span><b>Email</b><span>${esc(b.email)}</span></div>
-      <table><thead><tr><th>Auction Date</th><th>Make / Model</th><th>Plate Number</th><th>Year</th><th class="r">Result Price</th><th class="r">Notarial / Transfer Fee</th><th class="r">Total</th></tr></thead><tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="6">Grand total</td><td class="r">${money(lots.reduce((a, r) => a + tot(r), 0))}</td></tr></tfoot></table>
+      <table><thead><tr><th>Auction Date</th><th>Make / Model</th><th>Plate Number</th><th>Year</th><th class="r">Result Price</th><th class="r">Notarial / Transfer Fee</th>${bond ? '<th class="r">Security Bond</th>' : ''}<th class="r">Total</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="${bond ? 7 : 6}">Grand total</td><td class="r">${money(lots.reduce((a, r) => a + tot(r), 0))}</td></tr></tfoot></table>
       <h3>Terms and conditions</h3><p>This is to declare the undersigned Buyer as the official winner of the above-listed vehicles. The Winning Bid Amount is considered as the Vehicle Selling Price of the awarded vehicles. The Buyer fully understands that the full amount of the Vehicle Selling Price and other applicable fees must be settled within three (3) working days from the Winning Bid Confirmation date.</p>
       <h3>Bank account details</h3><p>${rptBank()}<br>Please send the proof of payment to ${esc(CO().emails.finance)}.</p>
       <h3>Penalties</h3><p>A Buyer that fails to make payment on or before the due date shall automatically forfeit the transaction and shall have no further claim as regards the right to purchase the Vehicle/s. Forfeiture of transaction is subject to a penalty of Php ${money(CANCEL_PENALTY)} per vehicle which will be withdrawn from the deposit. In the event that the total penalty exceeds the deposit amount, the outstanding penalty shall be settled within 48 hours from forfeiture. Failure to settle the prescribed penalty fee will result to the Buyer being banned from joining future JBAP Auctions.</p>
@@ -46,11 +46,11 @@ const REPORTS = {
   },
   // 3. qryPAYMENTSELLERPrint: Computation of Payable to Seller (one page per seller)
   payableToSeller(code, lots, date) {
-    const net = SELLER[code]?.net !== false, m = n => (net ? money(n) : '');
-    const rows = lots.map(r => `<tr><td>${esc(r.adate)}</td><td>${esc(r.customer)}</td><td>${esc(r.model)}</td><td class="c">${esc(r.plate)}</td><td class="r">${money(r.price)}</td><td class="r">${money(r.transfer_fee)}</td><td class="r">${m(r.com)}</td><td class="r">${m(r.cvat)}</td><td class="r">${m(r.wtax)}</td><td class="r">${money(r.payable)}</td><td class="r">${money(r.to_jbap)}</td></tr>`).join('');
+    const net = SELLER[code]?.net !== false, m = n => (net ? money(n) : ''), fb = r => (r.transfer_fee || 0) + (r.security_bond || 0);
+    const rows = lots.map(r => `<tr><td>${esc(r.adate)}</td><td>${esc(r.customer)}</td><td>${esc(r.model)}</td><td class="c">${esc(r.plate)}</td><td class="r">${money(r.price)}</td><td class="r">${money(fb(r))}</td><td class="r">${m(r.com)}</td><td class="r">${m(r.cvat)}</td><td class="r">${m(r.wtax)}</td><td class="r">${money(r.payable)}</td><td class="r">${money(r.to_jbap)}</td></tr>`).join('');
     return rptPage('landscape', `<h2>${esc(CO().name.toUpperCase())}</h2><h1>Computation of Payable to Seller</h1><p><b>${esc(code)}</b> · ${esc(SELLER[code]?.name || code)}${net ? '' : ' (GROSS seller: commission billed separately)'}</p>
       <table><thead><tr><th>Auction Date</th><th>Customer Name</th><th>Make / Model</th><th>Plate #</th><th class="r">Result Price</th><th class="r">Notarial / Transfer / Bond</th><th class="r">Commission</th><th class="r">VAT</th><th class="r">Tax</th><th class="r">Payable to Seller</th><th class="r">To JBAP</th></tr></thead><tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="4">Total</td><td class="r">${money(rptSum(lots, 'price'))}</td><td class="r">${money(rptSum(lots, 'transfer_fee'))}</td><td class="r">${m(rptSum(lots, 'com'))}</td><td class="r">${m(rptSum(lots, 'cvat'))}</td><td class="r">${m(rptSum(lots, 'wtax'))}</td><td class="r">${money(rptSum(lots, 'payable'))}</td><td class="r">${money(rptSum(lots, 'to_jbap'))}</td></tr></tfoot></table>
+      <tfoot><tr><td colspan="4">Total</td><td class="r">${money(rptSum(lots, 'price'))}</td><td class="r">${money(lots.reduce((a, r) => a + fb(r), 0))}</td><td class="r">${m(rptSum(lots, 'com'))}</td><td class="r">${m(rptSum(lots, 'cvat'))}</td><td class="r">${m(rptSum(lots, 'wtax'))}</td><td class="r">${money(rptSum(lots, 'payable'))}</td><td class="r">${money(rptSum(lots, 'to_jbap'))}</td></tr></tfoot></table>
       ${rptSign([`Prepared by: ${CO().roles.fadStaff}`, longDate(date)])}`);
   },
   // 4. qryBillingSeller: Billing Computation (attachment to the seller's billing invoice)
