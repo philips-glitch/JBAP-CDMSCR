@@ -7,10 +7,12 @@
   // [MOCK] Security Bond (JBAP feedback, 15 Oct 2026): sample amount per vehicle until JBAP confirms which sellers bill one and how much (Q44, Q45).
   // INSPIRO bills a bond in JBAP's Security Bond sheet; ORICO and ASIALINK carry one here only so the demo has enough paid lots.
   D.sellers.forEach(s => { if (['INSPIRO', 'ORICO', 'ASIALINK'].includes(s.code)) s.security_bond = 20000; });
-  // [MOCK] Security Bond progress on the paid bond lots: V166 Complete, V030 Pending Refund, V054 Forfeited; V050, V058 and V063 Pending Documents.
+  // [MOCK] Access lots keep the amounts Access shows: no bond. V166 (INSPIRO) is a Liability to Seller lot in Access; a bond would put its total 20,000 above Access's SumOfTOTAL.
+  D.vehicles.forEach(v => { if (v.id === 'V166') v.security_bond = 0; });
+  // [MOCK] Security Bond progress on the paid bond lots: V030 Complete, V050 Pending Refund, V054 Forfeited; V058 and V063 Pending Documents.
   // Waiting ORCR shows once FAD enters Buyer Receipt of Documents for a bond lot in Document Monitoring.
-  const bond = { V166: { bond_orcr_jbap: '2026-03-02', bond_orcr_seller: '2026-03-09', bond_refund_jbap: '2026-03-20', bond_refund_buyer: '2026-03-24', bond_refund_via: 'Deposit c/o JBAP' },
-    V030: { bond_orcr_jbap: '2026-10-01', bond_orcr_seller: '2026-10-05' },
+  const bond = { V030: { bond_orcr_jbap: '2026-10-01', bond_orcr_seller: '2026-10-05', bond_refund_jbap: '2026-10-06', bond_refund_buyer: '2026-10-07', bond_refund_via: 'Deposit c/o JBAP' },
+    V050: { bond_orcr_jbap: '2026-10-06', bond_orcr_seller: '2026-10-07' },
     V054: { bond_forfeited: '2026-10-07', bond_remarks: 'Sample: buyer did not transfer the ORCR' } };
   D.vehicles.forEach(v => { if (bond[v.id]) Object.assign(v, bond[v.id]); });
   // [MOCK] P2: lots cancelled in CDMS that FAD has not recorded yet (FAD confirms them on Cancellation Entry)

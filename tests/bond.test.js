@@ -48,10 +48,11 @@ test('bondStatus: the furthest step reached', () => {
 test('Security Bond screen: paid bond lots, sample statuses, the Open view, shown with the switch off', () => {
   const P = load(), scr = P.byId['FAD/security-bond'], rows = scr.rows(), st = Object.fromEntries(rows.map(r => [r.id, r.bond_status]));
   assert.ok(P.shown(scr)); assert.strictEqual(scr.tag, 'Wish');
-  assert.deepStrictEqual(rows.map(r => r.id).sort(), ['V030', 'V050', 'V054', 'V058', 'V063', 'V166']);
-  assert.deepStrictEqual([st.V166, st.V030, st.V054, st.V063], ['Complete', 'Pending Refund', 'Forfeited', 'Pending Documents']);
+  assert.deepStrictEqual(rows.map(r => r.id).sort(), ['V030', 'V050', 'V054', 'V058', 'V063']);
+  assert.deepStrictEqual([st.V030, st.V050, st.V054, st.V063], ['Complete', 'Pending Refund', 'Forfeited', 'Pending Documents']);
   assert.deepStrictEqual(scr.initial, { bond_status: 'Open' });
-  assert.ok(!P.applyFilters(scr, rows).some(r => ['V166', 'V054'].includes(r.id)), 'Open hides Complete and Forfeited');
+  const open = P.applyFilters(scr, rows).map(r => r.id).sort();
+  assert.ok(!open.some(id => ['V030', 'V054'].includes(id)), 'Open hides Complete and Forfeited'); assert.deepStrictEqual(open, ['V050', 'V058', 'V063'], 'Open shows the rest');
   assert.deepStrictEqual(scr.filters[0].options(), ['Open', 'Pending Documents', 'Waiting ORCR', 'Pending Refund', 'Complete', 'Forfeited']);
 });
 test('Waiting ORCR once the buyer has the documents (Document Monitoring)', () => {
@@ -60,7 +61,8 @@ test('Waiting ORCR once the buyer has the documents (Document Monitoring)', () =
   assert.strictEqual(P.byId['FAD/security-bond'].rows().find(r => r.id === 'V063').bond_status, 'Waiting ORCR');
 });
 test('Refund Via is a select; saving it logs the change', () => {
-  const P = load(), scr = P.byId['FAD/security-bond'], col = scr.cols.find(c => c.key === 'bond_refund_via'), r = scr.rows().find(x => x.id === 'V030');
+  const P = load(), scr = P.byId['FAD/security-bond'], col = scr.cols.find(c => c.key === 'bond_refund_via'), r = scr.rows().find(x => x.id === 'V050');
+  assert.strictEqual(r._raw.bond_refund_via, undefined, 'a row with no Refund Via yet');
   assert.strictEqual(col.edit, 'select'); assert.deepStrictEqual(col.options, ['Deposit c/o JBAP', 'Cheque', 'Seller deposited to buyer']);
   const h = P.cellHtml(scr, r, col, true); assert.match(h, /<select[^>]*data-key="bond_refund_via"/); assert.match(h, /<option>Cheque<\/option>/);
   const before = P.S.log.length; P.U(scr.id).edits[r.id] = { bond_refund_via: 'Cheque' }; P.applyEdits(scr);
@@ -74,4 +76,8 @@ test('Security Bond validation', () => {
   assert.match(P.bondValidate(v, { bond_orcr_jbap: '2026-10-01', bond_orcr_seller: '2026-09-30' }).bond_orcr_seller, /JBAP Receipt of Transferred ORCR/);
   assert.match(P.bondValidate(v, { bond_refund_buyer: '2026-10-01', bond_forfeited: '2026-10-02' }).bond_forfeited, /refund/);
   assert.deepStrictEqual(Object.values(P.bondValidate(v, { bond_orcr_jbap: '2026-09-25', bond_orcr_seller: '2026-09-28', bond_refund_jbap: '2026-10-01', bond_refund_buyer: '2026-10-02' })).filter(Boolean), []);
+});
+test('Access lots keep the amounts Access shows: the sample bond skips V166 (Liability to Seller, INSPIRO)', () => {
+  const P = load(), v = P.V().find(x => x.id === 'V166');
+  assert.strictEqual(v.security_bond, 0); assert.strictEqual(v.total, 372000);
 });
