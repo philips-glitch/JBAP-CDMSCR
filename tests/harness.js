@@ -12,7 +12,7 @@ const EXPORTS = ['D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enric
   'dropHolds', 'dispatchCc', 'queueCounts', 'PROPOSALS', 'LATEST_AUCTION', 'rtsEligible', 'recordReturnClearance',
   // JBAP feedback round 1 (spec 2026-10-15)
   'doasOf', 'docStatus', 'DOC_STATUSES', 'workdaysBetween', 'cellHtml', 'applyFilters', 'bondOf', 'recordAwarding',
-  'bondStatus', 'BOND_STATUSES', 'bondValidate'];
+  'bondStatus', 'BOND_STATUSES', 'bondValidate', 'groupOf', 'sideHtml', 'pageHead', 'homeLayout'];
 function load() {
   const window = { addEventListener() {} };
   new Function('window', fs.readFileSync(path.join(ROOT, 'data.js'), 'utf8'))(window);

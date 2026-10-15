@@ -374,14 +374,14 @@ const SCREENS = [
     totals: rows => ({ rebate: money(sumBy(rows, 'rebate')) }),
     validate: (r, e) => ({ rebate_paid: notFuture(e.rebate_paid) || notBefore(e.rebate_paid, r.buyer_paid, 'Buyer Paid') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid rebates removed from the list.' },
-  { dept: 'FAD', slug: 'billing-monitoring', title: 'Billing Monitoring', actions: VSU, rule: 'All records from the billing table. New commission billings appear here after printing. Tick Print Transmittal? and print the billing transmittal to record the Transmittal Date.',
+  { dept: 'FAD', slug: 'billing-monitoring', title: 'Billing Monitoring', group: 'Billing', actions: VSU, rule: 'All records from the billing table. New commission billings appear here after printing. Tick Print Transmittal? and print the billing transmittal to record the Transmittal Date.',
     rows: B, sort: ['bdate', 'desc'],
     cols: [C('Billing #', 'no', 'code'), C('Customer', 'customer', 'text', { w: 320 }), C('Auction Date / Particulars', 'particular', 'text', { w: 230 }), C('Billing Date', 'bdate', 'date'), C('Total', 'total', 'money'),
       C('Transmittal Date', 'trans', 'date'), C('Print Transmittal?', 'print_trans', 'check', { edit: 'check' })],
     buttons: [{ label: 'Print billing transmittal', kind: 'ol', icon: 'print', act: 'printTransmittal', count: 'print_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     queue: true, ready: { key: 'print_trans', when: r => !r.trans },
     ruleP: ['P4', 'Billings with no Transmittal Date arrive pre-ticked.'] },
-  { dept: 'FAD', slug: 'unpaid-billing', title: 'Unpaid Billing', actions: VSU, rule: `Billing records with a blank Payment Date. Due date = billing date + ${BILL_DUE_DAYS} days.`,
+  { dept: 'FAD', slug: 'unpaid-billing', title: 'Unpaid Billing', group: 'Billing', actions: VSU, rule: `Billing records with a blank Payment Date. Due date = billing date + ${BILL_DUE_DAYS} days.`,
     rows: () => B().filter(b => !b.pay), sort: ['bdate', 'asc'],
     cols: [C('Customer', 'customer', 'text', { w: 240 }), C('Auction Date / Particulars', 'particular', 'text', { w: 180 }), C('Billing Date', 'bdate', 'date'), C('Bill Amount', 'bill', 'money'),
       C('VAT', 'vat', 'money'), C('Total', 'total', 'money'), C('Transmittal Date', 'trans', 'date'), C('Due Date', 'due', 'date', { late: true }),
@@ -574,30 +574,37 @@ const TOP_BEFORE = [['Dashboard', 'dashboard', 0], ['Customer', 'customer', 0], 
 const TOP_AFTER = [['Sales Summary', 'sales-summary', 0], ['Cashier Closing', 'cashier-closing', 0], ['Deposit', 'deposit', 1], ['Payment', 'payment', 1], ['Inspection', 'inspection', 0], ['Staff', 'staff', 1]];
 const disabledItem = ([label, key, caret]) => `<button type="button" class="mi is-disabled" aria-disabled="true" data-disabled="${esc(label)}" title="Not part of this prototype">
   <img src="assets/ic-${key}.png" alt="">${esc(label)}${caret ? '<span class="caret"></span>' : ''}</button>`;
-function renderSide(route) {
-  const dept = route.split('/')[0];
+// [BEHAVIOR] Screens of one department that share a group show as one menu entry with a tab per screen (FAD › Billing: Billing Monitoring, Unpaid Billing)
+const groupOf = scr => scr.group ? SCREENS.filter(s => s.dept === scr.dept && s.group === scr.group && shown(s)) : null;
+const menuTitle = s => s.group ? `${s.group} › ${s.title}` : s.title;
+function sideHtml(route) {
   const groups = ['FAD', 'SMD', 'VWD'].map(d => {
     const open = OPEN[d];
     const items = SCREENS.filter(s => s.dept === d && shown(s)).map(s => {
-      const q = queueCounts(s), on = s.id === route;
+      const g = groupOf(s); if (g && g[0] !== s) return '';   // a group shows once, where its first screen sits
+      const list = g || [s], title = g ? s.group : s.title, on = list.some(x => x.id === route);
+      const qs = list.map(queueCounts).filter(Boolean), q = qs.length ? { ready: sumBy(qs, 'ready'), late: sumBy(qs, 'late') } : null;
       const b = q && (q.ready || q.late) ? `<span class="qbs" aria-hidden="true">${q.late ? `<span class="qb late">${q.late}</span>` : ''}${q.ready ? `<span class="qb">${q.ready}</span>` : ''}</span>` : '';
-      const label = q ? ` aria-label="${esc(s.title)}: ${q.ready} waiting, ${q.late} overdue"` : '';
-      return `<a class="mis ${on ? 'is-active' : ''}" href="#/${s.id}" ${on ? 'aria-current="page"' : ''}${label}>${esc(s.title)}${tagMini(s)}${b}</a>`;
+      const label = q ? ` aria-label="${esc(title)}: ${q.ready} waiting, ${q.late} overdue"` : '';
+      return `<a class="mis ${on ? 'is-active' : ''}" href="#/${list[0].id}" ${on ? 'aria-current="page"' : ''}${label}>${esc(title)}${g ? '' : tagMini(s)}${b}</a>`;
     }).join('');
     return `<button type="button" class="mi" data-group="${d}" aria-expanded="${open}" aria-controls="grp-${d}">${deptSvg(d)}${d}<span class="caret"></span></button>
       <div class="lvs" id="grp-${d}" ${open ? '' : 'hidden'}>${items}</div>`;
   }).join('');
   const logOn = route === LOG_ID;
   const log = `<a class="mi ${logOn ? 'is-active' : ''}" href="#/${LOG_ID}" ${logOn ? 'aria-current="page"' : ''}>${deptSvg('LOG')}Log Activity</a>`;
-  $('#menu').innerHTML = TOP_BEFORE.map(disabledItem).join('') + groups + TOP_AFTER.map(disabledItem).join('') + log +
+  return TOP_BEFORE.map(disabledItem).join('') + groups + TOP_AFTER.map(disabledItem).join('') + log +
     '<p class="side-note">Prototype: only FAD, SMD, VWD and Log Activity are active. Other menus are disabled.</p>';
 }
+function renderSide(route) { $('#menu').innerHTML = sideHtml(route); }
 
 function pageHead(scr) {
   const pills = scr.actions.map(a => `<span class="pill ${a === 'Update' ? 'u' : ''}">${a}</span>`).join('');
   const extra = PROPOSED && scr.ruleP ? ` ${tagHtml({ tag: scr.ruleP[0] })} ${esc(scr.ruleP[1])}` : '';   // [BEHAVIOR] what the switch changes on this screen
-  return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›${scr.top ? '' : `<span>${scr.dept}</span>›`}<b>${esc(scr.title)}</b></nav>
-    <div class="hrow"><h1>${esc(scr.title)}${tagHtml(scr)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>
+  const g = groupOf(scr);   // [BEHAVIOR] a grouped screen: the menu entry names the page, each screen is a tab (a link with its own URL)
+  const tabs = g ? `<nav class="tabs" aria-label="${esc(scr.group)} tabs">${g.map(s => `<a href="#/${s.id}" class="tab${s === scr ? ' is-active' : ''}"${s === scr ? ' aria-current="page"' : ''}>${esc(s.title)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`).join('')}</nav>` : '';
+  return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›${scr.top ? '' : `<span>${scr.dept}</span>›`}${g ? `<span>${esc(scr.group)}</span>›` : ''}<b>${esc(scr.title)}</b></nav>
+    <div class="hrow"><h1>${esc(g ? scr.group : scr.title)}${tagHtml(scr)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>${tabs}
     <p class="rule">${IC.info}<span>${esc(scr.rule)}${extra}</span></p>`;
 }
 
@@ -758,13 +765,13 @@ function entryLayout(scr) {
 function proposedPanels() {
   const items = PROPOSALS.map(([id, text, link]) => `<li>${tagHtml({ tag: id })} ${link ? `<a href="#/${link}">${esc(text)}</a>` : esc(text)}</li>`).join('');
   const dept = d => `<div><h3>${d}</h3><ul>${SCREENS.filter(s => s.dept === d).map(s => [s, queueCounts(s)]).filter(([, q]) => q).map(([s, q]) =>
-    `<li><a href="#/${s.id}">${esc(s.title)}${q.late ? `<span class="cnt late">${q.late} overdue</span>` : ''}<span class="cnt">${q.ready}</span></a></li>`).join('') || '<li class="none">Nothing waiting</li>'}</ul></div>`;
+    `<li><a href="#/${s.id}">${esc(menuTitle(s))}${q.late ? `<span class="cnt late">${q.late} overdue</span>` : ''}<span class="cnt">${q.ready}</span></a></li>`).join('') || '<li class="none">Nothing waiting</li>'}</ul></div>`;
   return `<section class="card pp" aria-label="Proposed improvements"><div class="card-h"><div class="ico">${IC.info}</div>Proposed improvements</div><ul class="pp-list">${items}</ul></section>
     <section class="card pp" aria-label="Waiting for you"><div class="card-h"><div class="ico">${IC.table}</div>Waiting for you${tagHtml({ tag: 'P6' })}</div><div class="pp-wait">${['FAD', 'SMD', 'VWD'].map(dept).join('')}</div></section>`;
 }
 function homeLayout() {
   const card = d => {
-    const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(s.title)}${tagMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
+    const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
     const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Monitoring (legacy SMD sample data); Return to Seller and Inventory use live data', VWD: 'Units for dispatch and release; VWD records the vehicle release' }[d];
     return `<section class="hcard"><div class="card-h"><div class="ico">${deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox')}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
@@ -904,7 +911,7 @@ function recordCancellation(scr, v, f) {
 }
 // [MOCK] P2: lots cancelled in CDMS (data-extra.js > cdmsCancels) that FAD has not recorded yet (the vehicle is still Sold)
 const cdmsCancelsPending = () => (D.cdmsCancels || []).map(c => ({ c, v: V().find(x => x.id === c.vid) })).filter(x => x.v && x.v.status === 'Sold');
-// [BEHAVIOR] One commission billing per seller: adds the billing (Billing Monitoring, Unpaid Billing), marks the lots billed, logs both
+// [BEHAVIOR] One commission billing per seller: adds the billing (Billing › Billing Monitoring and Unpaid Billing), marks the lots billed, logs both
 function recordCommissionBilling(scr, code, no, bd, rows) {
   const bill = { no, customer: SELLER[code]?.name || code, particular: [...new Set(rows.map(r => r.adate))].join('; '), bdate: bd, total: Math.round(sumBy(rows, 'ctotal') * 100) / 100, trans: null, pay: null, cr: '' };
   S.billing.push(bill);
@@ -1012,7 +1019,7 @@ const ACTIONS = {
     const p3 = PROPOSED ? `<p class="note no-print">${tagHtml({ tag: 'P3' })} Typed for now; comes through JBAP's NOAH integration once it is re-routed to CDMS.</p>` : '';
     const body = `<div class="fgrid two no-print" style="padding:0 0 12px">${nos}<div class="fld"><label for="cb-date">Billing Date</label><input class="ctl" type="date" id="cb-date" value="${TODAY}" required><span class="err" id="cb-date-err"></span></div></div>${p3}
       ${sellers.map(code => REPORTS.billingComputation(code, '(entered above)', TODAY, of(code))).join('')}`;
-    openModal({ title: many ? `Print commission billing: ${sellers.length} sellers` : 'Print commission billing', icon: 'print', wide: true, body, note: 'Recording adds the billing to Billing Monitoring and Unpaid Billing.',
+    openModal({ title: many ? `Print commission billing: ${sellers.length} sellers` : 'Print commission billing', icon: 'print', wide: true, body, note: 'Recording adds the billing to Billing (Billing Monitoring and Unpaid Billing tabs).',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: many ? `Record ${sellers.length} billings & print` : 'Record billing & print', kind: 'pr', icon: 'print', onClick: () => {
         const bd = $('#cb-date').value, entered = sellers.map((_, i) => $(`#cb-no-${i}`).value.trim()); let ok = true;
         $('#cb-date-err').textContent = ''; $('#cb-date').classList.remove('is-invalid');
@@ -1026,7 +1033,7 @@ const ACTIONS = {
         if (!ok) return;
         const html = sellers.map((code, i) => { recordCommissionBilling(scr, code, entered[i], bd, of(code)); return REPORTS.billingComputation(code, entered[i], bd, of(code)); }).join('');
         render(); openModal({ title: many ? `Billing computation: ${sellers.length} billings` : `Billing computation #${entered[0]}`, icon: 'print', wide: true, body: html, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
-        printModal(); toast(`${many ? `${sellers.length} billings` : `Billing #${esc(entered[0])}`} recorded for ${rows.length} vehicle(s). See Billing Monitoring and Unpaid Billing.`);
+        printModal(); toast(`${many ? `${sellers.length} billings` : `Billing #${esc(entered[0])}`} recorded for ${rows.length} vehicle(s). See Billing (Billing Monitoring and Unpaid Billing tabs).`);
       } }] });
   },
   printCancel(scr) {

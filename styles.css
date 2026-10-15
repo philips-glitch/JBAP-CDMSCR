@@ -288,3 +288,10 @@ table.cmp th{font-size:11.5px}table.cmp th .hb{padding:5px 4px}table.cmp td{padd
 @media (max-width:768px){.pp-wait{grid-template-columns:1fr}}
 /* JBAP feedback: Document Monitoring columns that do not apply to the seller */
 td.na{color:#8a91a8;background:#f3f5f9;font-size:11.5px}
+/* Tabs: screens grouped under one menu entry (FAD › Billing) */
+.tabs{display:flex;gap:4px;margin-top:12px;border-bottom:1px solid var(--line-2);overflow-x:auto;scrollbar-width:thin}
+.tab{display:flex;align-items:center;gap:7px;padding:8px 14px;margin-bottom:-1px;border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0;color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:600;white-space:nowrap}
+.tab:hover{color:var(--navy);background:var(--zebra)}
+.tab.is-active{background:var(--card);color:var(--navy);border-color:var(--line-2);border-bottom:1px solid var(--card)}
+.tab .cnt{font-size:11px;font-weight:600;background:#e8ecf7;border-radius:9px;padding:0 7px;line-height:17px}
+.tab:focus-visible{outline:2px solid var(--navy);outline-offset:-2px}
