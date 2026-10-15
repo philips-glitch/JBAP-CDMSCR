@@ -270,3 +270,19 @@ table.cmp th{font-size:11.5px}table.cmp th .hb{padding:5px 4px}table.cmp td{padd
 @media print{.ptag{display:none}}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .msg[hidden]{display:none}
+/* P6: menu badges and the Home panels (switch on) */
+.qbs{margin-left:auto;margin-right:12px;display:flex;gap:4px}
+.qb{font-family:var(--font-ui);font-size:11px;line-height:17px;padding:0 7px;border-radius:9px;background:rgba(255,255,255,.18);color:#fff}
+.qb.late{background:#d64545}
+.pp-list{list-style:none;margin:0;padding:12px 18px 14px;display:grid;gap:8px;font-size:13px}
+.pp-list .ptag{margin-left:0}
+.pp-wait{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;padding:12px 18px 16px}
+.pp-wait h3{margin:0 0 6px;font-size:13px}
+.pp-wait ul{list-style:none;margin:0;padding:0}
+.pp-wait li a{display:flex;align-items:center;gap:6px;padding:5px 0;font-size:13px;color:inherit;text-decoration:none}
+.pp-wait li a:hover{text-decoration:underline}
+.pp-wait .cnt{margin-left:auto;border-radius:9px;padding:0 8px;font-size:11px;background:#e8ecf7}
+.pp-wait .cnt.late{background:#fde7e7;color:#b42318}
+.pp-wait .cnt.late+.cnt{margin-left:0}
+.pp-wait .none{font-size:12.5px;color:#7b8299}
+@media (max-width:768px){.pp-wait{grid-template-columns:1fr}}

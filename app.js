@@ -225,7 +225,7 @@ const SCREENS = [
       transfer_fee: 'transfer_fee' in e && (e.transfer_fee === '' || Number(e.transfer_fee) < 0) ? 'must be 0 or more' : null }),
     buttons: [{ label: 'Email BAAF', kind: 'ol', icon: 'mail', act: 'emailBaaf', count: 'for_baaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Vehicles with an Awarding Date moved to Unpaid.',
-    ready: { key: 'for_baaf', when: r => !!r.saaf_approved },
+    queue: true, ready: { key: 'for_baaf', when: r => !!r.saaf_approved },
     ruleP: ['P4', 'Lots the seller approved (SAAF, recorded by SMD) arrive pre-ticked for BAAF; untick a lot to hold it back.'] },
   { dept: 'FAD', slug: 'unpaid', title: 'Unpaid', actions: VFSU, rule: 'Vehicles with status SOLD, an Awarding Date, and a blank Buyer Paid date. Total = Awarded price + Transfer fees. Buyer deadline = 3 working days after awarding.',
     rows: () => sold().filter(v => v.awarding && !v.buyer_paid), sort: ['buyer_deadline', 'asc'],
@@ -239,7 +239,7 @@ const SCREENS = [
     validate: (r, e) => ({ buyer_paid: notFuture(e.buyer_paid) || notBefore(e.buyer_paid, r.awarding, 'the Awarding Date') }),
     buttons: [{ label: 'Confirm Buyer Paid', kind: 'ol', icon: 'check', act: 'confirmPaid', count: 'cdms_confirm', proposed: true, tag: 'P1' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Paid vehicles moved to Payment Seller.',
-    ready: { key: 'cdms_confirm', when: cdmsConfirmable },
+    queue: true, ready: { key: 'cdms_confirm', when: cdmsConfirmable },
     saveWarn: { test: (r, e) => !!e.buyer_paid && !r.cdms_full, text: n => `${n} lot(s) saved without full payment in CDMS.` },
     ruleP: ['P1', 'Paid in CDMS shows the payments CDMS recorded per lot. Fully paid lots are pre-ticked under Confirm; Confirm Buyer Paid sets Buyer Paid to the date CDMS shows the lot fully paid. Typing Buyer Paid still works, with a warning when CDMS does not show the lot fully paid.'] },
   { dept: 'FAD', slug: 'payment-seller', title: 'Payment Seller', actions: VFSU, rule: 'Vehicles with status SOLD, a Buyer Paid date, and a blank Payment to Seller date. Deadline = 3 working days after Buyer Paid. To JBAP = commission + VAT − 15% withholding tax (NET sellers); Payable to Seller = total − To JBAP.',
@@ -252,7 +252,7 @@ const SCREENS = [
     validate: (r, e) => ({ pay_seller: notFuture(e.pay_seller) || notBefore(e.pay_seller, r.buyer_paid, 'Buyer Paid') }),
     buttons: [{ label: 'Print payment to seller', kind: 'ol', icon: 'print', act: 'printSeller', count: 'print_seller' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Paid sellers moved to Seller Acknowledgement and Commission Billing.',
-    ready: { key: 'print_seller', when: () => true },
+    queue: true, ready: { key: 'print_seller', when: () => true },
     ruleP: ['P4', 'Every lot arrives pre-ticked for printing; untick a lot to hold it back. Payment Voucher No. (P3) is typed for now and will come from NOAH once the connection is confirmed.'] },
   { dept: 'FAD', slug: 'seller-acknowledgement', title: 'Seller Acknowledgement', actions: VFSU,
     rule: 'Vehicles with status SOLD, Buyer Paid and Payment to Seller filled in, and a blank Seller Acknowledgement date.',
@@ -271,7 +271,7 @@ const SCREENS = [
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ dispatch: notFuture(e.dispatch) || (releaseOf(r) === 'ack' ? notBefore(e.dispatch, r.seller_ack, 'Seller Acknowledgement') : notBefore(e.dispatch, r.buyer_paid, 'Buyer Paid')) }),
     buttons: [{ label: 'Email dispatch form', kind: 'ol', icon: 'mail', act: 'emailDispatch', count: 'for_dispatch_email' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Dispatched vehicles moved to Unreleased Unit (FAD and VWD).',
-    ready: { key: 'for_dispatch_email', when: () => true },
+    queue: true, ready: { key: 'for_dispatch_email', when: () => true },
     ruleP: ['P4', 'Every lot arrives pre-ticked for the dispatch email; untick a lot to hold it back. The email is copied to Finance only (P5): VWD sees the lot in its own list.'] },
   { dept: 'FAD', slug: 'document-monitoring', title: 'Document Monitoring', actions: VFSU,
     rule: 'Sold lots with a Buyer Paid date whose documents are not yet released to the buyer. Sellers released on Buyer Payment (TFS) skip the DOAS steps. DOAS dates go in order: received for signing, signed by the buyer, receipt by the seller.',
@@ -283,7 +283,7 @@ const SCREENS = [
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     validate: docValidate,
     buttons: [{ label: 'Print document transmittal', kind: 'ol', icon: 'print', act: 'printDocTrans', count: 'print_doc_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Lots with Documents Released to Buyer were removed from the list.',
-    ready: { key: 'print_doc_trans', when: r => !!r.orig_docs && !r.atf_no },
+    queue: true, ready: { key: 'print_doc_trans', when: r => !!r.orig_docs && !r.atf_no },
     ruleP: ['P4', 'Lots with original documents received and no ATF No. yet arrive pre-ticked.'] },
   { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
     rule: `Dispatched vehicles not yet released to the buyer. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15).`,
@@ -310,7 +310,7 @@ const SCREENS = [
     cols: [C('Billing #', 'no', 'code'), C('Customer', 'customer', 'text', { w: 320 }), C('Auction Date / Particulars', 'particular', 'text', { w: 230 }), C('Billing Date', 'bdate', 'date'), C('Total', 'total', 'money'),
       C('Transmittal Date', 'trans', 'date'), C('Print Transmittal?', 'print_trans', 'check', { edit: 'check' })],
     buttons: [{ label: 'Print billing transmittal', kind: 'ol', icon: 'print', act: 'printTransmittal', count: 'print_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
-    ready: { key: 'print_trans', when: r => !r.trans },
+    queue: true, ready: { key: 'print_trans', when: r => !r.trans },
     ruleP: ['P4', 'Billings with no Transmittal Date arrive pre-ticked.'] },
   { dept: 'FAD', slug: 'unpaid-billing', title: 'Unpaid Billing', actions: VSU, rule: `Billing records with a blank Payment Date. Due date = billing date + ${BILL_DUE_DAYS} days.`,
     rows: () => B().filter(b => !b.pay), sort: ['bdate', 'asc'],
@@ -328,11 +328,11 @@ const SCREENS = [
       C('Winning Bid', 'price', 'money'), C('Commission', 'com', 'money'), C('VAT', 'cvat', 'money'), C('Total', 'ctotal', 'money')],
     totals: rows => ({ plate: `${rows.length} units`, price: money(sumBy(rows, 'price')), com: money(sumBy(rows, 'com')), cvat: money(sumBy(rows, 'cvat')), ctotal: money(sumBy(rows, 'ctotal')) }),
     buttons: [{ label: 'Print commission billing', kind: 'ol', icon: 'print', act: 'printComm', count: 'print_comm' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
-    ready: { key: 'print_comm', when: () => true },
+    queue: true, ready: { key: 'print_comm', when: () => true },
     ruleP: ['P4', 'Every lot arrives pre-ticked. Printing records one billing per seller in one go, each with its own NOAH billing number (P3: typed for now).'] },
   { dept: 'FAD', slug: 'cancellation-monitoring', title: 'Cancellation Monitoring', actions: VS, rule: 'Information on cancelled vehicles.',
     rows: CX, cols: CXMON_COLS, sort: ['dcancel', 'desc'] },
-  { dept: 'FAD', slug: 'cancellation-entry', title: 'Cancellation Entry', actions: VSU, layout: 'entry',
+  { dept: 'FAD', slug: 'cancellation-entry', title: 'Cancellation Entry', actions: VSU, layout: 'entry', queue: () => cdmsCancelsPending().length,
     rule: 'Enter the Auction No. and Lot to find the transaction, then record the cancellation.',
     ruleP: ['P2', 'Lots already cancelled in CDMS wait at the top: add the waiver decision and Confirm. The record and the penalty billing are the same as for a cancellation entered here.'],
     rows: CX, sort: ['dcancel', 'desc'],
@@ -345,7 +345,7 @@ const SCREENS = [
       C('Penalty', 'penalty', 'money'), C('To Seller', 'pen_seller', 'money'), C('To JBAP', 'pen_jbap', 'money'), C('Billing Date', 'bill_date', 'date'), C('For Print?', 'for_print', 'check', { edit: 'check' })],
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), pen_seller: money(sumBy(rows, 'pen_seller')), pen_jbap: money(sumBy(rows, 'pen_jbap')) }),
     buttons: [{ label: 'Print cancellation billing', kind: 'ol', icon: 'print', act: 'printCancel', count: 'for_print' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
-    ready: { key: 'for_print', when: () => true },
+    queue: true, ready: { key: 'for_print', when: () => true },
     ruleP: ['P4', 'Every lot arrives pre-ticked for billing.'] },
   { dept: 'FAD', slug: 'cancellation-payment', title: 'Cancellation Payment', actions: VSU,
     rule: 'Result price records with a Cancellation Billing Date and a blank Cancellation Payment.',
@@ -376,7 +376,7 @@ const SCREENS = [
     validate: (r, e) => ({ saaf_approved: notFuture(e.saaf_approved) || (e.saaf_approved && !r.saaf_sent ? 'needs the SAAF to be sent first' : notBefore(e.saaf_approved, r.saaf_sent, 'SAAF Sent')) }),
     buttons: [{ label: 'Email SAAF', kind: 'ol', icon: 'mail', act: 'emailSaaf', count: 'for_saaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Approved lots are ready in FAD Pending Awarding.',
-    ready: { key: 'for_saaf', when: r => !r.saaf_sent } },
+    queue: true, ready: { key: 'for_saaf', when: r => !r.saaf_sent } },
   { dept: 'SMD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFS, rule: 'Vehicles with status SOLD and a blank Awarding Date.',
     rows: () => SMD('pending'), sort: ['customer', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 200 }), C('For BAAF', 'for_baaf', 'rocheck'),
@@ -413,7 +413,7 @@ const SCREENS = [
     rows: () => SMD('cancellations'), cols: CXMON_COLS, sort: ['dcancel', 'desc'] },
 
   // ===================== VWD (live data shared with FAD; the Unreleased screens release vehicles) =====================
-  { dept: 'VWD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFSU, rule: 'Dispatched vehicles with no penalty yet (still within the dispatch deadline). VWD releases a vehicle with Release vehicle (JBAP Q9).',
+  { dept: 'VWD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFSU, queue: true, rule: 'Dispatched vehicles with no penalty yet (still within the dispatch deadline). VWD releases a vehicle with Release vehicle (JBAP Q9).',
     rows: () => sold().filter(v => v.dispatch && !v.release && v.dispatch_deadline >= TODAY), sort: ['dispatch_deadline', 'asc'],
     cols: [C('Customer Name', 'customer', 'text', { w: 330 }), C('Auction No.', 'auction', 'code'), C('Make/Model', 'model', 'text', { w: 280 }), C('Plate Number', 'plate', 'code'),
       C('Location', 'location', 'code'), C('Dispatch Deadline', 'dispatch_deadline', 'date'), C('Release', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })], filters: UNREL_FILTERS },
@@ -423,7 +423,7 @@ const SCREENS = [
       C('Seller', 'seller_full', 'text', { w: 250 }), C('Awarding Date', 'awarding', 'date'), C('Payment Date', 'buyer_paid', 'date'), C('Payment to Seller Date', 'pay_seller', 'date'),
       C('Seller Acknowledgement', 'seller_ack', 'date')],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Buyer' }, { key: 'plate', label: 'Plate Number' }] },
-  { dept: 'VWD', slug: 'unreleased-unit-overdue', title: 'Unreleased Unit (Overdue)', actions: VFSU,
+  { dept: 'VWD', slug: 'unreleased-unit-overdue', title: 'Unreleased Unit (Overdue)', actions: VFSU, queue: true,
     rule: `Dispatched vehicles past the dispatch deadline. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15). VWD releases a vehicle with Release vehicle (JBAP Q9) once the penalty is paid.`,
     rows: () => sold().filter(v => v.dispatch && !v.release && v.dispatch_deadline < TODAY), sort: ['dispatch_deadline', 'asc'], cols: [...UNREL_COLS, C('Release', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })], filters: UNREL_FILTERS,
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')) }) },
@@ -493,7 +493,12 @@ function renderSide(route) {
   const dept = route.split('/')[0];
   const groups = ['FAD', 'SMD', 'VWD'].map(d => {
     const open = OPEN[d];
-    const items = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<a class="mis ${s.id === route ? 'is-active' : ''}" href="#/${s.id}" ${s.id === route ? 'aria-current="page"' : ''}>${esc(s.title)}${tagMini(s)}</a>`).join('');
+    const items = SCREENS.filter(s => s.dept === d && shown(s)).map(s => {
+      const q = queueCounts(s), on = s.id === route;
+      const b = q && (q.ready || q.late) ? `<span class="qbs" aria-hidden="true">${q.late ? `<span class="qb late">${q.late}</span>` : ''}${q.ready ? `<span class="qb">${q.ready}</span>` : ''}</span>` : '';
+      const label = q ? ` aria-label="${esc(s.title)}: ${q.ready} waiting, ${q.late} overdue"` : '';
+      return `<a class="mis ${on ? 'is-active' : ''}" href="#/${s.id}" ${on ? 'aria-current="page"' : ''}${label}>${esc(s.title)}${tagMini(s)}${b}</a>`;
+    }).join('');
     return `<button type="button" class="mi" data-group="${d}" aria-expanded="${open}" aria-controls="grp-${d}">${deptSvg(d)}${d}<span class="caret"></span></button>
       <div class="lvs" id="grp-${d}" ${open ? '' : 'hidden'}>${items}</div>`;
   }).join('');
@@ -535,6 +540,20 @@ function filterCard(scr) {
 // or logged; unticking stores an edit like any other change. With the switch off a tick shows the saved value only.
 const tickDefault = (scr, r, key) => !!r[key] || (PROPOSED && scr.ready?.key === key && !!scr.ready.when(r));
 const tickValue = (scr, r, key) => { const e = U(scr.id).edits[r.id] || {}; return key in e ? e[key] : tickDefault(scr, r, key); };
+// [BEHAVIOR] P6: menu badges and Home "Waiting for you". ready = rows the list would pre-tick (P4 rule), every row of a work list
+// (scr.queue === true without a ready rule), or a count the screen gives (scr.queue as a function); late = rows past a deadline column.
+function queueCounts(scr) {
+  if (!PROPOSED || !scr.queue || !shown(scr)) return null;
+  const rows = scr.rows(), cols = colsOf(scr);
+  const ready = typeof scr.queue === 'function' ? scr.queue() : scr.ready ? rows.filter(r => tickDefault(scr, r, scr.ready.key)).length : rows.length;
+  return { ready, late: rows.filter(r => cols.some(c => c.late && r[c.key] && r[c.key] < TODAY)).length };
+}
+const PROPOSALS = [['P1', 'Buyer Paid proposed from CDMS payments; FAD confirms in a batch', 'FAD/unpaid'],
+  ['P2', 'Cancellations made in CDMS wait for FAD to confirm', 'FAD/cancellation-entry'],
+  ['P3', 'NOAH numbers stay typed, marked to come from NOAH; optional Payment Voucher No.', 'FAD/payment-seller'],
+  ['P4', 'Ready lots arrive pre-ticked on 7 lists; Commission Billing bills several sellers at once', 'FAD/commission-billing'],
+  ['P5', 'SMD sends the SAAF and records the seller approval; approved lots are ready for FAD', 'SMD/saaf'],
+  ['P6', 'Counts on the menu and "Waiting for you" on this page', '']];
 // [BEHAVIOR] P4: an untick on the ready key holds the lot back for this session. It is never saved, logged or counted as a change.
 const holdKey = scr => PROPOSED && scr.ready ? scr.ready.key : null;
 const dirtyCount = scr => Object.values(U(scr.id).edits).filter(e => Object.keys(e).some(k => k !== holdKey(scr))).length;
@@ -647,6 +666,14 @@ function entryLayout(scr) {
   }
   return `${PROPOSED ? cdmsCancelPanel(scr) : ''}<div class="row2">${find}${det}</div>${dataCard(scr, 'Recent cancellation entries')}`;
 }
+// P6 (switch on): what the switch adds, and what is waiting per department
+function proposedPanels() {
+  const items = PROPOSALS.map(([id, text, link]) => `<li>${tagHtml({ tag: id })} ${link ? `<a href="#/${link}">${esc(text)}</a>` : esc(text)}</li>`).join('');
+  const dept = d => `<div><h3>${d}</h3><ul>${SCREENS.filter(s => s.dept === d).map(s => [s, queueCounts(s)]).filter(([, q]) => q).map(([s, q]) =>
+    `<li><a href="#/${s.id}">${esc(s.title)}${q.late ? `<span class="cnt late">${q.late} overdue</span>` : ''}<span class="cnt">${q.ready}</span></a></li>`).join('') || '<li class="none">Nothing waiting</li>'}</ul></div>`;
+  return `<section class="card pp" aria-label="Proposed improvements"><div class="card-h"><div class="ico">${IC.info}</div>Proposed improvements</div><ul class="pp-list">${items}</ul></section>
+    <section class="card pp" aria-label="Waiting for you"><div class="card-h"><div class="ico">${IC.table}</div>Waiting for you${tagHtml({ tag: 'P6' })}</div><div class="pp-wait">${['FAD', 'SMD', 'VWD'].map(dept).join('')}</div></section>`;
+}
 function homeLayout() {
   const card = d => {
     const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(s.title)}${tagMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
@@ -655,7 +682,7 @@ function homeLayout() {
   };
   return `<div class="home"><nav class="crumb" aria-label="Breadcrumb"><b>Home</b></nav><h1>Post-Auction Menus</h1>
     <p class="lead">Clickable prototype of the new FAD, SMD and VWD menus that replace the MS Access post-auction forms. Data is sample data and resets when you refresh the page. Demo date: <b>${fmtDate(TODAY)}</b>.</p>
-    <div class="hgrid">${['FAD', 'SMD', 'VWD'].map(card).join('')}</div></div>`;
+    ${PROPOSED ? proposedPanels() : ''}<div class="hgrid">${['FAD', 'SMD', 'VWD'].map(card).join('')}</div></div>`;
 }
 
 // ─── Router ───────────────────────────────────────────────────────────
