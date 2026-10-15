@@ -15,4 +15,10 @@
     V121: [{ date: '2026-10-01', amount: 200000, or_no: 'OR-50108' }],
     V122: [{ date: '2026-10-02', amount: 120000, or_no: 'OR-50109' }],
   };
+  // P2: lots cancelled in CDMS that FAD has not recorded yet (FAD confirms them on Cancellation Entry)
+  D.cdmsCancels = [
+    { vid: 'V107', date: '2026-09-29', reason: 'Buyer did not pay within the buyer deadline' },
+    { vid: 'V109', date: '2026-09-30', reason: 'Buyer withdrew the bid' },
+    { vid: 'V112', date: '2026-10-05', reason: 'Buyer did not pay within the buyer deadline' },
+  ];
 })(window.MOCK_DATA);

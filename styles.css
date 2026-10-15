@@ -268,3 +268,4 @@ table.cmp th{font-size:11.5px}table.cmp th .hb{padding:5px 4px}table.cmp td{padd
 .ptag.mini{font-size:9.5px;line-height:15px;padding:0 5px}
 @media (max-width:768px){.prop-switch{font-size:0;gap:0}}
 @media print{.ptag{display:none}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

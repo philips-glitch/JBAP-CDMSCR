@@ -321,6 +321,7 @@ const SCREENS = [
     rows: CX, cols: CXMON_COLS, sort: ['dcancel', 'desc'] },
   { dept: 'FAD', slug: 'cancellation-entry', title: 'Cancellation Entry', actions: VSU, layout: 'entry',
     rule: 'Enter the Auction No. and Lot to find the transaction, then record the cancellation.',
+    ruleP: ['P2', 'Lots already cancelled in CDMS wait at the top: add the waiver decision and Confirm. The record and the penalty billing are the same as for a cancellation entered here.'],
     rows: CX, sort: ['dcancel', 'desc'],
     cols: [C('Lot', 'lot', 'code'), C('Auction Date', 'adate', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }), C('Status', 'status', 'status'),
       C('Date Cancelled', 'dcancel', 'date'), C('Cancellation Fee Waived', 'waived', 'rocheck'), C('Justification of Waiver', 'just', 'text', { w: 330 }), C('Plate Number', 'plate', 'code')] },
@@ -582,6 +583,17 @@ function queryCard(scr) {
     <p style="font-size:12.5px;color:var(--faint);margin:0 0 9px;max-width:620px">Buyer payment date has no filter. A unit is listed when Payment to Seller is blank, or falls after the date entered.</p>
     <div class="btns"><button type="submit" class="btn pr">${IC.play}Generate</button></div></form></section>`;
 }
+// P2 (switch on): lots cancelled in CDMS, each with the waiver decision and a Confirm button
+function cdmsCancelPanel(scr) {
+  const list = cdmsCancelsPending(), err = U(scr.id).ccErr;
+  const rows = list.map(({ c, v }, i) => `<tr><td class="c">${esc(v.plate)}</td><td class="c">${esc(v.auction)} / ${esc(v.lot)}</td><td>${esc(v.customer)}</td><td class="c">${fmtDate(c.date)}</td><td>${esc(c.reason)}</td>
+    <td class="c"><input type="checkbox" class="chk" id="cc-w-${i}" aria-label="Waive fee, ${esc(v.plate)}"></td><td><input class="cell-in" id="cc-j-${i}" aria-label="Justification, ${esc(v.plate)}"></td>
+    <td class="c"><button type="button" class="btn ol" data-act="confirmCdmsCancel" data-rid="${esc(v.id)}" data-i="${i}" aria-label="Confirm cancellation ${esc(v.plate)}">Confirm</button></td></tr>`).join('');
+  return `<section class="card" aria-label="Cancelled in CDMS, to confirm"><div class="card-h"><div class="ico">${IC.ban}</div>Cancelled in CDMS, to confirm${tagHtml({ tag: 'P2' })}<span class="bdg">${list.length}</span></div>
+    ${err ? `<div class="msg error" role="alert">${IC.info}<div>${esc(err)}</div></div>` : ''}
+    <div class="tw"><table><thead><tr><th scope="col">Plate</th><th scope="col">Auction / Lot</th><th scope="col">Customer Name</th><th scope="col">Cancelled in CDMS</th><th scope="col">CDMS Reason</th><th scope="col">Waive fee?</th><th scope="col">Justification</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="8"><div class="empty">${IC.inbox}<b>Nothing to confirm</b>Every CDMS cancellation is recorded.</div></td></tr>`}</tbody></table></div></section>`;
+}
 function entryLayout(scr) {
   const ui = U(scr.id), e = ui.entry || (ui.entry = { auction: '', lot: '', found: null, errors: {}, form: null });
   const ferr = k => e.errors[k] ? `<span class="err" id="err-${k}">${esc(e.errors[k])}</span>` : '';
@@ -607,7 +619,7 @@ function entryLayout(scr) {
       </div>${ro ? `<p class="note">This lot is already <b>${esc(v.status)}</b>. Only SOLD transactions can be cancelled.</p>` : ''}
       <div class="fact"><button type="button" class="btn gh" data-act="entryClear">Discard</button><button type="submit" class="btn dg" ${ro ? 'disabled' : ''}>${IC.ban}Cancel transaction</button></div></form></section>`;
   }
-  return `<div class="row2">${find}${det}</div>${dataCard(scr, 'Recent cancellation entries')}`;
+  return `${PROPOSED ? cdmsCancelPanel(scr) : ''}<div class="row2">${find}${det}</div>${dataCard(scr, 'Recent cancellation entries')}`;
 }
 function homeLayout() {
   const card = d => {
@@ -736,6 +748,16 @@ function saveWarnCount(scr) {
   const map = Object.fromEntries(scr.rows().map(r => [r.id, r]));
   return Object.entries(U(scr.id).edits).filter(([id, e]) => map[id] && scr.saveWarn.test(map[id], e)).length;
 }
+// [BEHAVIOR] Records a cancellation: Cancellation Entry, and P2 confirmations of cancellations made in CDMS
+function recordCancellation(scr, v, f) {
+  logChange(scr, 'Cancel', v, [['Status', 'text', v._raw.status, 'Cancelled'], ['Date Cancelled', 'date', null, f.date],
+    ['Cancellation Fee Waived', null, null, f.waived], ['Justification of Waiver', 'text', null, f.just]]);
+  v._raw.status = 'Cancelled';
+  S.cancels.unshift({ id: `C-${v.auction}-${v.lot}-new`, auction: v.auction, lot: v.lot, plate: v.plate, customer: v.customer, cid: v.cid, dcancel: f.date,
+    waived: f.waived, just: f.just, seller: v.seller, remitted: null, bill_date: null, paid_date: null, amount: null, for_print: false });
+}
+// [MOCK] P2: lots cancelled in CDMS (data-extra.js > cdmsCancels) that FAD has not recorded yet (the vehicle is still Sold)
+const cdmsCancelsPending = () => (D.cdmsCancels || []).map(c => ({ c, v: V().find(x => x.id === c.vid) })).filter(x => x.v && x.v.status === 'Sold');
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
@@ -757,6 +779,13 @@ const ACTIONS = {
         recordCdmsPaid(scr, rows); closeModal(); render();
         toast(`Buyer Paid confirmed from CDMS for ${rows.length} lot(s). They moved to Payment Seller.`);
       } }] });
+  },
+  confirmCdmsCancel(scr, el) {
+    const item = cdmsCancelsPending().find(x => x.v.id === el.dataset.rid), ui = U(scr.id); if (!item) return;
+    const i = el.dataset.i, waived = $(`#cc-w-${i}`).checked, just = $(`#cc-j-${i}`).value.trim();
+    if (waived && !just) { ui.ccErr = `Enter the justification to waive the fee for ${item.v.plate}.`; render(); return; }
+    recordCancellation(scr, item.v, { date: item.c.date, waived, just: just || item.c.reason });
+    ui.ccErr = null; render(); toast(`Cancellation of ${esc(item.v.plate)} confirmed from CDMS.`);
   },
   emailBaaf(scr) {
     const rows = selectedRows(scr, 'for_baaf'), ui = U(scr.id);
@@ -994,11 +1023,7 @@ function entryCancel(scr) {
     body: `<p>Lot <b>${esc(v.lot)}</b> of Auction <b>${v.auction}</b> (${esc(v.plate)}, ${esc(v.customer)}) will be set to <b>Cancelled</b> on ${fmtDate(e.form.date)}.</p>
       <p>Cancellation fee: <b>${e.form.waived ? 'waived' : 'to be billed'}</b>. The vehicle leaves all FAD work lists${e.form.waived ? '' : ' and appears in Cancellation Billing'}.</p>`,
     footer: [{ label: 'Keep transaction', kind: 'gh', onClick: closeModal }, { label: 'Cancel transaction', kind: 'dg', icon: 'ban', onClick: () => {
-      logChange(scr, 'Cancel', v, [['Status', 'text', v._raw.status, 'Cancelled'], ['Date Cancelled', 'date', null, e.form.date],
-        ['Cancellation Fee Waived', null, null, e.form.waived], ['Justification of Waiver', 'text', null, e.form.just]]);
-      v._raw.status = 'Cancelled';
-      S.cancels.unshift({ id: `C-${v.auction}-${v.lot}-new`, auction: v.auction, lot: v.lot, plate: v.plate, customer: v.customer, cid: v.cid, dcancel: e.form.date,
-        waived: e.form.waived, just: e.form.just, seller: v.seller, remitted: null, bill_date: null, paid_date: null, amount: null, for_print: false });
+      recordCancellation(scr, v, e.form);
       U(scr.id).entry = null; closeModal(); render(); toast(`Lot ${esc(v.lot)} of Auction ${v.auction} cancelled.`);
     } }] });
 }
