@@ -10,12 +10,14 @@
 
 The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is loaded with a `<script>` tag, so it works straight from the folder (no `fetch()`).
 
+Sample data for the proposed improvements and the wish-list screens sits in `data-extra.js` (loaded right after `data.js`). The header switch **Proposed improvements** turns on LOGIQUE's proposals P1 to P6; a link ending in `?proposed=1` (for example `index.html?proposed=1`) opens with it on.
+
 **Works in** Chrome, Edge, Firefox and Safari on Windows, macOS or Linux. If double-click does not open a browser: right-click `index.html` > Open With > choose a browser.
 
 ## What is clickable
 
 - **Only FAD, SMD, VWD and Log Activity are active.** All other CDMS menus (Dashboard, Customer, Cars, Report, Payment, etc.) are disabled and show a short message when clicked.
-- **33 screens**: FAD 19, SMD 9, VWD 4, Log Activity 1 (last item in the sidebar, below Staff), plus a Home page with counts per list.
+- **38 screens**: FAD 19, SMD 12, VWD 6, Log Activity 1 (last item in the sidebar, below Staff), plus a Home page with counts per list. The SMD **Seller Awarding Acknowledgement** screen shows only with the **Proposed improvements** switch on (37 screens with it off).
 - Every list has working **filters, column sorting, page size and paging**, an empty state, and totals where the design has them.
 
 ## Flow walkthrough (FAD, data flows between lists and into VWD)
@@ -28,7 +30,10 @@ The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is l
 6. **Unpaid Billing**: enter Payment Date + Collection Receipt > **Save**.
 7. **Cancellation Entry**: enter an Auction No. and Lot (tip: copy one from Unpaid) > **Find** > set Status to *Cancelled*, date, waiver and reason > **Cancel transaction**. It appears in **Cancellation Monitoring** and (if not waived) **Cancellation Billing** > print to bill > **Cancellation Payment** > enter date paid and amount.
 8. **Rebate Payable**: enter *Rebate Paid* > **Save**. **Liability to Seller**: pick a date > **Generate**.
-9. **Log Activity**: every change from steps 1 to 8 and every VWD release appears here as user `system`, one row per changed field with the old and new value (newest first). Filter by date, user, module, action or record/plate. Prints and emails that record a value (Awarding Date, Billing #, Transmittal Date, Dispatch Date, cancellation billing date and amount, vehicle release with type and checklist, documents received with Others/Remarks and ATF No.) are logged; previews that change nothing and *Generate* are not.
+9. **Log Activity**: every change from steps 1 to 8, every VWD release or return and every SMD Return to Seller clearance appears here as user `system`, one row per changed field with the old and new value (newest first). Filter by date, user, module, action or record/plate. Prints and emails that record a value (Awarding Date, Billing #, Transmittal Date, Dispatch Date, cancellation billing date and amount, vehicle release with type and checklist, documents received with Others/Remarks and ATF No.) are logged; previews that change nothing and *Generate* are not.
+10. **Return to Seller** (SMD, wish 4): tick *For Return* on units that are not sold and not in the latest auction > **Print & email clearance form** > **Send & print**. The units move to VWD **For Return to Seller** > **Release vehicle** (type *Return to Seller*).
+11. **Inventory** (VWD, also in SMD, wish 5): one row per vehicle with Date of Entry, status, release or return date and days in yard. Filter *In yard / Out* or *Not in latest auction*.
+12. **Proposed improvements**: turn on the switch in the header (see the next section).
 
 ## Reports and emails (layouts of the MS Access samples, 12 Oct 2026)
 
@@ -45,14 +50,27 @@ The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is l
 
 Reports print role titles and a placeholder bank account, not JBAP's staff names or account number. Print or save as PDF with the browser's print dialog.
 
+## Proposed improvements (switch in the header)
+
+With the switch **off**, every screen works as the CR form describes. With it **on**, LOGIQUE's proposals P1 to P6 appear; each changed column, button or screen is tagged "Proposed P#", and Home lists them with a link to each screen. The proposal document for JBAP describes the same items.
+
+| Item | Where | What changes |
+|---|---|---|
+| P1 | Unpaid | *Paid in CDMS* column (sample CDMS payments); fully paid lots pre-ticked under *Confirm*; **Confirm Buyer Paid** opens a preview, then sets Buyer Paid to the CDMS date (logged as *Confirm*); a CDMS date in the future or before the Awarding Date is not confirmable. Typing Buyer Paid still works, with a warning |
+| P2 | Cancellation Entry | Lots cancelled in CDMS wait at the top; add the waiver decision and **Confirm** |
+| P3 | Commission Billing, Unpaid Billing, Payment Seller | NOAH numbers stay typed, marked to come from NOAH; optional *Payment Voucher No.* on Payment Seller |
+| P4 | Pending Awarding, Payment Seller, Commission Billing, Billing Monitoring, For Dispatch, Document Monitoring, Cancellation Billing | Ready lots arrive pre-ticked (untick to hold back; the untick survives Save); Commission Billing records one billing per seller in one go |
+| P5 | SMD Seller Awarding Acknowledgement, Pending Awarding, For Dispatch | SMD emails the SAAF (placeholder layout) and records the seller's approval; approved lots are pre-ticked for BAAF; the dispatch email is copied to Finance only |
+| P6 | Menu, Home | Counts of ready and overdue lots on each work list; *Waiting for you* on Home |
+
 ## Access per menu
 
 | Menu | Access in this prototype |
 |------|--------------------------|
 | FAD | View, filter, sort; update on the screens marked *Update* (CR form) |
-| SMD | View, filter, sort only. Shows the **legacy SMD sample data** (snapshot), so FAD actions do not change SMD lists |
-| VWD | View, filter, sort; **Release vehicle** on Unreleased Unit and Unreleased Unit (Overdue) (JBAP Q9). Blocked when a DOAS seller's lot has no Buyer signed DOAS or a storage penalty is unpaid. Uses the same live data as FAD |
-| Log Activity | View, filter, sort only. Entries cannot be edited or deleted. FAD changes and VWD vehicle releases are logged; SMD is view-only, so it has no entries |
+| SMD | View, filter, sort. Shows the **legacy SMD sample data** (snapshot), so FAD actions do not change those lists. Live data on three screens: **Return to Seller** (update: clearance form, wish 4), **Inventory** (view, wish 5) and, with the switch on, **Seller Awarding Acknowledgement** (update: SAAF, P5) |
+| VWD | View, filter, sort; **Release vehicle** on Unreleased Unit and Unreleased Unit (Overdue) (JBAP Q9). Blocked when a DOAS seller's lot has no Buyer signed DOAS or a storage penalty is unpaid. **For Return to Seller**: Release vehicle with type *Return to Seller* (wish 4; never blocked). **Inventory** (wish 5). Uses the same live data as FAD |
+| Log Activity | View, filter, sort only. Entries cannot be edited or deleted. FAD changes, VWD releases and returns, and SMD Return to Seller clearances (plus the SAAF with the switch on) are logged |
 
 ## Seeded test data (`data.js` > `window.MOCK_DATA`)
 
@@ -67,6 +85,7 @@ Reports print role titles and a placeholder bank account, not JBAP's staff names
 - **billing**: 48 records: Access Billing Monitoring (#486 to #510) and Unpaid Billing (24 rows, including #428 three times as in Access)
 - **smd**: legacy SMD screenshots (Result Summary, Auction Monitoring, Pending Awarding, Unpaid, Pending Seller Ack., For Dispatch, Unreleased Units, Rebates, Cancellations)
 - **activityLog**: 38 sample Log Activity entries (09/01 to 10/06/2026) by 3 sample users (`fad.ana`, `fad.rico`, `fad.lea`), built from the lot and cancellation dates above so every new value matches the lists. Includes one correction (old value to new value) and one cancellation
+- **data-extra.js** ([MOCK], not Access): CDMS payments on 8 Unpaid lots (P1: 5 fully paid, 3 partly paid), 3 lots cancelled in CDMS (P2), SAAF dates on 7 Pending Awarding lots (P5: 4 approved, 3 awaiting the seller), a Date of Entry on every vehicle (wish 5) and the SMD/FAD role titles for the new forms
 - **Demo date** is fixed at **10/08/2026** (`meta.demoToday`), the day the Access screenshots were taken, so deadlines and penalties match Access. Buyer emails are placeholders (example.com).
 
 ### Values not visible in the Access screenshots (inferred)
@@ -86,8 +105,9 @@ Names cut off in Access end in "…". Everything shown in a screenshot is copied
 | Buyer ID when not shown | Placeholder **B9001 to B9041** |
 | Customer name (Liability lots), Make/Model when not shown | Left blank |
 | Billing Date (Unpaid Billing rows) | Auction end of the particulars plus 7 days, never earlier than a lower Billing # |
+| Date of Entry (data-extra.js) | Start of the lot's auction minus 7 to 21 days |
 
-Edit `data.js` and refresh the browser to change sample data.
+Edit `data.js` (or `data-extra.js` for the proposal sample data) and refresh the browser to change sample data.
 
 ## Rules used (to confirm with JBAP)
 
@@ -108,16 +128,19 @@ Qn = question n in JBAP's Open Questions document.
 | Liability lots on Payment Seller | The 15 Access Liability lots (Nov 2025 to Aug 2026) also show on Payment Seller | Access does not list them on Payment Seller: **to confirm** which filter Access uses |
 | Billing # unique | Not enforced for existing rows | Access lists Billing #428 three times: **data issue to check** |
 | "Sold - Accounting" menu | Not in the prototype | Exists in Access FAD but not in the CR form: **to confirm** if needed |
-| One commission billing per seller | Enforced when printing | **Assumption** |
+| One commission billing per seller | Enforced when printing; with the switch on, several sellers print together, one billing each (P4) | **Assumption** |
 | Waived cancellations are not billed | Excluded from Cancellation Billing | **Assumption** |
 | Overdue deadlines shown in red | Unpaid, Payment Seller, Unreleased, Unpaid Billing | Prototype suggestion |
-| Log Activity records data changes only (not views, or prints that change nothing), one row per changed field | Update, Create, Cancel | Prototype suggestion, **to confirm** |
+| Log Activity records data changes only (not views, or prints that change nothing), one row per changed field | Update, Create, Cancel, Confirm (P1) | Prototype suggestion, **to confirm** |
+| Buyer Paid from CDMS (P1) | The date CDMS payments first reach the lot total (awarded price + transfer fee) | **Proposal**; the CDMS amount due must use the confirmed formulas (Q10) |
+| Return to Seller (wish 4) | Units not Sold or Pending, not in the latest auction (the last auction started by the demo date: 221), no clearance yet; one form per seller, signatures on paper | Wish 4, Q18, Q19; **assumption**: latest auction and paper signatures (Q32) |
+| Inventory Days in Yard (wish 5) | Date of Entry to the release or return date, or to today while in the yard | Wish 5; columns to check against VWD's Excel file |
 
 ## Not simulated
 
 - Persistence: all changes are lost on refresh (by design), including new Log Activity entries
 - Real login: the header shows the CDMS user only, so every change made in the demo is logged as `system`. Log times use the demo date with the real clock time
-- Real emails and NOAH: email and print are previews; nothing is sent or posted
+- Real emails, NOAH and CDMS: email and print are previews; nothing is sent or posted. CDMS payments and cancellations (P1, P2) are sample data in `data-extra.js`
 - Storage penalty payment and deadline extensions (step 2): overdue lots cannot be released yet in the prototype
 - Pixel-perfect design: this is a prototype, not the final UI
 
