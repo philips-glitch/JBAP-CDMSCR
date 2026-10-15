@@ -25,3 +25,11 @@ test('data-extra.js adds role titles for the new forms', () => {
   const r = load().D.meta.company.roles;
   assert.deepStrictEqual([r.smdStaff, r.smdManager, r.fadManager], ['SMD staff', 'SMD Manager', 'FAD Manager']);
 });
+test('F4: Log Activity offers the Confirm action only with the switch on or once a Confirm entry exists', () => {
+  const P = load(), opts = () => P.byId['log-activity'].filters.find(f => f.key === 'action').options();
+  assert.ok(!opts().includes('Confirm'), 'switch off, fresh load');
+  assert.deepStrictEqual(opts(), ['Update', 'Create', 'Cancel']);
+  P.setProposed(true); assert.ok(opts().includes('Confirm'), 'switch on');
+  P.setProposed(false); assert.ok(!opts().includes('Confirm'));
+  P.S.log.push({ action: 'Confirm' }); assert.ok(opts().includes('Confirm'), 'a Confirm entry exists in the log');
+});

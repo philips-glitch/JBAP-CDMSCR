@@ -69,3 +69,28 @@ test('P3: Payment Voucher No. only with the switch on; saved and logged like oth
   assert.strictEqual(r._raw.voucher_no, 'PV-0001'); assert.strictEqual(P.S.log.slice(before)[0].field, 'Payment Voucher No.');
   assert.strictEqual(P.byId['FAD/unpaid-billing'].cols.find(c => c.key === 'cr').tag, 'P3');
 });
+test('F1: a pre-ticked batch covers only the rows the current filter shows; with the switch off the filter does not change it', () => {
+  const P = load(), scr = P.byId['FAD/payment-seller'];
+  P.setProposed(true); P.U(scr.id).applied = { seller: 'EWB' };
+  const sel = P.selectedRows(scr, 'print_seller'), ewb = scr.rows().filter(r => r.seller === 'EWB');
+  assert.ok(sel.length > 0 && sel.length < scr.rows().length, 'filter narrows the batch (not vacuous)');
+  assert.ok(sel.every(r => r.seller === 'EWB'), 'every selected row is an EWB row');
+  assert.deepStrictEqual(ids(sel), ids(ewb));
+  P.setProposed(false); P.U(scr.id).edits = {};
+  assert.deepStrictEqual(ids(P.selectedRows(scr, 'print_seller')), ids(scr.rows().filter(r => r.print_seller)), 'switch off: only saved ticks, the filter changes nothing');
+  P.setProposed(true); P.U(scr.id).edits[ewb[0].id] = { print_seller: false };
+  assert.ok(!P.selectedRows(scr, 'print_seller').some(r => r.id === ewb[0].id), 'a held-back row still drops out');
+});
+test('F3: held-back ticks do not survive turning the switch off', () => {
+  const P = load(), scr = P.byId['FAD/payment-seller'], r = scr.rows()[0], other = scr.rows()[1];
+  P.setProposed(true); P.U(scr.id).edits[r.id] = { print_seller: false };
+  assert.strictEqual(P.dirtyCount(scr), 0, 'switch on: a held-back row is not a change');
+  P.U(scr.id).edits[other.id] = { print_seller: false, voucher_no: 'PV-1' };   // a real edit beside the hold stays
+  P.setProposed(false);
+  assert.strictEqual(P.dirtyCount(scr), 2, 'switch off, before the clean-up: the stale holds would count as changes');
+  P.dropHolds();
+  assert.strictEqual(P.U(scr.id).edits[r.id], undefined, 'the empty edit object is removed');
+  assert.deepStrictEqual(P.U(scr.id).edits[other.id], { voucher_no: 'PV-1' }, 'only the hold key is removed from an edit that has other fields');
+  assert.strictEqual(P.dirtyCount(scr), 1, 'only the real edit is left');
+  P.U(scr.id).edits = {}; assert.strictEqual(P.dirtyCount(scr), 0);
+});

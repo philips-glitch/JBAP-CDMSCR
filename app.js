@@ -214,7 +214,7 @@ const INVENTORY = { slug: 'inventory', title: 'Inventory', actions: VFS, tag: 'W
   rule: `One row per vehicle: Date of Entry (CDMS Cars > Car List; sample dates inferred), status, and the date it left the yard. Days in Yard runs to the release or return date, or to today while the unit is in the yard. "Not in latest auction" (auction ${LATEST_AUCTION}) helps SMD spot units to return.`,
   rows: V, sort: ['entry_date', 'asc'], initial: { yard: 'In yard' },
   cols: [C('Date of Entry', 'entry_date', 'date'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Seller', 'seller', 'code'), C('Location', 'location', 'code'),
-    C('Status', 'status', 'status'), C('Released to Buyer', 'released_buyer', 'date'), C('Returned to Seller', 'returned_seller', 'date'), C('Days in Yard', 'days_in_yard', 'int')],
+    C('CDMS Status', 'status', 'status'), C('Released to Buyer', 'released_buyer', 'date'), C('Returned to Seller', 'returned_seller', 'date'), C('Days in Yard', 'days_in_yard', 'int')],
   filters: [{ key: 'yard', label: 'In yard / Out', type: 'select', w: 'w1', options: () => ['In yard', 'Out'] }, { key: 'status', label: 'Status', type: 'select', w: 'w1', options: () => ['Sold', 'Not Sold', 'Cancelled'] },
     { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'location', label: 'Location', type: 'select', options: () => [...new Set(S.veh.map(v => v.location || 'Pasay City'))].sort() },
     { key: 'latest', label: 'Latest auction', type: 'select', options: () => ['In latest auction', 'Not in latest auction'] }, { key: 'plate', label: 'Plate Number' }],
@@ -382,12 +382,12 @@ const SCREENS = [
     rows: () => SMD('auction'), cols: AM_COLS.map(c => c.key === 'customer' ? C('Customer Name', 'customer', 'text', { w: 190 }) : c), sort: ['auction', 'desc'],
     filters: AM_FILTERS, initial: { plate: 'NFW4473' },
     totals: rows => ({ customer: `${rows.length} lots`, price: money(sumBy(rows, 'price')) }) },
-  // P5 (switch on): SMD's only update screen; live data, unlike the legacy SMD snapshot screens
+  // P5 (switch on): SMD's update screen for the SAAF; live data, unlike the legacy SMD snapshot screens
   { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU, proposed: true, tag: 'P5',
     rule: 'Sold lots with no Awarding Date (live data; the other SMD screens show the legacy snapshot). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; approved lots arrive pre-ticked in FAD Pending Awarding.',
     rows: () => sold().filter(v => !v.awarding), sort: ['seller', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
-      C('Awarded Price', 'price', 'money'), C('For SAAF', 'for_saaf', 'check', { edit: 'check' }), C('SAAF Sent', 'saaf_sent', 'date'), C('Seller Approved', 'saaf_approved', 'date', { edit: 'date' })],
+      C('Awarded Price', 'price', 'money'), C('For SAAF', 'for_saaf', 'check', { edit: 'check', disabledWhen: r => !!r.saaf_approved }), C('SAAF Sent', 'saaf_sent', 'date'), C('Seller Approved', 'saaf_approved', 'date', { edit: 'date' })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ saaf_approved: notFuture(e.saaf_approved) || (e.saaf_approved && !r.saaf_sent ? 'needs the SAAF to be sent first' : notBefore(e.saaf_approved, r.saaf_sent, 'SAAF Sent')) }),
     buttons: [{ label: 'Email SAAF', kind: 'ol', icon: 'mail', act: 'emailSaaf', count: 'for_saaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
@@ -471,8 +471,9 @@ const SCREENS = [
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
+    // [BEHAVIOR] P1: the Confirm action is offered only with the switch on, or when the log already holds a Confirm entry
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
-      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Confirm'] },
+      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', ...(PROPOSED || S.log.some(l => l.action === 'Confirm') ? ['Confirm'] : [])] },
       { key: 'record', label: 'Record / Plate' }],
     emptyNote: () => { const m = U(LOG_ID).applied.module; return m === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller or, with the proposed improvements on, sends a SAAF.' : m === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : null; } },
 ];
@@ -571,6 +572,7 @@ function filterCard(scr) {
 // or logged; unticking stores an edit like any other change. With the switch off a tick shows the saved value only.
 const tickDefault = (scr, r, key) => !!r[key] || (PROPOSED && scr.ready?.key === key && !!scr.ready.when(r));
 const tickValue = (scr, r, key) => { const e = U(scr.id).edits[r.id] || {}; return key in e ? e[key] : tickDefault(scr, r, key); };
+const tickRows = (scr, key) => PROPOSED && scr.ready?.key === key ? applyFilters(scr, scr.rows()) : scr.rows();   // [BEHAVIOR] P4: a pre-ticked batch covers only the rows the current filter shows
 // [BEHAVIOR] P6: menu badges and Home "Waiting for you". ready = rows the list would pre-tick (P4 rule), every row of a work list
 // (scr.queue === true without a ready rule), or a count the screen gives (scr.queue as a function); late = rows past a deadline column.
 function queueCounts(scr) {
@@ -588,6 +590,7 @@ const PROPOSALS = [['P1', 'Buyer Paid proposed from CDMS payments; FAD confirms 
 // [BEHAVIOR] P4: an untick on the ready key holds the lot back for this session. It is never saved, logged or counted as a change.
 const holdKey = scr => PROPOSED && scr.ready ? scr.ready.key : null;
 const dirtyCount = scr => Object.values(U(scr.id).edits).filter(e => Object.keys(e).some(k => k !== holdKey(scr))).length;
+function dropHolds() { SCREENS.forEach(s => { const ed = s.ready && UI[s.id]?.edits; if (ed) Object.keys(ed).forEach(id => { delete ed[id][s.ready.key]; if (!Object.keys(ed[id]).length) delete ed[id]; }); }); }   // [BEHAVIOR] P4: turning the switch off drops the held-back ticks, so they cannot show up as unsaved changes
 function cellHtml(scr, r, c, upd) {
   const ui = U(scr.id), ed = ui.edits[r.id] || {}, err = (ui.errors[r.id] || {})[c.key];
   const cls = [RIGHT.has(c.type) ? 'r' : '', CEN.has(c.type) ? 'c' : ''].join(' ');
@@ -648,7 +651,7 @@ function dataCard(scr, title) {
 const hasFilter = scr => Object.values(U(scr.id).applied).some(v => v);
 function effectiveCount(scr, key) {   // ticks: unsaved edit, else saved value or the P4 default
   if (!key) return 0;
-  return scr.rows().filter(r => tickValue(scr, r, key)).length;
+  return tickRows(scr, key).filter(r => tickValue(scr, r, key)).length;
 }
 
 // ─── Special layouts ──────────────────────────────────────────────────
@@ -754,7 +757,7 @@ window.addEventListener('afterprint', () => document.body.classList.remove('prin
 
 // ─── Actions ──────────────────────────────────────────────────────────
 function currentScr() { return byId[route()]; }
-function selectedRows(scr, key) { return sortRows(scr, scr.rows()).filter(r => tickValue(scr, r, key)); }
+function selectedRows(scr, key) { return sortRows(scr, tickRows(scr, key)).filter(r => tickValue(scr, r, key)); }
 function setMsg(scr, type, html) { U(scr.id).msg = type ? { type, html } : null; }
 function validateEdits(scr, ids) {
   const ui = U(scr.id), map = Object.fromEntries(scr.rows().map(r => [r.id, r])), errors = {}, lines = [];
@@ -938,7 +941,7 @@ const ACTIONS = {
       } }] });
   },
   emailSaaf(scr) {
-    const rows = selectedRows(scr, 'for_saaf');
+    const rows = selectedRows(scr, 'for_saaf').filter(r => !r.saaf_approved);   // [BEHAVIOR] P5: an approved lot is never sent again
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For SAAF</b> on at least one lot first.'); render(); return; }
     setMsg(scr, null); render();
     const groups = {}; rows.forEach(r => (groups[r.seller] ||= []).push(r));
@@ -1142,7 +1145,7 @@ function bind() {
   $('#burger').addEventListener('click', () => document.body.classList.toggle('nav-open'));
   $('#home-logo').addEventListener('click', () => { location.hash = '#/'; });
   const sw = $('#proposed-switch');
-  if (sw) { sw.checked = PROPOSED; sw.addEventListener('change', () => { setProposed(sw.checked); closeModal(); render(); toast(PROPOSED ? 'Proposed improvements on: changes are tagged "Proposed P1" to "P6".' : 'Proposed improvements off: the prototype follows the CR form.'); }); }
+  if (sw) { sw.checked = PROPOSED; sw.addEventListener('change', () => { setProposed(sw.checked); if (!PROPOSED) dropHolds(); closeModal(); render(); toast(PROPOSED ? 'Proposed improvements on: changes are tagged "Proposed P1" to "P6".' : 'Proposed improvements off: the prototype follows the CR form.'); }); }
   window.addEventListener('hashchange', () => { closeModal(); render(); window.scrollTo(0, 0); });
 }
 

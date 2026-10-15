@@ -42,3 +42,15 @@ test('dispatch email is copied to Finance only with the switch on', () => {
   const P = load(); assert.strictEqual(P.dispatchCc(), 'sales@jbap.com.ph; vwd@jbap.com.ph; finance@jbap.com.ph');
   P.setProposed(true); assert.strictEqual(P.dispatchCc(), 'finance@jbap.com.ph');
 });
+test('F2: an approved lot cannot be ticked for SAAF and Email SAAF skips it', () => {
+  const P = load(), scr = P.byId['SMD/saaf']; P.setProposed(true);
+  const col = scr.cols.find(c => c.key === 'for_saaf'), rows = scr.rows(), approved = rows.find(r => r.id === 'V102'), sent = rows.find(r => r.id === 'V087');
+  assert.ok(approved.saaf_approved && sent && !sent.saaf_approved);
+  assert.strictEqual(!!col.disabledWhen?.(approved), true, 'the tick is disabled on an approved lot');
+  assert.strictEqual(!!col.disabledWhen?.(sent), false, 'a sent lot awaiting the seller can still be re-sent');
+  // only the approved lot is ticked: Email SAAF finds nothing to send (the harness DOM stub throws after the message is set)
+  rows.forEach(r => { P.U(scr.id).edits[r.id] = { for_saaf: r.id === 'V102' }; });
+  assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf').map(r => r.id), ['V102'], 'the approved lot is ticked');
+  try { P.ACTIONS.emailSaaf(scr); } catch (e) { /* DOM stub */ }
+  const m = P.U(scr.id).msg; assert.ok(m && m.type === 'error' && /at least one lot/.test(m.html), 'nothing to send');
+});
