@@ -111,6 +111,10 @@ function docAging(v, status, doas) {
 // [BEHAVIOR] JBAP feedback (15 Oct 2026): Security Bond per vehicle, billed to the buyer with the vehicle. Seller setting security_bond; the lot keeps its own
 // amount once set at Pending Awarding. It passes to the seller with the remittance (JBAP's "Notarial / Transfer / Bond" column; to confirm, Q46).
 const bondOf = v => Number(v.security_bond ?? SELLER[v.seller]?.security_bond ?? 0) || 0;
+const BOND_STATUSES = ['Pending Documents', 'Waiting ORCR', 'Pending Refund', 'Complete', 'Forfeited'];
+const REFUND_VIA = ['Deposit c/o JBAP', 'Cheque', 'Seller deposited to buyer'];   // JBAP's Security Bond sheet remarks
+// [BEHAVIOR] Security Bond status = the furthest step reached (JBAP's Security Bond sheet: same as the typed status on 93 of 98 lots)
+const bondStatus = v => v.bond_forfeited ? 'Forfeited' : v.bond_refund_buyer ? 'Complete' : v.bond_orcr_seller || v.bond_refund_jbap ? 'Pending Refund' : v.to_buyer ? 'Waiting ORCR' : 'Pending Documents';
 // [BEHAVIOR] Commission (÷1.12 when the seller's 5% includes VAT), VAT 12%, W/TAX 15% for NET sellers,
 // To JBAP = commission + VAT − W/TAX (0 for GROSS sellers), Payable to Seller = price + fee + security bond − To JBAP. Unrounded until displayed.
 function sellerMoney(v) {
@@ -131,6 +135,7 @@ function enrichV(v) {
   return Object.assign({}, v, {
     _raw: v, auction_start: as, auction_end: ae, adate: as ? `${fmtDate(as)} - ${fmtDate(ae)}` : '',
     seller_full: SELLER[v.seller]?.name || v.seller, total, security_bond: bond,
+    bond_status: bondStatus(v),
     release_cond: RELEASE_LABEL[releaseOf(v)],
     auction_lot: `${v.auction}/${v.lot || ''}`, doas, doc_status, ...docAging(v, doc_status, doas),
     // Wish 5: a release with type Return to Seller is the return date; any other release is the release to the buyer
@@ -209,6 +214,14 @@ function docValidate(r, e) {
   out.to_buyer ||= notBefore(val('to_buyer'), val('orig_docs'), 'JBAP Receipt of Documents');
   ['ewb_callout', 'ewb_signed', 'ewb_place'].forEach(k => { if (doas !== 'branch' && e[k]) out[k] = 'is only for sellers whose DOAS is signed at their branch (EWB)'; });
   ['rcv_doas', 'buyer_doas', 'seller_doas'].forEach(k => { if (doas === 'none' && e[k]) out[k] = 'does not apply: this seller has no DOAS'; });
+  return out;
+}
+// [BEHAVIOR] Security Bond dates: not in the future, not before Buyer Paid, the transferred ORCR reaches JBAP before the seller; a bond is refunded or forfeited, not both
+function bondValidate(r, e) {
+  const val = k => (k in e ? e[k] : r[k]) || null, out = {};
+  ['bond_orcr_jbap', 'bond_orcr_seller', 'bond_refund_jbap', 'bond_refund_buyer', 'bond_forfeited'].forEach(k => { out[k] = notFuture(val(k)) || notBefore(val(k), r.buyer_paid, 'Buyer Paid'); });
+  out.bond_orcr_seller ||= notBefore(val('bond_orcr_seller'), val('bond_orcr_jbap'), 'JBAP Receipt of Transferred ORCR');
+  if (val('bond_forfeited') && val('bond_refund_buyer')) out.bond_forfeited ||= 'cannot be filled when the buyer has received the refund';
   return out;
 }
 const EWB_NA = r => r.doas !== 'branch', NO_DOAS = r => r.doas === 'none';   // n/a cells on Document Monitoring
@@ -325,6 +338,22 @@ const SCREENS = [
     buttons: [{ label: 'Print document transmittal', kind: 'ol', icon: 'print', act: 'printDocTrans', count: 'print_doc_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Complete lots leave the Open view.',
     queue: true, ready: { key: 'print_doc_trans', when: r => r.doc_status === 'For Releasing' && !r.atf_no },
     ruleP: ['P4', 'Lots whose documents are at JBAP (For Releasing) and have no ATF No. yet arrive pre-ticked.'] },
+  // JBAP feedback (15 Oct 2026): the Security Bond billed with the vehicle, monitored like the bid bond until refund or forfeiture (JBAP's Security Bond sheet)
+  { dept: 'FAD', slug: 'security-bond', title: 'Security Bond', actions: VFSU, tag: 'Wish',
+    rule: 'Paid lots with a security bond (seller setting, or the amount set at Pending Awarding). The buyer transfers the ORCR; once the seller has it, the bond is refunded. Status is the furthest step reached: Pending Documents, Waiting ORCR (the buyer has the documents), Pending Refund (the seller has the transferred ORCR, or JBAP has the refund), Complete (buyer refunded) or Forfeited. The Open view hides Complete and Forfeited.',
+    rows: () => sold().filter(v => v.security_bond > 0 && v.buyer_paid), sort: ['auction_lot', 'asc'],
+    cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 190 }), C('Make/Model', 'model', 'text', { w: 170 }),
+      C('Plate Number', 'plate', 'code'), C('Security Bond', 'security_bond', 'money'), C('JBAP Receipt of Documents', 'orig_docs', 'date'), C('Buyer Receipt of Documents', 'to_buyer', 'date'),
+      C('JBAP Receipt of Transferred ORCR', 'bond_orcr_jbap', 'date', { edit: 'date' }), C('Seller Receipt of Transferred ORCR', 'bond_orcr_seller', 'date', { edit: 'date' }),
+      C('JBAP Receipt of Refund / Seller Confirmation', 'bond_refund_jbap', 'date', { edit: 'date' }), C('Buyer Receipt of Refund', 'bond_refund_buyer', 'date', { edit: 'date' }),
+      C('Refund Via', 'bond_refund_via', 'text', { edit: 'select', options: REFUND_VIA }), C('Forfeited', 'bond_forfeited', 'date', { edit: 'date' }),
+      C('Status', 'bond_status', 'text', { w: 130 }), C('Remarks', 'bond_remarks', 'text', { edit: 'text' })],
+    filters: [{ key: 'bond_status', label: 'Status', type: 'select', options: () => ['Open', ...BOND_STATUSES], match: (r, v) => (v === 'Open' ? !['Complete', 'Forfeited'].includes(r.bond_status) : r.bond_status === v) },
+      AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
+    initial: { bond_status: 'Open' },
+    totals: rows => ({ plate: `${rows.length} lots`, security_bond: money(sumBy(rows, 'security_bond')) }),
+    validate: bondValidate,
+    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Complete and forfeited bonds leave the Open view.' },
   { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
     rule: `Dispatched vehicles not yet released to the buyer. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15).`,
     rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'], cols: UNREL_COLS, filters: UNREL_FILTERS,
@@ -626,6 +655,7 @@ function cellHtml(scr, r, c, upd) {
     if (c.edit === 'check') return `<td class="c"><input type="checkbox" class="chk ${st}" ${val ? 'checked' : ''} ${c.disabledWhen?.(r) ? 'disabled' : ''} ${common}></td>`;
     if (c.edit === 'date') return `<td><input type="date" class="cell-in ${st}" value="${esc(val || '')}" ${common}></td>`;
     if (c.edit === 'money') return `<td><input type="number" min="0" step="0.01" class="cell-in num ${st}" value="${val ?? ''}" ${common}></td>`;
+    if (c.edit === 'select') return `<td><select class="cell-in ${st}" ${common}><option value=""></option>${c.options.map(o => `<option${o === val ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></td>`;
     return `<td><input type="text" class="cell-in ${st}" value="${esc(val || '')}" ${common}></td>`;
   }
   const v = r[c.key];
