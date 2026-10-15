@@ -373,7 +373,7 @@ const SCREENS = [
       return { paid_date: notFuture(d) || notBefore(d, r.bill_date, 'the Billing Date') || (!d && a ? 'is required with an Amount' : null), amount: d && !(Number(a) > 0) ? 'must be more than 0' : null }; },
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid cancellations removed from the list.' },
 
-  // ===================== SMD (read-only, legacy SMD sample data) =====================
+  // ===================== SMD (legacy SMD sample data, read-only; Return to Seller, Inventory and SAAF use live data) =====================
   { dept: 'SMD', slug: 'result-summary', title: 'Result Summary', actions: VFS, rule: 'One row per auction. Average price per unit = Total awarded price ÷ Sold units.',
     rows: () => SMD('result'), cols: RESULT_COLS, sort: ['auction', 'desc'], totals: resultTotals,
     filters: [{ key: 'month', label: 'Month', type: 'select', options: () => [...new Set(D.smd.result.map(r => r.month))] }, AUCTION_FILTER] },
@@ -427,6 +427,13 @@ const SCREENS = [
     rows: () => SMD('rebates'), cols: REBMON_COLS, sort: ['buyer_paid', 'desc'] },
   { dept: 'SMD', slug: 'cancellation-monitoring', title: 'Cancellation Monitoring', actions: VS, rule: 'Information on cancelled vehicles.',
     rows: () => SMD('cancellations'), cols: CXMON_COLS, sort: ['dcancel', 'desc'] },
+  { dept: 'SMD', slug: 'return-to-seller', title: 'Return to Seller', actions: VFSU, tag: 'Wish',
+    rule: `Units that are not sold or pending and not in the latest auction (${LATEST_AUCTION}), with no clearance yet. Tick For Return, then Print & email clearance form: one form per seller, emailed to FAD and VWD; the SMD Manager signs and the FAD Manager notes on paper. "Latest auction" and paper signatures are assumptions to confirm (Q32).`,
+    rows: () => V().filter(rtsEligible), sort: ['seller', 'asc'],
+    cols: [C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Status', 'status', 'status'), C('Last Auction', 'auction', 'code'),
+      C('Date of Entry', 'entry_date', 'date'), C('Days in Yard', 'days_in_yard', 'int'), C('For Return', 'for_return', 'check', { edit: 'check' })],
+    filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'status', label: 'Status', type: 'select', w: 'w1', options: () => ['Not Sold', 'Cancelled'] }, { key: 'plate', label: 'Plate Number' }],
+    buttons: [{ label: 'Print & email clearance form', kind: 'ol', icon: 'print', act: 'printReturn', count: 'for_return' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },
   { dept: 'SMD', ...INVENTORY },
 
   // ===================== VWD (live data shared with FAD; the Unreleased screens release vehicles) =====================
@@ -444,6 +451,12 @@ const SCREENS = [
     rule: `Dispatched vehicles past the dispatch deadline. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15). VWD releases a vehicle with Release vehicle (JBAP Q9) once the penalty is paid.`,
     rows: () => sold().filter(v => v.dispatch && !v.release && v.dispatch_deadline < TODAY), sort: ['dispatch_deadline', 'asc'], cols: [...UNREL_COLS, C('Release', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })], filters: UNREL_FILTERS,
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')) }) },
+  { dept: 'VWD', slug: 'for-return-to-seller', title: 'For Return to Seller', actions: VFSU, tag: 'Wish', queue: true, releaseType: 'Return to Seller',
+    rule: 'Units SMD cleared for return to the seller that have not left the yard. VWD records the return with Release vehicle (type Return to Seller), like a release to a buyer (Q18): same running VRF No. and release form.',
+    rows: () => V().filter(v => v.rts_cleared && !v.release), sort: ['rts_cleared', 'asc'],
+    cols: [C('Seller', 'seller_full', 'text', { w: 280 }), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 240 }), C('Location', 'location', 'code'),
+      C('Cleared by SMD', 'rts_cleared', 'date'), C('Return', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })],
+    filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }] },
   { dept: 'VWD', slug: 'auction-monitoring', title: 'Auction Monitoring', actions: VFS, rule: 'Auction result per auction and lot, from awarding to vehicle release.',
     rows: V, sort: ['auction', 'desc'], filters: AM_FILTERS,
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Seller', 'seller', 'code'),
@@ -454,14 +467,14 @@ const SCREENS = [
 
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
-    rule: 'Every data change made in FAD, SMD and VWD, one row per changed field. Entries cannot be edited or deleted. SMD is view-only under the CR, so it has no entries; VWD entries come from vehicle releases.',
+    rule: 'Every data change made in FAD, SMD and VWD, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and, with the proposed improvements on, the SAAF.',
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
       { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Confirm'] },
       { key: 'record', label: 'Record / Plate' }],
-    emptyNote: () => { const m = U(LOG_ID).applied.module; return m === 'SMD' ? 'No activity: SMD is view-only under the CR, so it has no update actions to log.' : m === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases a vehicle.' : null; } },
+    emptyNote: () => { const m = U(LOG_ID).applied.module; return m === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller or, with the proposed improvements on, sends a SAAF.' : m === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -695,7 +708,7 @@ function proposedPanels() {
 function homeLayout() {
   const card = d => {
     const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(s.title)}${tagMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
-    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'View-only monitoring (legacy SMD sample data)', VWD: 'Units for dispatch and release; VWD records the vehicle release' }[d];
+    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Monitoring (legacy SMD sample data); Return to Seller and Inventory use live data', VWD: 'Units for dispatch and release; VWD records the vehicle release' }[d];
     return `<section class="hcard"><div class="card-h"><div class="ico">${deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox')}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
   return `<div class="home"><nav class="crumb" aria-label="Breadcrumb"><b>Home</b></nav><h1>Post-Auction Menus</h1>
@@ -784,6 +797,7 @@ function recordDispatch(scr, rows, dateFor) {
 }
 // [BEHAVIOR] VWD releases only when the seller's DOAS is signed (DOAS sellers) and no storage penalty is unpaid (JBAP Q17).
 function releaseBlock(v) {
+  if (v.status !== 'Sold') return null;   // [BEHAVIOR] wish 4: a unit returned to the seller was never sold, so DOAS and storage penalty do not apply
   if (releaseOf(v) === 'doas' && !v.buyer_doas) return 'Buyer signed DOAS is missing: this seller requires DOAS / legal documents signing. FAD records it in Document Monitoring.';
   if (v.penalty > 0) return `Storage penalty of PHP ${money(v.penalty)} is unpaid. Recording penalty payments comes with step 2 (holidays and extensions).`;
   return null;
@@ -849,6 +863,13 @@ function recordSaafSent(scr, rows) {
 }
 // [BEHAVIOR] P5: with the switch on the dispatch email is copied to Finance only; VWD sees the lot in its own list
 const dispatchCc = () => { const e = D.meta.company.emails; return PROPOSED ? e.finance : `${e.sales}; ${e.vwd}; ${e.finance}`; };
+// [BEHAVIOR] Wish 4: units SMD may return: not Sold or Pending, not in the latest auction (Q32), no clearance and no release yet
+const rtsEligible = v => !['Sold', 'Pending'].includes(v.status) && String(v.auction) !== LATEST_AUCTION && !v.rts_cleared && !v.release;
+// [BEHAVIOR] Wish 4: sending the clearance form records the clearance date (logged under SMD); the units then wait in VWD For Return to Seller
+function recordReturnClearance(scr, rows) {
+  rows.forEach(r => { logChange(scr, 'Update', r, [['Return Clearance Date', 'date', r._raw.rts_cleared, TODAY], ['For Return', 'check', r._raw.for_return, false]]);
+    r._raw.rts_cleared = TODAY; r._raw.for_return = false; clearTick(scr, r.id, 'for_return'); });
+}
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
@@ -1029,25 +1050,45 @@ const ACTIONS = {
         recordDispatch(scr, rows, dateFor); closeModal(); render(); toast(`Dispatch form sent to ${Object.keys(groups).length} buyer(s). ${rows.length} vehicle(s) moved to Unreleased Unit.`);
       } }] });
   },
+  printReturn(scr) {
+    const rows = selectedRows(scr, 'for_return');
+    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For Return</b> on at least one unit first.'); render(); return; }
+    setMsg(scr, null); render();
+    const groups = {}; rows.forEach(r => (groups[r.seller] ||= []).push(r));
+    const co = D.meta.company, n = Object.keys(groups).length, name = code => SELLER[code]?.name || code;
+    const forms = () => Object.entries(groups).map(([code, list]) => REPORTS.returnClearance(code, list, TODAY)).join('');
+    const mails = Object.entries(groups).map(([code, list]) => REPORTS.email({ from: co.emails.sales, to: `${co.emails.finance}; ${co.emails.vwd}`, cc: '', subject: `RETURN TO SELLER - ${name(code)}`,
+      atts: [{ key: code, name: 'RETURN TO SELLER CLEARANCE.pdf' }],
+      body: `Please see the attached Vehicle Dispatch Clearance Form (Return to Seller) for ${list.length} unit(s) of ${esc(name(code))}. VWD records the return when each unit leaves the yard.` })).join('');
+    openModal({ title: `Return to seller: ${n} seller(s), ${rows.length} unit(s)`, icon: 'mail', wide: true, body: mails,
+      note: 'Simulated: no email is actually sent. Click the attachment to preview the form.', onAtt: code => openReport('RETURN TO SELLER CLEARANCE.pdf', REPORTS.returnClearance(code, groups[code], TODAY), () => ACTIONS.printReturn(scr)),
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Send & print', kind: 'pr', icon: 'print', onClick: () => {
+        recordReturnClearance(scr, rows); render();
+        openModal({ title: 'Return to seller clearance', icon: 'print', wide: true, body: forms(), footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
+        printModal(); toast(`${rows.length} unit(s) cleared for return. They wait in VWD For Return to Seller.`);
+      } }] });
+  },
   releaseVehicle(scr, el) {
     const v = scr.rows().find(r => r.id === el.dataset.rid); if (!v) return;
     const block = releaseBlock(v);
     if (block) { openModal({ title: `Cannot release ${v.plate}`, icon: 'ban', body: `<p>${esc(block)}</p>`, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }] }); return; }
+    // [BEHAVIOR] wish 4: For Return to Seller presets the type and Released To (the seller), like a release to a buyer (Q18)
+    const preset = scr.releaseType || 'Sold', toDefault = preset === 'Return to Seller' ? v.seller_full : v.customer;
     const items = RELEASE_ITEMS.map((t, i) => `<label class="chkline"><input type="checkbox" class="chk" id="rl-i${i}" value="${esc(t)}">${esc(t)}</label>`).join('');
-    openModal({ title: `Release ${v.plate} (${v.model})`, icon: 'play',
+    openModal({ title: `${preset === 'Return to Seller' ? 'Return' : 'Release'} ${v.plate} (${v.model})`, icon: 'play',
       body: `<div class="fgrid two"><div class="fld"><label for="rl-date">Release date</label><input class="ctl" type="date" id="rl-date" value="${TODAY}"><span class="err" id="rl-date-err"></span></div>
-        <div class="fld"><label for="rl-to">Released to</label><input class="ctl" id="rl-to" value="${esc(v.customer)}"></div>
-        <div class="fld"><label for="rl-type">Type</label><select class="ctl" id="rl-type"><option>Sold</option><option>Return to Seller</option><option>Others</option></select></div><div></div>
+        <div class="fld"><label for="rl-to">Released to</label><input class="ctl" id="rl-to" value="${esc(toDefault)}"></div>
+        <div class="fld"><label for="rl-type">Type</label><select class="ctl" id="rl-type">${['Sold', 'Return to Seller', 'Others'].map(t => `<option ${t === preset ? 'selected' : ''}>${t}</option>`).join('')}</select></div><div></div>
         <div class="fld full"><span class="lbl">Checklist</span><div class="cols2">${items}</div></div></div>`,
       note: 'Records the release date and the next VRF No., then prints the release form and gate pass.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Release & print', kind: 'pr', icon: 'print', onClick: () => {
-        const date = $('#rl-date').value, err = !date ? 'Release date is required.' : notFuture(date) || notBefore(date, v.dispatch, 'the Dispatch Date');
+        const date = $('#rl-date').value, err = !date ? 'Release date is required.' : notFuture(date) || notBefore(date, v.dispatch, 'the Dispatch Date') || notBefore(date, v.rts_cleared, 'the Return to Seller clearance');
         if (err) { $('#rl-date-err').textContent = err; $('#rl-date').classList.add('is-invalid'); return; }
-        const f = { date, to: $('#rl-to').value.trim() || v.customer, type: $('#rl-type').value, items: RELEASE_ITEMS.filter((_, i) => $(`#rl-i${i}`).checked) };
+        const f = { date, to: $('#rl-to').value.trim() || toDefault, type: $('#rl-type').value, items: RELEASE_ITEMS.filter((_, i) => $(`#rl-i${i}`).checked) };
         const vrf = recordRelease(scr, v, f); render();
         openModal({ title: `Vehicle release form VRF No. ${vrf}`, icon: 'print', wide: true, body: REPORTS.releaseForm(enrichV(v._raw), f, vrf),
           footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
-        printModal(); toast(`${esc(v.plate)} released (VRF No. ${vrf}).`);
+        printModal(); toast(`${esc(v.plate)} ${f.type === 'Return to Seller' ? 'returned to the seller' : 'released'} (VRF No. ${vrf}).`);
       } }] });
   },
   resetFilter(scr) { const ui = U(scr.id); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); },

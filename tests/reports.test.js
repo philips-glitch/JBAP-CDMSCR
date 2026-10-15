@@ -27,7 +27,8 @@ test('render sweep: no report prints null, undefined or NaN', () => {
   Q.cancelLetterGroups(rows('FAD/cancellation-billing')).forEach(list => add(`cancellation ${list[0].customer}`, Q.REPORTS.cancellationLetter({ customer: list[0].customer }, list, T)));
   rows('FAD/document-monitoring').forEach(v => add(`document ${v.plate}`, Q.REPORTS.documentTransmittal(Q.enrichV(v._raw), [], '', 'HRAD-ATF-0', '')));
   groupBy(rows('SMD/saaf'), 'seller').forEach(list => add(`saaf ${list[0].seller}`, Q.REPORTS.saaf(list[0].seller, list, T)));
-  for (const id of ['SMD/saaf', 'FAD/pending-awarding', 'FAD/payment-seller', 'FAD/commission-billing', 'FAD/billing-monitoring', 'FAD/for-dispatch', 'VWD/unreleased-unit-overdue', 'FAD/cancellation-billing', 'FAD/document-monitoring'])
+  groupBy(rows('SMD/return-to-seller'), 'seller').forEach(list => add(`return ${list[0].seller}`, Q.REPORTS.returnClearance(list[0].seller, list, T)));
+  for (const id of ['SMD/return-to-seller', 'SMD/saaf', 'FAD/pending-awarding', 'FAD/payment-seller', 'FAD/commission-billing', 'FAD/billing-monitoring', 'FAD/for-dispatch', 'VWD/unreleased-unit-overdue', 'FAD/cancellation-billing', 'FAD/document-monitoring'])
     assert.ok(rows(id).length > 0, `${id} has rows to render`);
   const bad = out.map(([name, h]) => [name, h.replace(/<[^>]*>/g, ' ').match(/.{0,30}(\bnull\b|undefined|NaN).{0,30}/)]).filter(([, m]) => m).map(([name, m]) => `${name}: ${m[0].trim()}`);
   assert.deepStrictEqual(bad, []);
@@ -105,7 +106,7 @@ test('Log Activity texts no longer call VWD view-only', () => {
   P.U('log-activity').applied.module = 'VWD';
   assert.match(scr.emptyNote(), /releases/);
   P.U('log-activity').applied.module = 'SMD';
-  assert.match(scr.emptyNote(), /SMD is view-only/);
+  assert.match(scr.emptyNote(), /Return to Seller/);
   delete P.U('log-activity').applied.module;
 });
 test('cancellation letter: penalty × units', () => {
