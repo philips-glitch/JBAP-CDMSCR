@@ -149,6 +149,7 @@ window.MOCK_DATA = {
    "transfer_fee": 1000,
    "commission_rate": 0.05,
    "release": "doas",
+   "doas_signing": "branch",
    "vat_inclusive": true,
    "net": true
   },

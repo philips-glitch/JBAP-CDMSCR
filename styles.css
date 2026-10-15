@@ -286,3 +286,5 @@ table.cmp th{font-size:11.5px}table.cmp th .hb{padding:5px 4px}table.cmp td{padd
 .pp-wait .cnt.late+.cnt{margin-left:0}
 .pp-wait .none{font-size:12.5px;color:#7b8299}
 @media (max-width:768px){.pp-wait{grid-template-columns:1fr}}
+/* JBAP feedback: Document Monitoring columns that do not apply to the seller */
+td.na{color:#8a91a8;background:#f3f5f9;font-size:11.5px}

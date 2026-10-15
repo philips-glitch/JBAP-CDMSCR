@@ -4,6 +4,7 @@ const P = load(), D = P.D, byPlate = Object.fromEntries(D.vehicles.map(v => [v.p
 test('seller settings', () => {
   const s = Object.fromEntries(D.sellers.map(x => [x.code, x]));
   assert.deepStrictEqual([s.EWB.release, s.EWB.vat_inclusive, s.EWB.net, s.EWB.transfer_fee], ['doas', true, true, 1000]);
+  assert.strictEqual(s.EWB.doas_signing, 'branch');
   assert.deepStrictEqual(s.SBC.fee_tiers, [[499999.99, 400], [null, 500]]);
   assert.deepStrictEqual([s.TFS.release, s.TFS.net, s.TFS.transfer_fee], ['payment', false, 500]);
   assert.strictEqual(s.JACCS.release, 'ack');

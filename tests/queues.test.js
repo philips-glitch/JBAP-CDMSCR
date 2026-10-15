@@ -16,7 +16,7 @@ test('switch on: ready rows are pre-ticked as in the spec table', () => {
   const sel = id => ids(P.selectedRows(P.byId[id], READY[id])), rows = id => P.byId[id].rows();
   for (const id of ['FAD/payment-seller', 'FAD/commission-billing', 'FAD/for-dispatch', 'FAD/cancellation-billing']) { assert.deepStrictEqual(sel(id), ids(rows(id)), id); assert.ok(sel(id).length > 0, `${id}: pre-ticked rows exist (not vacuous)`); }
   assert.deepStrictEqual(sel('FAD/billing-monitoring'), ids(rows('FAD/billing-monitoring').filter(b => !b.trans || b.print_trans)));
-  assert.deepStrictEqual(sel('FAD/document-monitoring'), ids(rows('FAD/document-monitoring').filter(v => (v.orig_docs && !v.atf_no) || v.print_doc_trans)));
+  assert.deepStrictEqual(sel('FAD/document-monitoring'), ids(rows('FAD/document-monitoring').filter(v => !['Complete', 'Cancelled'].includes(v.doc_status) && ((v.doc_status === 'For Releasing' && !v.atf_no) || v.print_doc_trans))));
   assert.deepStrictEqual(sel('FAD/pending-awarding'), ids(rows('FAD/pending-awarding').filter(v => v.saaf_approved || v.for_baaf)));
 });
 test('unticking a pre-ticked row holds it back', () => {

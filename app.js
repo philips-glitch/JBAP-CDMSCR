@@ -27,6 +27,8 @@ const toIso = dt => dt.toISOString().slice(0, 10);
 const addDays = (iso, n) => { const d = toDate(iso); d.setUTCDate(d.getUTCDate() + n); return toIso(d); };
 // [BEHAVIOR] Working days skip Saturday and Sunday only. Holiday list is an open question (Q14).
 function addWorkdays(iso, n) { let d = toDate(iso), left = n; while (left > 0) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6) left--; } return toIso(d); }
+// [BEHAVIOR] Working days from a to b, both days included, like Excel NETWORKDAYS without holidays. Blank when a is blank or after b.
+function workdaysBetween(a, b) { if (!a || !b || a > b) return null; let n = 0; for (const d = toDate(a), e = toDate(b); d <= e; d.setUTCDate(d.getUTCDate() + 1)) { const w = d.getUTCDay(); if (w !== 0 && w !== 6) n++; } return n; }
 const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / 86400000);
 
 const IC = {
@@ -84,6 +86,28 @@ const releaseOf = v => SELLER[v.seller]?.release || 'ack';
 // [BEHAVIOR] Dispatch notice per seller condition (Dispatch Condition per seller): payment and DOAS sellers after Buyer Paid,
 // others after Seller Acknowledgement. DOAS sellers still need the signed DOAS before VWD releases.
 const dispatchReady = v => releaseOf(v) === 'ack' ? !!v.seller_ack : !!v.buyer_paid;
+// [BEHAVIOR] JBAP feedback (15 Oct 2026): how the seller's DOAS is signed, separate from the release condition. 'jbap' = at JBAP (default),
+// 'branch' = at the seller's HO or store (EWB), 'none' = no DOAS (sellers released on Buyer Payment: TFS, TFSPH). In JBAP's sheet JACCS and SAFC sign a DOAS too.
+const doasOf = v => SELLER[v.seller]?.doas_signing || (releaseOf(v) === 'payment' ? 'none' : 'jbap');
+const DOC_STATUSES = ['Pending Payment', 'Pending DOAS', 'DOAS for Signing', 'Pending Documents', 'For Releasing', 'Complete', 'Cancelled'];
+// [BEHAVIOR] Document status = the furthest step reached (JBAP's 2026 Documents Monitoring sheet: same as the typed status on 1,644 of 1,674 lots)
+function docStatus(v) {
+  const doas = doasOf(v);
+  if (v.status === 'Cancelled') return 'Cancelled';
+  if (v.to_buyer) return 'Complete';
+  if (v.orig_docs) return 'For Releasing';
+  if (doas === 'none') return v.pay_seller ? 'Pending Documents' : 'Pending Payment';
+  if (v.buyer_doas || v.seller_doas || (doas === 'branch' && v.ewb_signed)) return 'Pending Documents';
+  if (v.rcv_doas || (doas === 'branch' && v.pay_seller)) return 'DOAS for Signing';
+  return v.pay_seller ? 'Pending DOAS' : 'Pending Payment';
+}
+// [BEHAVIOR] Aging counts working days to today only while a step waits (JBAP's sheet shows 0 once done; CDMS shows blank).
+// DOAS Aging: from Seller Payment while the DOAS is awaited (branch sellers: until it is signed). Docs Aging: from the signed DOAS (no DOAS: Seller Payment) until JBAP has the documents.
+function docAging(v, status, doas) {
+  const start = doas === 'none' ? v.pay_seller : v.seller_doas || (doas === 'branch' ? v.ewb_signed : null);
+  return { doas_aging: status === 'Pending DOAS' || (doas === 'branch' && status === 'DOAS for Signing') ? workdaysBetween(v.pay_seller, TODAY) : null,
+    docs_aging: status === 'Pending Documents' ? workdaysBetween(start, TODAY) : null };
+}
 // [BEHAVIOR] Commission (÷1.12 when the seller's 5% includes VAT), VAT 12%, W/TAX 15% for NET sellers,
 // To JBAP = commission + VAT − W/TAX (0 for GROSS sellers), Payable to Seller = price + fee − To JBAP. Unrounded until displayed.
 function sellerMoney(v) {
@@ -100,10 +124,12 @@ function enrichV(v) {
   const dispatch_deadline = v.dispatch ? addWorkdays(v.dispatch, 3) : null;  // 3 working days after dispatch
   const overdue = v.dispatch && !v.release && dispatch_deadline < TODAY;
   const total = v.price === null ? null : v.price + (v.transfer_fee || 0);
+  const doas = doasOf(v), doc_status = docStatus(v);
   return Object.assign({}, v, {
     _raw: v, auction_start: as, auction_end: ae, adate: as ? `${fmtDate(as)} - ${fmtDate(ae)}` : '',
     seller_full: SELLER[v.seller]?.name || v.seller, total,
     release_cond: RELEASE_LABEL[releaseOf(v)],
+    auction_lot: `${v.auction}/${v.lot || ''}`, doas, doc_status, ...docAging(v, doc_status, doas),
     // Wish 5: a release with type Return to Seller is the return date; any other release is the release to the buyer
     days_in_yard: v.entry_date ? daysBetween(v.entry_date, v.release || TODAY) : null,
     released_buyer: v.release && v.release_type !== 'Return to Seller' ? v.release : null, returned_seller: v.release_type === 'Return to Seller' ? v.release : null,
@@ -169,21 +195,25 @@ const VFS = ['View', 'Filter', 'Sort'], VFSU = ['View', 'Filter', 'Sort', 'Updat
 const notFuture = d => d && d > TODAY ? `cannot be after today (${fmtDate(TODAY)})` : null;
 const notBefore = (d, ref, refLabel) => d && ref && d < ref ? `cannot be before ${refLabel} (${fmtDate(ref)})` : null;
 
-// [BEHAVIOR] Document dates: not in the future, not before Buyer Paid, DOAS steps in order (received → buyer signed → seller receipt),
-// documents released to the buyer only after the originals arrive from the seller.
+// [BEHAVIOR] Document dates: not in the future, not before Buyer Paid, steps in order (EWB call out → signed; receipt → JBAP signed → seller receipt),
+// documents to the buyer only after JBAP has them. EWB columns only for sellers who sign at their branch; DOAS columns not for sellers without a DOAS.
 function docValidate(r, e) {
-  const val = k => (k in e ? e[k] : r[k]) || null, out = {};
-  ['rcv_doas', 'buyer_doas', 'seller_doas', 'orig_docs', 'to_buyer'].forEach(k => { out[k] = notFuture(val(k)) || notBefore(val(k), r.buyer_paid, 'Buyer Paid'); });
-  out.buyer_doas ||= notBefore(val('buyer_doas'), val('rcv_doas'), 'Received DOAS for Signing');
-  out.seller_doas ||= notBefore(val('seller_doas'), val('buyer_doas') || val('rcv_doas'), val('buyer_doas') ? 'Buyer Signed DOAS' : 'Received DOAS for Signing');
-  out.to_buyer ||= notBefore(val('to_buyer'), val('orig_docs'), 'Original Docs Received from Seller');
+  const val = k => (k in e ? e[k] : r[k]) || null, out = {}, doas = doasOf(r);
+  ['ewb_callout', 'ewb_signed', 'rcv_doas', 'buyer_doas', 'seller_doas', 'orig_docs', 'to_buyer'].forEach(k => { out[k] = notFuture(val(k)) || notBefore(val(k), r.buyer_paid, 'Buyer Paid'); });
+  out.ewb_signed ||= notBefore(val('ewb_signed'), val('ewb_callout'), 'EWB Call Out');
+  out.buyer_doas ||= notBefore(val('buyer_doas'), val('rcv_doas'), 'Receipt of DOAS');
+  out.seller_doas ||= notBefore(val('seller_doas'), val('buyer_doas') || val('rcv_doas'), val('buyer_doas') ? 'JBAP Receipt of Signed DOAS' : 'Receipt of DOAS');
+  out.to_buyer ||= notBefore(val('to_buyer'), val('orig_docs'), 'JBAP Receipt of Documents');
+  ['ewb_callout', 'ewb_signed', 'ewb_place'].forEach(k => { if (doas !== 'branch' && e[k]) out[k] = 'is only for sellers whose DOAS is signed at their branch (EWB)'; });
+  ['rcv_doas', 'buyer_doas', 'seller_doas'].forEach(k => { if (doas === 'none' && e[k]) out[k] = 'does not apply: this seller has no DOAS'; });
   return out;
 }
+const EWB_NA = r => r.doas !== 'branch', NO_DOAS = r => r.doas === 'none';   // n/a cells on Document Monitoring
 const AM_COLS = [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 150 }),
   C('Seller', 'seller', 'code'), C('Status', 'status', 'status'), C('Result Price', 'price', 'money'), C('Awarding Date', 'awarding', 'date'), C('Buyer Paid', 'buyer_paid', 'date'),
   C('Payment to Seller', 'pay_seller', 'date'), C('Seller Acknowl\u00adedgement', 'seller_ack', 'date'), C('Dispatch Date', 'dispatch', 'date'), C('Release Date', 'release', 'date'),
-  C('Received DOAS for Signing', 'rcv_doas', 'date'), C('Buyer Signed DOAS', 'buyer_doas', 'date'), C('Seller Receipt of Signed DOAS', 'seller_doas', 'date'),
-  C('Original Docs Received from Seller', 'orig_docs', 'date'), C('Documents Released to Buyer', 'to_buyer', 'date')];
+  C('Receipt of DOAS', 'rcv_doas', 'date'), C('JBAP Receipt of Signed DOAS', 'buyer_doas', 'date'), C('Seller Receipt of Signed DOAS', 'seller_doas', 'date'),
+  C('JBAP Receipt of Documents', 'orig_docs', 'date'), C('Buyer Receipt of Documents', 'to_buyer', 'date')];
 const AM_FILTERS = [AUCTION_FILTER, { key: 'lot', label: 'Lot', type: 'text', w: 'w1' }, { key: 'plate', label: 'Plate Number' }, { key: 'customer', label: 'Customer Name' },
   { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'status', label: 'Status', type: 'select', options: () => ['Sold', 'Not Sold', 'Cancelled'] }];
 const amTotals = rows => { const s = rows.filter(r => r.status === 'Sold'); return { customer: `${rows.length} lots, ${s.length} sold`, price: money(sumBy(s, 'price')) }; };
@@ -274,17 +304,23 @@ const SCREENS = [
     queue: true, ready: { key: 'for_dispatch_email', when: () => true },
     ruleP: ['P4', 'Every lot arrives pre-ticked for the dispatch email; untick a lot to hold it back. The email is copied to Finance only (P5): VWD sees the lot in its own list.'] },
   { dept: 'FAD', slug: 'document-monitoring', title: 'Document Monitoring', actions: VFSU,
-    rule: 'Sold lots with a Buyer Paid date whose documents are not yet released to the buyer. Sellers released on Buyer Payment (TFS) skip the DOAS steps. DOAS dates go in order: received for signing, signed by the buyer, receipt by the seller.',
-    rows: () => sold().filter(v => v.buyer_paid && releaseOf(v) !== 'payment' && !v.to_buyer), sort: ['buyer_paid', 'asc'],
-    cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 210 }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
-      C('Buyer Paid', 'buyer_paid', 'date'), C('Received DOAS for Signing', 'rcv_doas', 'date', { edit: 'date' }), C('Buyer Signed DOAS', 'buyer_doas', 'date', { edit: 'date' }),
-      C('Seller Receipt of Signed DOAS', 'seller_doas', 'date', { edit: 'date' }), C('Original Docs Received from Seller', 'orig_docs', 'date', { edit: 'date' }),
-      C('Documents Released to Buyer', 'to_buyer', 'date', { edit: 'date' }), C('ATF No.', 'atf_no', 'code'), C('Print Transmittal?', 'print_doc_trans', 'check', { edit: 'check' })],
-    filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
+    rule: `Every sold or cancelled lot, in the columns of JBAP's Documents Monitoring sheet. Status is the furthest step reached: Pending Payment (seller not paid yet), Pending DOAS, DOAS for Signing, Pending Documents (signed DOAS back), For Releasing (documents at JBAP), Complete (documents with the buyer) or Cancelled. EWB buyers sign the DOAS at EWB's HO or store; TFS and TFSPH have no DOAS (n/a). Aging counts working days while a step waits. The Open view hides Complete and Cancelled lots.`,
+    rows: () => V().filter(v => v.status === 'Sold' || v.status === 'Cancelled'), sort: ['auction_lot', 'asc'],
+    cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 190 }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
+      C('Seller Payment', 'pay_seller', 'date'),
+      C('EWB Call Out', 'ewb_callout', 'date', { edit: 'date', na: EWB_NA }), C('Date DOAS Signed (EWB)', 'ewb_signed', 'date', { edit: 'date', na: EWB_NA }), C('EWB HO/Store', 'ewb_place', 'text', { edit: 'text', na: EWB_NA }),
+      C('Receipt of DOAS', 'rcv_doas', 'date', { edit: 'date', na: NO_DOAS }), C('DOAS Aging', 'doas_aging', 'int', { na: NO_DOAS }),
+      C('JBAP Receipt of Signed DOAS', 'buyer_doas', 'date', { edit: 'date', na: NO_DOAS }), C('Seller Receipt of Signed DOAS', 'seller_doas', 'date', { edit: 'date', na: NO_DOAS }),
+      C('JBAP Receipt of Documents', 'orig_docs', 'date', { edit: 'date' }), C('Buyer Receipt of Documents', 'to_buyer', 'date', { edit: 'date' }), C('Docs Aging', 'docs_aging', 'int'),
+      C('Status', 'doc_status', 'text', { w: 130 }), C('Remarks', 'doc_remarks', 'text', { edit: 'text' }),
+      C('ATF No.', 'atf_no', 'code'), C('Print Transmittal?', 'print_doc_trans', 'check', { edit: 'check' })],
+    filters: [{ key: 'doc_status', label: 'Status', type: 'select', options: () => ['Open', ...DOC_STATUSES], match: (r, v) => (v === 'Open' ? !['Complete', 'Cancelled'].includes(r.doc_status) : r.doc_status === v) },
+      AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
+    initial: { doc_status: 'Open' },
     validate: docValidate,
-    buttons: [{ label: 'Print document transmittal', kind: 'ol', icon: 'print', act: 'printDocTrans', count: 'print_doc_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Lots with Documents Released to Buyer were removed from the list.',
-    queue: true, ready: { key: 'print_doc_trans', when: r => !!r.orig_docs && !r.atf_no },
-    ruleP: ['P4', 'Lots with original documents received and no ATF No. yet arrive pre-ticked.'] },
+    buttons: [{ label: 'Print document transmittal', kind: 'ol', icon: 'print', act: 'printDocTrans', count: 'print_doc_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Complete lots leave the Open view.',
+    queue: true, ready: { key: 'print_doc_trans', when: r => r.doc_status === 'For Releasing' && !r.atf_no },
+    ruleP: ['P4', 'Lots whose documents are at JBAP (For Releasing) and have no ATF No. yet arrive pre-ticked.'] },
   { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
     rule: `Dispatched vehicles not yet released to the buyer. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15).`,
     rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'], cols: UNREL_COLS, filters: UNREL_FILTERS,
@@ -480,6 +516,7 @@ function applyFilters(scr, rows) {
       if (from && (!x || x < from)) return false; if (to && (!x || x > to)) return false; return true;
     }
     if (v === undefined || v === '') return true;
+    if (fd.match) return fd.match(r, v);   // [BEHAVIOR] a filter with its own rule, e.g. Status "Open" = not Complete or Cancelled
     if (fd.type === 'select') return String(r[fd.key]) === String(v);
     const keys = fd.keys || [fd.key];
     if (fd.exact) return keys.some(k => String(r[k] ?? '').toLowerCase() === v.trim().toLowerCase());
@@ -576,6 +613,7 @@ function dropHolds() { SCREENS.forEach(s => { const ed = s.ready && UI[s.id]?.ed
 function cellHtml(scr, r, c, upd) {
   const ui = U(scr.id), ed = ui.edits[r.id] || {}, err = (ui.errors[r.id] || {})[c.key];
   const cls = [RIGHT.has(c.type) ? 'r' : '', CEN.has(c.type) ? 'c' : ''].join(' ');
+  if (c.na?.(r)) return '<td class="c na" title="Does not apply to this seller">n/a</td>';   // [BEHAVIOR] JBAP feedback: EWB / DOAS columns that do not apply to the seller
   if (c.edit && upd) {
     const has = c.key in ed, val = has ? ed[c.key] : c.edit === 'check' ? tickDefault(scr, r, c.key) : r[c.key];
     const aria = `${c.label}, lot ${r.lot || ''} ${r.plate || ''}`.trim();
@@ -783,7 +821,7 @@ function recordDispatch(scr, rows, dateFor) {
 // [BEHAVIOR] VWD releases only when the seller's DOAS is signed (DOAS sellers) and no storage penalty is unpaid (JBAP Q17).
 function releaseBlock(v) {
   if (v.status !== 'Sold') return null;   // [BEHAVIOR] wish 4: a unit returned to the seller was never sold, so DOAS and storage penalty do not apply
-  if (releaseOf(v) === 'doas' && !v.buyer_doas) return 'Buyer signed DOAS is missing: this seller requires DOAS / legal documents signing. FAD records it in Document Monitoring.';
+  if (releaseOf(v) === 'doas' && !v.buyer_doas && !(doasOf(v) === 'branch' && v.ewb_signed)) return 'JBAP Receipt of Signed DOAS is missing: this seller requires DOAS / legal documents signing. FAD records it in Document Monitoring (EWB: Date DOAS Signed).';
   if (v.penalty > 0) return `Storage penalty of PHP ${money(v.penalty)} is unpaid. Recording penalty payments comes with step 2 (holidays and extensions).`;
   return null;
 }
@@ -976,7 +1014,7 @@ const ACTIONS = {
     const rows = selectedRows(scr, 'print_doc_trans');
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Print Transmittal?</b> on at least one lot first.'); render(); return; }
     const missing = rows.filter(r => !r.orig_docs);
-    if (missing.length) { setMsg(scr, 'error', `Enter <b>Original Docs Received from Seller</b> and save first: ${missing.map(r => esc(r.plate)).join(', ')}.`); render(); return; }
+    if (missing.length) { setMsg(scr, 'error', `Enter <b>JBAP Receipt of Documents</b> and save first: ${missing.map(r => esc(r.plate)).join(', ')}.`); render(); return; }
     setMsg(scr, null); render();
     const form = rows.map((r, n) => `<fieldset class="dt-lot"><legend><b>${esc(r.plate)}</b> · ${esc(r.customer)}</legend><div class="cols2">${DOC_TYPES.map((t, i) => `<label class="chkline"><input type="checkbox" class="chk" id="dt-${n}-${i}" ${(r.docs_received || []).includes(t) ? 'checked' : ''}>${esc(t)}</label>`).join('')}</div>
       <div class="fld"><label for="dt-${n}-o">Others</label><input class="ctl" id="dt-${n}-o" value="${esc(r.docs_others || '')}"></div>

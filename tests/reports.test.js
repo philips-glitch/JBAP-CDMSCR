@@ -84,7 +84,7 @@ test('dispatch form: deadline, remarks, location; recording moves the lot to Unr
 test('VWD release: DOAS block, then release with the next VRF number', () => {
   const scr = P.byId['VWD/unreleased-unit'];
   const v = scr.rows().find(x => P.releaseOf(x) === 'doas') || P.V().find(x => P.releaseOf(x) === 'doas' && x.dispatch && !x.release && !(x.penalty > 0));
-  v._raw.buyer_doas = null; assert.match(P.releaseBlock(P.enrichV(v._raw)), /DOAS/);
+  v._raw.buyer_doas = null; v._raw.ewb_signed = null; assert.match(P.releaseBlock(P.enrichV(v._raw)), /DOAS/);
   v._raw.buyer_doas = v.buyer_paid; assert.strictEqual(P.releaseBlock(P.enrichV(v._raw)), null);
   const f = { date: P.TODAY, to: v.customer, type: 'Sold', items: ['No. of Keys', 'Spare Tire'] }, before = P.S.log.length;
   const vrf = P.recordRelease(scr, v, f);
@@ -121,7 +121,7 @@ test('cancellation letters: one letter per buyer name, even when some lots have 
   assert.strictEqual(P.cancelLetterGroups(rows).length, 1);
 });
 test('document transmittal: control number, checklist and saved documents', () => {
-  const scr = P.byId['FAD/document-monitoring'], v = scr.rows()[0];
+  const scr = P.byId['FAD/document-monitoring'], v = scr.rows().filter(r => r.status === 'Sold' && !r.atf_no)[0];
   v._raw.orig_docs = v.buyer_paid;
   const atf = P.recordDocTransmittal(scr, v, ['LTO Official Receipt', 'Spare Key'], 'Extra key fob');
   assert.strictEqual(atf, 'HRAD-ATF-8864'); assert.deepStrictEqual(v._raw.docs_received, ['LTO Official Receipt', 'Spare Key']);
@@ -130,7 +130,7 @@ test('document transmittal: control number, checklist and saved documents', () =
   assert.match(h, /Auction Transmittal Form/); assert.match(h, /HRAD-ATF-8864/); assert.strictEqual(P.DOC_TYPES.length, 19);
 });
 test('document transmittal: Others and Remarks are saved, logged and printed (escaped)', () => {
-  const scr = P.byId['FAD/document-monitoring'], v = scr.rows()[1], before = P.S.log.length;
+  const scr = P.byId['FAD/document-monitoring'], v = scr.rows().filter(r => r.status === 'Sold' && !r.atf_no)[1], before = P.S.log.length;
   const atf = P.recordDocTransmittal(scr, v, ['Spare Key', 'Others'], 'Extra key fob', 'Keys with VWD');
   assert.strictEqual(v._raw.docs_others, 'Extra key fob'); assert.strictEqual(v._raw.docs_remarks, 'Keys with VWD');
   const added = P.S.log.slice(before), entry = f => added.find(e => e.field === f);
@@ -143,7 +143,7 @@ test('document transmittal: Others and Remarks are saved, logged and printed (es
   assert.match(x, /rbox">✓<\/span>Others: /, 'typed Others text prints with the Others box ticked');
 });
 test('document transmittal keeps unsaved date edits on the row and clears only Print Transmittal?', () => {
-  const scr = P.byId['FAD/document-monitoring'], [v, w] = scr.rows().slice(2), edits = P.U(scr.id).edits;
+  const scr = P.byId['FAD/document-monitoring'], [v, w] = scr.rows().filter(r => r.status === 'Sold' && !r.atf_no).slice(2), edits = P.U(scr.id).edits;
   edits[v.id] = { to_buyer: '2026-10-08', print_doc_trans: true }; edits[w.id] = { print_doc_trans: true };
   P.recordDocTransmittal(scr, v, ['Spare Key'], ''); P.recordDocTransmittal(scr, w, ['Spare Key'], '');
   assert.deepStrictEqual(edits[v.id], { to_buyer: '2026-10-08' });

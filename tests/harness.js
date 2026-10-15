@@ -9,7 +9,9 @@ const EXPORTS = ['D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enric
   // proposed improvements and wishes 4–5 (spec 2026-10-15)
   'isProposed', 'setProposed', 'shown', 'colsOf', 'tagHtml', 'SCREENS', 'selectedRows', 'applyEdits', 'tickDefault', 'tickValue',
   'dirtyCount', 'cdmsCancelsPending', 'recordCancellation', 'recordCommissionBilling', 'recordSaafSent',
-  'dropHolds', 'dispatchCc', 'queueCounts', 'PROPOSALS', 'LATEST_AUCTION', 'rtsEligible', 'recordReturnClearance'];
+  'dropHolds', 'dispatchCc', 'queueCounts', 'PROPOSALS', 'LATEST_AUCTION', 'rtsEligible', 'recordReturnClearance',
+  // JBAP feedback round 1 (spec 2026-10-15)
+  'doasOf', 'docStatus', 'DOC_STATUSES', 'workdaysBetween', 'cellHtml', 'applyFilters'];
 function load() {
   const window = { addEventListener() {} };
   new Function('window', fs.readFileSync(path.join(ROOT, 'data.js'), 'utf8'))(window);
