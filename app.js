@@ -91,16 +91,26 @@ function sellerMoney(v) {
   const vat = com * VAT_RATE, net = s.net !== false, wtax = net ? com * WTAX_RATE : 0, toJbap = net ? com + vat - wtax : 0;
   return { com: r2(com), cvat: r2(r2(com + vat) - r2(com)), ctotal: r2(com + vat), wtax: r2(wtax), to_jbap: r2(toJbap), payable: r2(price + (v.transfer_fee || 0) - toJbap) };
 }
+// [MOCK] P1: payments CDMS recorded per lot (data-extra.js > cdmsPayments). fullDate = the day the running total first reached the amount due.
+function cdmsPaid(id, due) {
+  const pays = [...((D.cdmsPayments || {})[id] || [])].sort((a, b) => a.date.localeCompare(b.date));
+  let paid = 0, fullDate = null;
+  pays.forEach(p => { paid = r2(paid + p.amount); if (!fullDate && due !== null && due !== undefined && paid >= due) fullDate = p.date; });
+  return { paid, due, fullDate };
+}
 function enrichV(v) {
   const [as, ae] = D.auctions[String(v.auction)] || [null, null];
   const buyer_deadline = v.awarding ? addWorkdays(v.awarding, 3) : null;     // 3 working days after awarding
   const pay_deadline = v.buyer_paid ? addWorkdays(v.buyer_paid, 3) : null;   // 3 working days after buyer paid
   const dispatch_deadline = v.dispatch ? addWorkdays(v.dispatch, 3) : null;  // 3 working days after dispatch
   const overdue = v.dispatch && !v.release && dispatch_deadline < TODAY;
+  const total = v.price === null ? null : v.price + (v.transfer_fee || 0), cdms = cdmsPaid(v.id, total);
   return Object.assign({}, v, {
     _raw: v, auction_start: as, auction_end: ae, adate: as ? `${fmtDate(as)} - ${fmtDate(ae)}` : '',
-    seller_full: SELLER[v.seller]?.name || v.seller, total: v.price === null ? null : v.price + (v.transfer_fee || 0),
+    seller_full: SELLER[v.seller]?.name || v.seller, total,
     release_cond: RELEASE_LABEL[releaseOf(v)],
+    cdms_paid: cdms.paid, cdms_full: cdms.fullDate,
+    cdms_status: cdms.fullDate ? `Fully paid ${fmtDate(cdms.fullDate)}` : cdms.paid ? `Partly paid ${money(cdms.paid)} of ${money(total)}` : 'No payment',
     buyer_deadline, pay_deadline, dispatch_deadline,
     penalty: overdue && PENALTY_LOCATIONS.includes(v.location || 'Pasay City') ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
     ...sellerMoney(v),
@@ -217,11 +227,17 @@ const SCREENS = [
     rows: () => sold().filter(v => v.awarding && !v.buyer_paid), sort: ['buyer_deadline', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Buyer ID', 'cid', 'code'), C('Seller', 'seller', 'code'),
       C('Make/Model', 'model', 'text', { w: 200 }), C('Plate Number', 'plate', 'code'), C('Total (Awarded Price + Transfer Fees)', 'total', 'money'),
+      C('Paid in CDMS', 'cdms_status', 'text', { w: 230, proposed: true, tag: 'P1', warn: r => !r.cdms_full }),
+      C('Confirm', 'cdms_confirm', 'check', { edit: 'check', proposed: true, tag: 'P1', disabledWhen: r => !r.cdms_full }),
       C('Buyer Paid', 'buyer_paid', 'date', { edit: 'date' }), C('Buyer Deadline', 'buyer_deadline', 'date', { late: true })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', keys: ['customer', 'cid'], label: 'Customer Name / Buyer ID', w: 'w2' }, { key: 'plate', label: 'Plate Number' }],
     totals: rows => ({ total: money(sumBy(rows, 'total')) }),
     validate: (r, e) => ({ buyer_paid: notFuture(e.buyer_paid) || notBefore(e.buyer_paid, r.awarding, 'the Awarding Date') }),
-    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid vehicles moved to Payment Seller.' },
+    buttons: [{ label: 'Confirm Buyer Paid', kind: 'ol', icon: 'check', act: 'confirmPaid', count: 'cdms_confirm', proposed: true, tag: 'P1' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
+    savedNote: 'Paid vehicles moved to Payment Seller.',
+    ready: { key: 'cdms_confirm', when: r => !!r.cdms_full },
+    saveWarn: { test: (r, e) => !!e.buyer_paid && !r.cdms_full, text: n => `${n} lot(s) saved without full payment in CDMS.` },
+    ruleP: ['P1', 'Paid in CDMS shows the payments CDMS recorded per lot. Fully paid lots are pre-ticked under Confirm; Confirm Buyer Paid sets Buyer Paid to the date CDMS shows the lot fully paid. Typing Buyer Paid still works, with a warning when CDMS does not show the lot fully paid.'] },
   { dept: 'FAD', slug: 'payment-seller', title: 'Payment Seller', actions: VFSU, rule: 'Vehicles with status SOLD, a Buyer Paid date, and a blank Payment to Seller date. Deadline = 3 working days after Buyer Paid. To JBAP = commission + VAT − 15% withholding tax (NET sellers); Payable to Seller = total − To JBAP.',
     rows: () => sold().filter(v => v.buyer_paid && !v.pay_seller), sort: ['pay_deadline', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction Date', 'adate', 'code'), C('Plate Number', 'plate', 'code'),
@@ -396,7 +412,7 @@ const SCREENS = [
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
-      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel'] },
+      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Confirm'] },
       { key: 'record', label: 'Record / Plate' }],
     emptyNote: () => { const m = U(LOG_ID).applied.module; return m === 'SMD' ? 'No activity: SMD is view-only under the CR, so it has no update actions to log.' : m === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases a vehicle.' : null; } },
 ];
@@ -486,15 +502,19 @@ function filterCard(scr) {
     <button type="submit" class="btn pr">${IC.search}Apply filter</button></div></form></section>`;
 }
 
+// [BEHAVIOR] P4: with the switch on, a work list's tick starts on for ready rows (scr.ready = { key, when }). The default is not saved
+// or logged; unticking stores an edit like any other change. With the switch off a tick shows the saved value only.
+const tickDefault = (scr, r, key) => !!r[key] || (PROPOSED && scr.ready?.key === key && !!scr.ready.when(r));
+const tickValue = (scr, r, key) => { const e = U(scr.id).edits[r.id] || {}; return key in e ? e[key] : tickDefault(scr, r, key); };
 function cellHtml(scr, r, c, upd) {
   const ui = U(scr.id), ed = ui.edits[r.id] || {}, err = (ui.errors[r.id] || {})[c.key];
   const cls = [RIGHT.has(c.type) ? 'r' : '', CEN.has(c.type) ? 'c' : ''].join(' ');
   if (c.edit && upd) {
-    const has = c.key in ed, val = has ? ed[c.key] : r[c.key];
+    const has = c.key in ed, val = has ? ed[c.key] : c.edit === 'check' ? tickDefault(scr, r, c.key) : r[c.key];
     const aria = `${c.label}, lot ${r.lot || ''} ${r.plate || ''}`.trim();
     const common = `data-row="${esc(r.id)}" data-key="${c.key}" aria-label="${esc(aria)}" ${err ? `aria-invalid="true" title="${esc(c.label + ' ' + err)}"` : ''}`;
     const st = `${has ? 'is-dirty' : ''} ${err ? 'is-invalid' : ''}`;
-    if (c.edit === 'check') return `<td class="c"><input type="checkbox" class="chk ${st}" ${val ? 'checked' : ''} ${common}></td>`;
+    if (c.edit === 'check') return `<td class="c"><input type="checkbox" class="chk ${st}" ${val ? 'checked' : ''} ${c.disabledWhen?.(r) ? 'disabled' : ''} ${common}></td>`;
     if (c.edit === 'date') return `<td><input type="date" class="cell-in ${st}" value="${esc(val || '')}" ${common}></td>`;
     if (c.edit === 'money') return `<td><input type="number" min="0" step="0.01" class="cell-in num ${st}" value="${val ?? ''}" ${common}></td>`;
     return `<td><input type="text" class="cell-in ${st}" value="${esc(val || '')}" ${common}></td>`;
@@ -502,11 +522,11 @@ function cellHtml(scr, r, c, upd) {
   const v = r[c.key];
   if (c.type === 'rocheck' || c.type === 'check') return `<td class="c"><span class="ro-chk ${v ? 'on' : ''}" role="img" aria-label="${v ? 'Yes' : 'No'}">${v ? IC.check : ''}</span></td>`;
   if (c.type === 'status') { const k = { Sold: 'sold', 'Not Sold': 'ns', Cancelled: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
-  if (c.type === 'action') { const k = { Update: 'up', Create: 'sold', Cancel: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
+  if (c.type === 'action') { const k = { Update: 'up', Create: 'sold', Cancel: 'cx', Confirm: 'up' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
   if (c.type === 'rowbtn') return `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}" aria-label="${esc(c.btn)} ${esc(r.plate || '')}">${esc(c.btn)}</button></td>`;
   if (c.type === 'logval' && (v ?? '') === '') return '<td><span class="blank">(blank)</span></td>';
   let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : c.type === 'datetime' ? `${fmtDate(v.slice(0, 10))} ${v.slice(11)}` : (v ?? '');
-  const late = c.late && v && v < TODAY ? ' late' : '';
+  const late = (c.late && v && v < TODAY) || c.warn?.(r) ? ' late' : '';   // warn: red text for a row that needs attention (P1: not fully paid)
   if (c.w) return `<td class="${cls}${late}"><div class="tx" style="max-width:${c.w}px" title="${esc(t)}">${esc(t)}</div></td>`;
   return `<td class="${cls}${late}">${esc(t)}</td>`;
 }
@@ -544,9 +564,9 @@ function dataCard(scr, title) {
     <div class="pg"><span>Showing ${from} to ${from ? from + rows.length - 1 : 0} of ${all.length.toLocaleString()} entries</span><div class="pgr">${pg.join('')}</div></div></section>`;
 }
 const hasFilter = scr => Object.values(U(scr.id).applied).some(v => v);
-function effectiveCount(scr, key) {   // ticks: saved value overridden by unsaved edit
-  if (!key) return 0; const ui = U(scr.id);
-  return scr.rows().filter(r => (key in (ui.edits[r.id] || {}) ? ui.edits[r.id][key] : r[key])).length;
+function effectiveCount(scr, key) {   // ticks: unsaved edit, else saved value or the P4 default
+  if (!key) return 0;
+  return scr.rows().filter(r => tickValue(scr, r, key)).length;
 }
 
 // ─── Special layouts ──────────────────────────────────────────────────
@@ -633,7 +653,7 @@ window.addEventListener('afterprint', () => document.body.classList.remove('prin
 
 // ─── Actions ──────────────────────────────────────────────────────────
 function currentScr() { return byId[route()]; }
-function selectedRows(scr, key) { const ui = U(scr.id); return sortRows(scr, scr.rows()).filter(r => (key in (ui.edits[r.id] || {}) ? ui.edits[r.id][key] : r[key])); }
+function selectedRows(scr, key) { return sortRows(scr, scr.rows()).filter(r => tickValue(scr, r, key)); }
 function setMsg(scr, type, html) { U(scr.id).msg = type ? { type, html } : null; }
 function validateEdits(scr, ids) {
   const ui = U(scr.id), map = Object.fromEntries(scr.rows().map(r => [r.id, r])), errors = {}, lines = [];
@@ -699,14 +719,31 @@ function recordDocTransmittal(scr, v, docs, others, remarks = '') {
   const ed = U(scr.id).edits; if (ed[v.id]) { delete ed[v.id].print_doc_trans; if (!Object.keys(ed[v.id]).length) delete ed[v.id]; }   // unsaved date edits on the row stay pending
   return atf;
 }
+// [BEHAVIOR] P1: Buyer Paid takes the date CDMS shows the lot fully paid; logged with action Confirm so Log Activity shows the source
+function recordCdmsPaid(scr, rows) {
+  const ed = U(scr.id).edits;
+  rows.filter(r => r.cdms_full).forEach(r => { logChange(scr, 'Confirm', r, [['Buyer Paid', 'date', r._raw.buyer_paid, r.cdms_full]]); r._raw.buyer_paid = r.cdms_full; delete ed[r.id]; });
+}
+// [BEHAVIOR] P1: typing Buyer Paid stays allowed; the save message counts lots CDMS does not show fully paid (switch on only)
+function saveWarnCount(scr) {
+  if (!PROPOSED || !scr.saveWarn) return 0;
+  const map = Object.fromEntries(scr.rows().map(r => [r.id, r]));
+  return Object.entries(U(scr.id).edits).filter(([id, e]) => map[id] && scr.saveWarn.test(map[id], e)).length;
+}
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
     if (!Object.keys(ui.edits).length) { setMsg(scr, 'info', 'There are no changes to save.'); render(); return; }
     const errs = validateEdits(scr);
     if (errs.length) { setMsg(scr, 'error', `Please fix ${errs.length} item(s) before saving:<br>${errs.slice(0, 6).join('<br>')}${errs.length > 6 ? '<br>…' : ''}`); render(); return; }
-    const n = applyEdits(scr); setMsg(scr, null); ui.errors = {}; render();
-    toast(`${n} record(s) saved. ${scr.savedNote || ''}`);
+    const warn = saveWarnCount(scr), n = applyEdits(scr); setMsg(scr, null); ui.errors = {}; render();
+    toast(`${n} record(s) saved. ${scr.savedNote || ''}${warn ? ` ${scr.saveWarn.text(warn)}` : ''}`, warn ? 'warn' : '');
+  },
+  confirmPaid(scr) {
+    const rows = selectedRows(scr, 'cdms_confirm').filter(r => r.cdms_full);
+    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Confirm</b> on at least one lot that CDMS shows as fully paid.'); render(); return; }
+    recordCdmsPaid(scr, rows); setMsg(scr, null); render();
+    toast(`Buyer Paid confirmed from CDMS for ${rows.length} lot(s). They moved to Payment Seller.`);
   },
   emailBaaf(scr) {
     const rows = selectedRows(scr, 'for_baaf'), ui = U(scr.id);
@@ -872,7 +909,7 @@ function onEdit(el) {
   const ui = U(scr.id), id = el.dataset.row, key = el.dataset.key;
   const row = scr.rows().find(r => r.id === id); if (!row) return;
   const val = el.type === 'checkbox' ? el.checked : el.value;
-  const orig = row[key], same = el.type === 'checkbox' ? !!orig === val : String(orig ?? '') === String(val ?? '');
+  const orig = row[key], same = el.type === 'checkbox' ? tickDefault(scr, row, key) === val : String(orig ?? '') === String(val ?? '');   // a pre-ticked box (P4) is the baseline
   if (same) { if (ui.edits[id]) { delete ui.edits[id][key]; if (!Object.keys(ui.edits[id]).length) delete ui.edits[id]; } }
   else (ui.edits[id] ||= {})[key] = val;
   el.classList.toggle('is-dirty', !same); el.classList.remove('is-invalid');
