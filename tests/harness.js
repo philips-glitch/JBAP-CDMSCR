@@ -5,10 +5,16 @@ const ROOT = path.join(__dirname, '..');
 const EXPORTS = ['D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enrichV', 'ACTIONS', 'logChange', 'TODAY',
   'sellerMoney', 'dispatchReady', 'releaseOf', 'docValidate', 'cancelSplit', 'recordCancellationBilling', 'recordBillingTransmittal',
   'recordDispatch', 'releaseBlock', 'recordRelease', 'recordDocTransmittal', 'REPORTS', 'DOC_TYPES', 'longDate', 'shortDate', 'cancelLetterGroups',
-  'addWorkdays', 'fmtDate'];
+  'addWorkdays', 'fmtDate',
+  // proposed improvements and wishes 4–5 (spec 2026-10-15)
+  'isProposed', 'setProposed', 'shown', 'colsOf', 'tagHtml', 'SCREENS', 'selectedRows', 'applyEdits', 'tickDefault', 'tickValue',
+  'cdmsPaid', 'recordCdmsPaid', 'saveWarnCount', 'cdmsCancelsPending', 'recordCancellation', 'recordCommissionBilling', 'recordSaafSent',
+  'dispatchCc', 'queueCounts', 'PROPOSALS', 'LATEST_AUCTION', 'rtsEligible', 'recordReturnClearance'];
 function load() {
   const window = { addEventListener() {} };
   new Function('window', fs.readFileSync(path.join(ROOT, 'data.js'), 'utf8'))(window);
+  const extra = path.join(ROOT, 'data-extra.js');   // [MOCK] sample data for the proposed improvements and wishes 4–5
+  if (fs.existsSync(extra)) new Function('window', fs.readFileSync(extra, 'utf8'))(window);
   const cls = { add() {}, remove() {}, toggle() {}, contains() { return false; } };
   const document = { addEventListener() {}, querySelector() { return null; }, querySelectorAll() { return []; }, body: { classList: cls } };
   let src = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');

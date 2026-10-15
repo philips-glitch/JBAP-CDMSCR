@@ -60,6 +60,22 @@ const SELLER = D ? Object.fromEntries(D.sellers.map(s => [s.code, s])) : {};
 const UI = {};          // per-screen UI state: filters, sort, page, edits, errors, message
 const OPEN = { FAD: false, SMD: false, VWD: false };
 
+// ─── Proposed improvements switch (spec 2026-10-15) ──────────────────
+// [BEHAVIOR] Off = the CR scope exactly; on = LOGIQUE's proposals P1–P6. A link with ?proposed=1 opens with the switch on.
+// Screens, columns and buttons marked `proposed` show only with the switch on; `tag` adds "Proposed P#" (switch on) or "Wish list" (always).
+let PROPOSED = /[?&]proposed=1(&|$)/.test((typeof location !== 'undefined' && location.search) || '');
+const isProposed = () => PROPOSED;
+function setProposed(on) {
+  PROPOSED = !!on;
+  if (typeof history === 'undefined' || !history.replaceState) return;   // Node tests have no history
+  const u = new URL(location.href); if (PROPOSED) u.searchParams.set('proposed', '1'); else u.searchParams.delete('proposed');
+  history.replaceState(null, '', u);
+}
+const shown = x => !x.proposed || PROPOSED;
+const colsOf = scr => scr.cols.filter(shown);
+const tagHtml = x => !x.tag ? '' : x.tag === 'Wish' ? '<span class="ptag wish">Wish list</span>' : PROPOSED ? `<span class="ptag">Proposed ${esc(x.tag)}</span>` : '';
+const tagMini = x => !x.tag ? '' : x.tag === 'Wish' ? '<span class="ptag mini wish">Wish</span>' : PROPOSED ? `<span class="ptag mini">${esc(x.tag)}</span>` : '';
+
 // ─── Derived fields (business rules from the Access guideline) ────────
 const RELEASE_LABEL = { payment: 'Buyer Payment', ack: 'Seller Acknowledgement', doas: 'Required DOAS / Legal Documents signing' };
 const releaseOf = v => SELLER[v.seller]?.release || 'ack';
@@ -432,7 +448,7 @@ function renderSide(route) {
   const dept = route.split('/')[0];
   const groups = ['FAD', 'SMD', 'VWD'].map(d => {
     const open = OPEN[d];
-    const items = SCREENS.filter(s => s.dept === d).map(s => `<a class="mis ${s.id === route ? 'is-active' : ''}" href="#/${s.id}" ${s.id === route ? 'aria-current="page"' : ''}>${esc(s.title)}</a>`).join('');
+    const items = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<a class="mis ${s.id === route ? 'is-active' : ''}" href="#/${s.id}" ${s.id === route ? 'aria-current="page"' : ''}>${esc(s.title)}${tagMini(s)}</a>`).join('');
     return `<button type="button" class="mi" data-group="${d}" aria-expanded="${open}" aria-controls="grp-${d}">${deptSvg(d)}${d}<span class="caret"></span></button>
       <div class="lvs" id="grp-${d}" ${open ? '' : 'hidden'}>${items}</div>`;
   }).join('');
@@ -444,9 +460,10 @@ function renderSide(route) {
 
 function pageHead(scr) {
   const pills = scr.actions.map(a => `<span class="pill ${a === 'Update' ? 'u' : ''}">${a}</span>`).join('');
+  const extra = PROPOSED && scr.ruleP ? ` ${tagHtml({ tag: scr.ruleP[0] })} ${esc(scr.ruleP[1])}` : '';   // [BEHAVIOR] what the switch changes on this screen
   return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›${scr.top ? '' : `<span>${scr.dept}</span>›`}<b>${esc(scr.title)}</b></nav>
-    <div class="hrow"><h1>${esc(scr.title)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>
-    <p class="rule">${IC.info}<span>${esc(scr.rule)}</span></p>`;
+    <div class="hrow"><h1>${esc(scr.title)}${tagHtml(scr)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>
+    <p class="rule">${IC.info}<span>${esc(scr.rule)}${extra}</span></p>`;
 }
 
 function filterCard(scr) {
@@ -495,26 +512,26 @@ function cellHtml(scr, r, c, upd) {
 }
 
 function dataCard(scr, title) {
-  const ui = U(scr.id), upd = scr.actions.includes('Update') && scr.layout !== 'entry', anyEdit = upd && scr.cols.some(c => c.edit);   // VWD lists: Update (row button) but no editable column
+  const ui = U(scr.id), cols = colsOf(scr), upd = scr.actions.includes('Update') && scr.layout !== 'entry', anyEdit = upd && cols.some(c => c.edit);   // VWD lists: Update (row button) but no editable column
   const all = sortRows(scr, applyFilters(scr, scr.rows()));
   const pages = Math.max(1, Math.ceil(all.length / ui.size)); ui.page = Math.min(ui.page, pages);
   const rows = all.slice((ui.page - 1) * ui.size, ui.page * ui.size);
   const dirty = Object.keys(ui.edits).length;
-  const btns = (upd ? scr.buttons || [] : []).map(b => {
+  const btns = (upd ? (scr.buttons || []).filter(shown) : []).map(b => {
     const n = b.act === 'save' ? dirty : effectiveCount(scr, b.count);
-    return `<button type="button" class="btn ${b.kind}" data-act="${b.act}">${IC[b.icon]}${esc(b.label)}${n ? `<span class="n" data-count="${b.act}">${n}</span>` : `<span class="n" data-count="${b.act}" hidden></span>`}</button>`;
+    return `<button type="button" class="btn ${b.kind}" data-act="${b.act}">${IC[b.icon]}${esc(b.label)}${tagHtml(b)}${n ? `<span class="n" data-count="${b.act}">${n}</span>` : `<span class="n" data-count="${b.act}" hidden></span>`}</button>`;
   }).join('');
   const legend = anyEdit ? '<div class="lg"><span><i class="sw l"></i>Locked</span><span><i class="sw e"></i>Editable</span><span><i class="sw d"></i>Unsaved change</span></div>' : '';
-  const th = scr.cols.map(c => {
+  const th = cols.map(c => {
     const ed = c.edit && upd, srt = ui.sort && ui.sort[0] === c.key ? (ui.sort[1] === 'asc' ? 'ascending' : 'descending') : 'none';
-    return `<th class="${ed ? 'ed' : ''}" aria-sort="${srt}" scope="col"><button type="button" class="hb" data-sort="${c.key}">${anyEdit ? (ed ? IC.pen : `<span class="lk">${IC.lock}</span>`) : ''}<span>${esc(c.label)}</span><span class="si" aria-hidden="true"></span></button></th>`;
+    return `<th class="${ed ? 'ed' : ''}" aria-sort="${srt}" scope="col"><button type="button" class="hb" data-sort="${c.key}">${anyEdit ? (ed ? IC.pen : `<span class="lk">${IC.lock}</span>`) : ''}<span>${esc(c.label)}</span>${tagHtml(c)}<span class="si" aria-hidden="true"></span></button></th>`;
   }).join('');
-  const body = rows.length ? rows.map(r => `<tr class="${ui.edits[r.id] ? 'is-dirty' : ''}" data-tr="${esc(r.id)}">${scr.cols.map(c => cellHtml(scr, r, c, upd)).join('')}</tr>`).join('')
-    : `<tr><td colspan="${scr.cols.length}"><div class="empty">${IC.inbox}<b>No records to show</b>${esc(scr.emptyNote?.() || '') || (hasFilter(scr) ? 'No records match the filter. Try Reset.' : 'Nothing is waiting in this list right now.')}</div></td></tr>`;
+  const body = rows.length ? rows.map(r => `<tr class="${ui.edits[r.id] ? 'is-dirty' : ''}" data-tr="${esc(r.id)}">${cols.map(c => cellHtml(scr, r, c, upd)).join('')}</tr>`).join('')
+    : `<tr><td colspan="${cols.length}"><div class="empty">${IC.inbox}<b>No records to show</b>${esc(scr.emptyNote?.() || '') || (hasFilter(scr) ? 'No records match the filter. Try Reset.' : 'Nothing is waiting in this list right now.')}</div></td></tr>`;
   let foot = '';
   if (scr.totals && all.length) {
     const t = scr.totals(all);
-    foot = `<tfoot><tr>${scr.cols.map((c, i) => `<td class="${RIGHT.has(c.type) ? 'r' : CEN.has(c.type) ? 'c' : ''}">${esc(t[c.key] ?? (i === 0 ? 'Total' : ''))}</td>`).join('')}</tr></tfoot>`;
+    foot = `<tfoot><tr>${cols.map((c, i) => `<td class="${RIGHT.has(c.type) ? 'r' : CEN.has(c.type) ? 'c' : ''}">${esc(t[c.key] ?? (i === 0 ? 'Total' : ''))}</td>`).join('')}</tr></tfoot>`;
   }
   const msg = ui.msg ? `<div class="msg ${ui.msg.type}" role="${ui.msg.type === 'error' ? 'alert' : 'status'}">${IC.info}<div>${ui.msg.html}</div></div>` : '';
   const pg = [`<button type="button" class="pb" data-page="${ui.page - 1}" ${ui.page === 1 ? 'disabled' : ''}>Previous</button>`];
@@ -569,7 +586,7 @@ function entryLayout(scr) {
 }
 function homeLayout() {
   const card = d => {
-    const subs = SCREENS.filter(s => s.dept === d).map(s => `<li><a href="#/${s.id}">${esc(s.title)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
+    const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(s.title)}${tagMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
     const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'View-only monitoring (legacy SMD sample data)', VWD: 'Units for dispatch and release; VWD records the vehicle release' }[d];
     return `<section class="hcard"><div class="card-h"><div class="ico">${deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox')}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
@@ -579,7 +596,7 @@ function homeLayout() {
 }
 
 // ─── Router ───────────────────────────────────────────────────────────
-function route() { const h = location.hash.replace(/^#\/?/, ''); return byId[h] ? h : ''; }
+function route() { const h = location.hash.replace(/^#\/?/, ''); return byId[h] && shown(byId[h]) ? h : ''; }   // a proposed screen opens only with the switch on
 function render() {
   const r = route(), scr = byId[r];
   if (scr) OPEN[scr.dept] = true;
@@ -895,6 +912,8 @@ function bind() {
   });
   $('#burger').addEventListener('click', () => document.body.classList.toggle('nav-open'));
   $('#home-logo').addEventListener('click', () => { location.hash = '#/'; });
+  const sw = $('#proposed-switch');
+  if (sw) { sw.checked = PROPOSED; sw.addEventListener('change', () => { setProposed(sw.checked); closeModal(); render(); toast(PROPOSED ? 'Proposed improvements on: changes are tagged "Proposed P1" to "P6".' : 'Proposed improvements off: the prototype follows the CR form.'); }); }
   window.addEventListener('hashchange', () => { closeModal(); render(); window.scrollTo(0, 0); });
 }
 
