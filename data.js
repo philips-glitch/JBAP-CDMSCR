@@ -5,7 +5,7 @@ window.MOCK_DATA = {
  "meta": {
   "demoToday": "2026-10-08",
   "generated": "2026-10-09",
-  "note": "Mock data. FAD lots merged with the MS Access FAD Maintenance screenshots of 10/08/2026 (see README > Seeded test data); FAD and VWD share one live dataset; SMD shows the legacy SMD sample (read-only snapshot).",
+  "note": "Mock data. FAD lots merged with the MS Access FAD Maintenance screenshots of 10/08/2026 (see README > Seeded test data); FAD and VWD share one live dataset; SMD shows the legacy SMD sample (read-only snapshot). Document Monitoring dates of the lots that match on plate and auction come from JBAP's \"2026 Documents Monitoring (updated)\" sheet, received 15 Oct 2026.",
   "company": {
    "name": "JBA Philippines Inc.",
    "bank": "Metrobank, account no. 000-0-000-000-000 (placeholder)",
@@ -888,8 +888,8 @@ window.MOCK_DATA = {
    "rcv_doas": null,
    "buyer_doas": null,
    "seller_doas": null,
-   "orig_docs": null,
-   "to_buyer": null,
+   "orig_docs": "2026-07-30",
+   "to_buyer": "2026-09-16",
    "vcn": "VCN-203122",
    "location": "Pasay City",
    "year": null,
@@ -901,7 +901,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-06-30",
+   "ewb_signed": "2026-07-07",
+   "ewb_place": "HO"
   },
   {
    "id": "V172",
@@ -944,7 +947,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-06-30",
+   "ewb_signed": "2026-08-27",
+   "ewb_place": "STORE - TAYTAY-ORTIGAS EXT."
   },
   {
    "id": "V173",
@@ -1073,7 +1079,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-06-30",
+   "ewb_signed": "2026-08-27",
+   "ewb_place": "STORE - TAYTAY-ORTIGAS EXT."
   },
   {
    "id": "V176",
@@ -1146,8 +1155,8 @@ window.MOCK_DATA = {
    "rcv_doas": null,
    "buyer_doas": null,
    "seller_doas": null,
-   "orig_docs": null,
-   "to_buyer": null,
+   "orig_docs": "2026-09-22",
+   "to_buyer": "2026-09-23",
    "vcn": "VCN-210121",
    "location": "Pasay City",
    "year": null,
@@ -1159,7 +1168,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-08-24",
+   "ewb_signed": "2026-08-28",
+   "ewb_place": "HO"
   },
   {
    "id": "V178",
@@ -1189,8 +1201,8 @@ window.MOCK_DATA = {
    "rcv_doas": null,
    "buyer_doas": null,
    "seller_doas": null,
-   "orig_docs": null,
-   "to_buyer": null,
+   "orig_docs": "2026-09-22",
+   "to_buyer": "2026-09-23",
    "vcn": "VCN-210122",
    "location": "Pasay City",
    "year": null,
@@ -1202,7 +1214,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-08-24",
+   "ewb_signed": "2026-08-28",
+   "ewb_place": "HO"
   },
   {
    "id": "V179",
@@ -1275,8 +1290,8 @@ window.MOCK_DATA = {
    "rcv_doas": null,
    "buyer_doas": null,
    "seller_doas": null,
-   "orig_docs": null,
-   "to_buyer": null,
+   "orig_docs": "2026-09-22",
+   "to_buyer": "2026-10-05",
    "vcn": "VCN-210124",
    "location": "Pasay City",
    "year": null,
@@ -1288,7 +1303,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-08-24",
+   "ewb_signed": "2026-09-04",
+   "ewb_place": "HO"
   },
   {
    "id": "V181",
@@ -1331,7 +1349,9 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-08-24",
+   "ewb_place": "HO"
   },
   {
    "id": "V209",
@@ -1399,8 +1419,8 @@ window.MOCK_DATA = {
    "seller_ack": null,
    "dispatch": null,
    "release": null,
-   "rcv_doas": "2026-10-05",
-   "buyer_doas": "2026-10-07",
+   "rcv_doas": null,
+   "buyer_doas": null,
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
@@ -1442,8 +1462,8 @@ window.MOCK_DATA = {
    "seller_ack": null,
    "dispatch": null,
    "release": null,
-   "rcv_doas": "2026-10-03",
-   "buyer_doas": "2026-10-05",
+   "rcv_doas": null,
+   "buyer_doas": null,
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
@@ -1489,8 +1509,8 @@ window.MOCK_DATA = {
    "rcv_doas": null,
    "buyer_doas": null,
    "seller_doas": null,
-   "orig_docs": null,
-   "to_buyer": null,
+   "orig_docs": "2026-09-22",
+   "to_buyer": "2026-09-23",
    "vcn": "VCN-211121",
    "location": "Pasay City",
    "year": null,
@@ -1502,7 +1522,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-08-24",
+   "ewb_signed": "2026-08-28",
+   "ewb_place": "HO"
   },
   {
    "id": "V183",
@@ -1545,7 +1568,9 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-08-24",
+   "ewb_place": "HO"
   },
   {
    "id": "V184",
@@ -1618,8 +1643,8 @@ window.MOCK_DATA = {
    "rcv_doas": null,
    "buyer_doas": null,
    "seller_doas": null,
-   "orig_docs": null,
-   "to_buyer": null,
+   "orig_docs": "2026-09-22",
+   "to_buyer": "2026-09-23",
    "vcn": "VCN-211124",
    "location": "Pasay City",
    "year": null,
@@ -1631,7 +1656,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-08-24",
+   "ewb_signed": "2026-08-28",
+   "ewb_place": "HO"
   },
   {
    "id": "V155",
@@ -1658,10 +1686,10 @@ window.MOCK_DATA = {
    "release": "2026-08-13",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
-   "orig_docs": null,
+   "rcv_doas": "2026-08-26",
+   "buyer_doas": "2026-08-27",
+   "seller_doas": "2026-08-28",
+   "orig_docs": "2026-10-07",
    "to_buyer": null,
    "vcn": "VCN-212121",
    "location": "Pasay City",
@@ -1717,7 +1745,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-09-04",
+   "ewb_signed": "2026-09-14",
+   "ewb_place": "STORE - TAGAYTAY"
   },
   {
    "id": "V187",
@@ -1760,7 +1791,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-09-04",
+   "ewb_signed": "2026-09-14",
+   "ewb_place": "STORE - TAGAYTAY"
   },
   {
    "id": "V188",
@@ -1803,7 +1837,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-09-04",
+   "ewb_signed": "2026-09-14",
+   "ewb_place": "STORE - TAGAYTAY"
   },
   {
    "id": "V189",
@@ -1889,7 +1926,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-09-04",
+   "ewb_signed": "2026-09-14",
+   "ewb_place": "STORE - TAGAYTAY"
   },
   {
    "id": "V191",
@@ -1932,7 +1972,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-09-04",
+   "ewb_signed": "2026-09-14",
+   "ewb_place": "STORE - TAGAYTAY"
   },
   {
    "id": "V192",
@@ -1975,7 +2018,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-09-04",
+   "ewb_signed": "2026-09-14",
+   "ewb_place": "STORE - TAGAYTAY"
   },
   {
    "id": "V193",
@@ -2087,9 +2133,9 @@ window.MOCK_DATA = {
    "release": "2026-08-27",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-21",
+   "buyer_doas": "2026-09-22",
+   "seller_doas": "2026-09-23",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-214121",
@@ -2298,8 +2344,8 @@ window.MOCK_DATA = {
    "seller_ack": null,
    "dispatch": null,
    "release": null,
-   "rcv_doas": "2026-10-03",
-   "buyer_doas": "2026-10-06",
+   "rcv_doas": null,
+   "buyer_doas": null,
    "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
@@ -2485,7 +2531,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "ONELOT"
   },
   {
    "id": "V205",
@@ -2595,9 +2642,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": true,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-23",
+   "buyer_doas": "2026-09-30",
+   "seller_doas": "2026-10-01",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-216121",
@@ -2637,9 +2684,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": true,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-29",
+   "buyer_doas": "2026-09-30",
+   "seller_doas": "2026-10-01",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-216122",
@@ -2679,9 +2726,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": true,
-   "rcv_doas": null,
+   "rcv_doas": "2026-09-29",
    "buyer_doas": null,
-   "seller_doas": null,
+   "seller_doas": "2026-10-02",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-216123",
@@ -2695,7 +2742,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "SBC - NAGA"
   },
   {
    "id": "V195",
@@ -2764,9 +2812,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
+   "rcv_doas": "2026-10-05",
    "buyer_doas": null,
-   "seller_doas": null,
+   "seller_doas": "2026-10-06",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217012",
@@ -2780,7 +2828,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT."
   },
   {
    "id": "V092",
@@ -2850,9 +2899,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
+   "rcv_doas": "2026-10-05",
    "buyer_doas": null,
-   "seller_doas": null,
+   "seller_doas": "2026-10-06",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217020",
@@ -2866,7 +2915,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "SBC - BACOLOD"
   },
   {
    "id": "V126",
@@ -2893,9 +2943,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
+   "rcv_doas": "2026-10-05",
    "buyer_doas": null,
-   "seller_doas": null,
+   "seller_doas": "2026-10-06",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217023",
@@ -2909,7 +2959,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT."
   },
   {
    "id": "V108",
@@ -2936,9 +2987,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
+   "rcv_doas": "2026-10-05",
    "buyer_doas": null,
-   "seller_doas": null,
+   "seller_doas": "2026-10-06",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217025",
@@ -2952,7 +3003,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "SBC - BACOLOD"
   },
   {
    "id": "V124",
@@ -2979,9 +3031,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
+   "rcv_doas": "2026-10-05",
    "buyer_doas": null,
-   "seller_doas": null,
+   "seller_doas": "2026-10-06",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217027",
@@ -2995,7 +3047,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT."
   },
   {
    "id": "V202",
@@ -3106,9 +3159,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-10-05",
+   "buyer_doas": "2026-10-01",
+   "seller_doas": "2026-10-06",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217058",
@@ -3122,7 +3175,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT."
   },
   {
    "id": "V014",
@@ -3148,9 +3202,9 @@ window.MOCK_DATA = {
    "seller_ack": null,
    "dispatch": null,
    "release": null,
-   "rcv_doas": "2026-10-03",
-   "buyer_doas": "2026-10-05",
-   "seller_doas": "2026-10-08",
+   "rcv_doas": null,
+   "buyer_doas": null,
+   "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
@@ -3318,9 +3372,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
+   "rcv_doas": "2026-10-05",
    "buyer_doas": null,
-   "seller_doas": null,
+   "seller_doas": "2026-10-06",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217073",
@@ -3334,7 +3388,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT."
   },
   {
    "id": "V110",
@@ -3361,9 +3416,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-10-05",
+   "buyer_doas": "2026-10-01",
+   "seller_doas": "2026-10-06",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217076",
@@ -3377,7 +3432,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "SBC - BACOLOD"
   },
   {
    "id": "V127",
@@ -3404,9 +3460,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-10-05",
+   "buyer_doas": "2026-10-01",
+   "seller_doas": "2026-10-06",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217078",
@@ -3420,7 +3476,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT."
   },
   {
    "id": "V015",
@@ -3490,9 +3547,9 @@ window.MOCK_DATA = {
    "release": "2026-09-17",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
+   "rcv_doas": "2026-09-30",
    "buyer_doas": null,
-   "seller_doas": null,
+   "seller_doas": "2026-10-02",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217121",
@@ -3506,7 +3563,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "SBC - GEORGETOWN, CDO"
   },
   {
    "id": "V003",
@@ -3533,9 +3591,9 @@ window.MOCK_DATA = {
    "release": "2026-09-17",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-30",
+   "buyer_doas": "2026-10-01",
+   "seller_doas": "2026-10-05",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217122",
@@ -3576,9 +3634,9 @@ window.MOCK_DATA = {
    "release": "2026-09-17",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
+   "rcv_doas": "2026-09-30",
    "buyer_doas": null,
-   "seller_doas": null,
+   "seller_doas": "2026-10-02",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217123",
@@ -3592,7 +3650,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "doc_remarks": "SBC - GEORGETOWN, CDO"
   },
   {
    "id": "V005",
@@ -3619,9 +3678,9 @@ window.MOCK_DATA = {
    "release": "2026-09-17",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-30",
+   "buyer_doas": "2026-10-01",
+   "seller_doas": "2026-10-05",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217124",
@@ -3662,9 +3721,9 @@ window.MOCK_DATA = {
    "release": "2026-09-17",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-30",
+   "buyer_doas": "2026-10-01",
+   "seller_doas": "2026-10-05",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217125",
@@ -3705,9 +3764,9 @@ window.MOCK_DATA = {
    "release": "2026-09-17",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-30",
+   "buyer_doas": "2026-10-01",
+   "seller_doas": "2026-10-05",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217126",
@@ -3748,9 +3807,9 @@ window.MOCK_DATA = {
    "release": "2026-09-17",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-30",
+   "buyer_doas": "2026-10-01",
+   "seller_doas": "2026-10-05",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217127",
@@ -3791,9 +3850,9 @@ window.MOCK_DATA = {
    "release": "2026-10-05",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-30",
+   "buyer_doas": "2026-10-05",
+   "seller_doas": "2026-10-06",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217128",
@@ -3834,9 +3893,9 @@ window.MOCK_DATA = {
    "release": "2026-10-02",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-30",
+   "buyer_doas": "2026-10-05",
+   "seller_doas": "2026-10-06",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217129",
@@ -3877,9 +3936,9 @@ window.MOCK_DATA = {
    "release": "2026-10-02",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-30",
+   "buyer_doas": "2026-10-06",
+   "seller_doas": "2026-10-07",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217130",
@@ -3920,9 +3979,9 @@ window.MOCK_DATA = {
    "release": "2026-10-02",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-30",
+   "buyer_doas": "2026-10-06",
+   "seller_doas": "2026-10-07",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217131",
@@ -3963,9 +4022,9 @@ window.MOCK_DATA = {
    "release": "2026-10-02",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-30",
+   "buyer_doas": "2026-10-07",
+   "seller_doas": "2026-10-08",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217132",
@@ -4006,9 +4065,9 @@ window.MOCK_DATA = {
    "release": "2026-10-02",
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-30",
+   "buyer_doas": "2026-10-07",
+   "seller_doas": "2026-10-08",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217133",
@@ -4048,9 +4107,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": true,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-29",
+   "buyer_doas": "2026-09-30",
+   "seller_doas": "2026-10-01",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217134",
@@ -4090,9 +4149,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": true,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-29",
+   "buyer_doas": "2026-10-02",
+   "seller_doas": "2026-10-05",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217135",
@@ -4132,9 +4191,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": true,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-29",
+   "buyer_doas": "2026-09-30",
+   "seller_doas": "2026-10-01",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217136",
@@ -4174,9 +4233,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": true,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-29",
+   "buyer_doas": "2026-10-01",
+   "seller_doas": "2026-10-05",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217137",
@@ -4216,9 +4275,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": true,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-29",
+   "buyer_doas": "2026-10-01",
+   "seller_doas": "2026-10-01",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-217138",
@@ -4317,7 +4376,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-10-02",
+   "ewb_signed": "2026-10-02",
+   "ewb_place": "STORE - ILOILO JARA"
   },
   {
    "id": "V199",
@@ -4488,7 +4550,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-10-01",
+   "ewb_signed": "2026-10-06",
+   "ewb_place": "STORE - TAYTAY ORTIGAS EXT."
   },
   {
    "id": "V136",
@@ -4531,7 +4596,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-09-25",
+   "ewb_signed": "2026-09-28",
+   "ewb_place": "HO"
   },
   {
    "id": "V096",
@@ -4660,7 +4728,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-10-05",
+   "ewb_signed": "2026-10-05",
+   "ewb_place": "HO"
   },
   {
    "id": "V121",
@@ -4703,7 +4774,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-10-05",
+   "ewb_signed": "2026-10-07",
+   "ewb_place": "HO"
   },
   {
    "id": "V024",
@@ -4944,9 +5018,9 @@ window.MOCK_DATA = {
    "seller_ack": "2026-09-25",
    "dispatch": "2026-09-27",
    "release": "2026-10-01",
-   "rcv_doas": "2026-10-01",
-   "buyer_doas": "2026-10-02",
-   "seller_doas": "2026-10-06",
+   "rcv_doas": null,
+   "buyer_doas": null,
+   "seller_doas": null,
    "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
@@ -5219,7 +5293,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-09-30",
+   "ewb_signed": "2026-10-02",
+   "ewb_place": "STORE - NAGA"
   },
   {
    "id": "V017",
@@ -5305,7 +5382,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-09-30",
+   "ewb_signed": "2026-10-01",
+   "ewb_place": "STORE - BACOLOD"
   },
   {
    "id": "V139",
@@ -5348,7 +5428,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-10-01",
+   "ewb_signed": "2026-10-02",
+   "ewb_place": "HO"
   },
   {
    "id": "V093",
@@ -5606,7 +5689,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-10-01",
+   "ewb_signed": "2026-10-02",
+   "ewb_place": "HO"
   },
   {
    "id": "V034",
@@ -5761,10 +5847,10 @@ window.MOCK_DATA = {
    "seller_ack": null,
    "dispatch": null,
    "release": null,
-   "rcv_doas": "2026-09-27",
-   "buyer_doas": "2026-09-30",
-   "seller_doas": "2026-10-05",
-   "orig_docs": "2026-10-08",
+   "rcv_doas": null,
+   "buyer_doas": null,
+   "seller_doas": null,
+   "orig_docs": null,
    "to_buyer": null,
    "rebate_paid": null,
    "billed": false,
@@ -5864,7 +5950,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-10-05",
+   "ewb_signed": "2026-10-05",
+   "ewb_place": "HO"
   },
   {
    "id": "V100",
@@ -6423,7 +6512,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-09-30",
+   "ewb_signed": "2026-09-30",
+   "ewb_place": "STORE - TUGUEGARAO"
   },
   {
    "id": "V142",
@@ -6466,7 +6558,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-10-06",
+   "ewb_signed": "2026-10-07",
+   "ewb_place": "HO"
   },
   {
    "id": "V143",
@@ -6509,7 +6604,10 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_callout": "2026-09-28",
+   "ewb_signed": "2026-09-28",
+   "ewb_place": "HO"
   },
   {
    "id": "V146",
@@ -6536,9 +6634,9 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": true,
-   "rcv_doas": null,
-   "buyer_doas": null,
-   "seller_doas": null,
+   "rcv_doas": "2026-09-30",
+   "buyer_doas": "2026-09-30",
+   "seller_doas": "2026-10-01",
    "orig_docs": null,
    "to_buyer": null,
    "vcn": "VCN-219124",
@@ -6837,7 +6935,7 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
+   "rcv_doas": "2026-10-06",
    "buyer_doas": null,
    "seller_doas": null,
    "orig_docs": null,
@@ -7240,7 +7338,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_place": "HO"
   },
   {
    "id": "V105",
@@ -7283,7 +7382,8 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "ewb_place": "HO"
   },
   {
    "id": "V052",
@@ -7439,7 +7539,7 @@ window.MOCK_DATA = {
    "release": null,
    "rebate_paid": null,
    "billed": false,
-   "rcv_doas": null,
+   "rcv_doas": "2026-10-01",
    "buyer_doas": null,
    "seller_doas": null,
    "orig_docs": null,

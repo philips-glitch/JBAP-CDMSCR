@@ -25,3 +25,11 @@ test('new fields and company settings', () => {
   assert.deepStrictEqual(D.meta.company.next, { vrf: 4583, atf: 8864 });
   assert.strictEqual(D.meta.company.emails.finance, 'finance@jbap.com.ph');
 });
+test('JBAP Document Monitoring merge: EWB columns on EWB lots only, no DOAS dates for sellers without a DOAS, nothing after the demo day', () => {
+  const S = Object.fromEntries(D.sellers.map(x => [x.code, x])), dates = ['ewb_callout', 'ewb_signed', 'rcv_doas', 'buyer_doas', 'seller_doas', 'orig_docs', 'to_buyer'];
+  assert.ok(D.vehicles.filter(v => v.ewb_signed).length > 0, 'merged EWB signing dates exist');
+  assert.ok(D.vehicles.every(v => !(v.ewb_callout || v.ewb_signed || v.ewb_place) || v.seller === 'EWB'));
+  assert.ok(D.vehicles.every(v => S[v.seller]?.release !== 'payment' || !(v.rcv_doas || v.buyer_doas || v.seller_doas)));
+  assert.ok(D.vehicles.every(v => dates.every(k => !v[k] || v[k] <= D.meta.demoToday)));
+  assert.match(D.meta.note, /2026 Documents Monitoring/);
+});
