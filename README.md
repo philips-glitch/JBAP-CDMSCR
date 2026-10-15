@@ -82,7 +82,7 @@ With the switch **off**, every screen works as the CR form describes. With it **
 |------|--------------------------|
 | FAD | View, filter, sort; update on the screens marked *Update* (CR form) |
 | SMD | View, filter, sort. Shows the **legacy SMD sample data** (snapshot), so FAD actions do not change those lists. Live data on three screens: **Return to Seller** (update: clearance form, wish 4), **Inventory** (view, wish 5) and, with the switch on, **Seller Awarding Acknowledgement** (update: SAAF, P5) |
-| VWD | View, filter, sort; **Release vehicle** on Unreleased Unit and Unreleased Unit (Overdue) (JBAP Q9). Blocked when a DOAS seller's lot has no signed DOAS (*JBAP Receipt of Signed DOAS*; EWB: *Date DOAS Signed (EWB)*) or a storage penalty is unpaid. **For Return to Seller**: Release vehicle with type *Return to Seller* (wish 4; never blocked). **Inventory** (wish 5). Uses the same live data as FAD |
+| VWD | View, filter, sort; **Release vehicle** on Unreleased Unit and Unreleased Unit (Overdue) (JBAP Q9). Blocked when a DOAS seller's lot has no signed DOAS (*JBAP Receipt of Signed DOAS* or *Seller Receipt of Signed DOAS*; EWB: *Date DOAS Signed (EWB)*) or a storage penalty is unpaid. **For Return to Seller**: Release vehicle with type *Return to Seller* (wish 4; never blocked). **Inventory** (wish 5). Uses the same live data as FAD |
 | Log Activity | View, filter, sort only. Entries cannot be edited or deleted. FAD changes, VWD releases and returns, and SMD Return to Seller clearances (plus the SAAF with the switch on) are logged |
 
 ## Seeded test data (`data.js` > `window.MOCK_DATA`)
@@ -137,7 +137,7 @@ Qn = question n in JBAP's Open Questions document.
 | For Dispatch | Seller condition met: Buyer Payment and DOAS sellers after Buyer Paid, others after Seller Acknowledgement | Dispatch Condition per seller; DOAS date for release: Q28 |
 | Storage penalty | PHP 500 per calendar day after the dispatch deadline, only at Pasay City / JBAP | Confirmed by Access data, Q15; locations Q31 |
 | Cancellation penalty | PHP 10,000 per lot; 5,000 seller / 5,000 JBAP; EWB all JBAP; waived 0 | Q4 |
-| Vehicle release (VWD) | Blocked for DOAS sellers until *JBAP Receipt of Signed DOAS* is entered (EWB: *Date DOAS Signed (EWB)*), and while a storage penalty is unpaid. VRF No. and ATF No. are running numbers (seed values in `data.js` > `meta.company.next`). Returns to the seller are never blocked. | **Assumption** (dispatch after payment, release needs the signed DOAS); JBAP Q9, Q28 |
+| Vehicle release (VWD) | Blocked for DOAS sellers until *JBAP Receipt of Signed DOAS* or *Seller Receipt of Signed DOAS* is entered (EWB: *Date DOAS Signed (EWB)*), and while a storage penalty is unpaid. VRF No. and ATF No. are running numbers (seed values in `data.js` > `meta.company.next`). Returns to the seller are never blocked. | **Assumption** (dispatch after payment, release needs the signed DOAS); JBAP Q9, Q28 |
 | Liability to Seller amount | Result price + transfer fees + security bond | Matches Access *SumOfTOTAL*; the sample bond is not applied to Access lots |
 | Liability lots on Payment Seller | The 15 Access Liability lots (Nov 2025 to Aug 2026) also show on Payment Seller | Access does not list them on Payment Seller: **to confirm** which filter Access uses |
 | Billing # unique | Not enforced for existing rows | Access lists Billing #428 three times: **data issue to check** |
