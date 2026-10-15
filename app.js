@@ -25,7 +25,7 @@ const fmtDate = iso => { if (!iso) return ''; const [y, m, d] = iso.split('-'); 
 const toDate = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
 const toIso = dt => dt.toISOString().slice(0, 10);
 const addDays = (iso, n) => { const d = toDate(iso); d.setUTCDate(d.getUTCDate() + n); return toIso(d); };
-// [BEHAVIOR] Working days skip Saturday and Sunday only. Holiday list is an open question (Q44).
+// [BEHAVIOR] Working days skip Saturday and Sunday only. Holiday list is an open question (Q14).
 function addWorkdays(iso, n) { let d = toDate(iso), left = n; while (left > 0) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6) left--; } return toIso(d); }
 const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / 86400000);
 
@@ -63,7 +63,7 @@ const UI = {};          // per-screen UI state: filters, sort, page, edits, erro
 const OPEN = { FAD: false, SMD: false, VWD: false };
 
 // ─── Proposed improvements switch (spec 2026-10-15) ──────────────────
-// [BEHAVIOR] Off = the CR scope exactly; on = LOGIQUE's proposals P1–P6. A link with ?proposed=1 opens with the switch on.
+// [BEHAVIOR] Off = the CR scope exactly; on = LOGIQUE's proposals P2–P6 (P1 withdrawn after JBAP's feedback of 15 Oct 2026). A link with ?proposed=1 opens with the switch on.
 // Screens, columns and buttons marked `proposed` show only with the switch on; `tag` adds "Proposed P#" (switch on) or "Wish list" (always).
 let PROPOSED = /[?&]proposed=1(&|$)/.test((typeof location !== 'undefined' && location.search) || '');
 const isProposed = () => PROPOSED;
@@ -93,28 +93,17 @@ function sellerMoney(v) {
   const vat = com * VAT_RATE, net = s.net !== false, wtax = net ? com * WTAX_RATE : 0, toJbap = net ? com + vat - wtax : 0;
   return { com: r2(com), cvat: r2(r2(com + vat) - r2(com)), ctotal: r2(com + vat), wtax: r2(wtax), to_jbap: r2(toJbap), payable: r2(price + (v.transfer_fee || 0) - toJbap) };
 }
-// [MOCK] P1: payments CDMS recorded per lot (data-extra.js > cdmsPayments). fullDate = the day the running total first reached the amount due.
-function cdmsPaid(id, due) {
-  const pays = [...((D.cdmsPayments || {})[id] || [])].sort((a, b) => a.date.localeCompare(b.date));
-  let paid = 0, fullDate = null;
-  pays.forEach(p => { paid = r2(paid + p.amount); if (!fullDate && due !== null && due !== undefined && paid >= due) fullDate = p.date; });
-  return { paid, due, fullDate };
-}
-// [BEHAVIOR] P1: same date rules as typed Buyer Paid (not in the future, not before the Awarding Date)
-const cdmsConfirmable = r => !!r.cdms_full && r.cdms_full <= TODAY && (!r.awarding || r.cdms_full >= r.awarding);
 function enrichV(v) {
   const [as, ae] = D.auctions[String(v.auction)] || [null, null];
   const buyer_deadline = v.awarding ? addWorkdays(v.awarding, 3) : null;     // 3 working days after awarding
   const pay_deadline = v.buyer_paid ? addWorkdays(v.buyer_paid, 3) : null;   // 3 working days after buyer paid
   const dispatch_deadline = v.dispatch ? addWorkdays(v.dispatch, 3) : null;  // 3 working days after dispatch
   const overdue = v.dispatch && !v.release && dispatch_deadline < TODAY;
-  const total = v.price === null ? null : v.price + (v.transfer_fee || 0), cdms = cdmsPaid(v.id, total);
+  const total = v.price === null ? null : v.price + (v.transfer_fee || 0);
   return Object.assign({}, v, {
     _raw: v, auction_start: as, auction_end: ae, adate: as ? `${fmtDate(as)} - ${fmtDate(ae)}` : '',
     seller_full: SELLER[v.seller]?.name || v.seller, total,
     release_cond: RELEASE_LABEL[releaseOf(v)],
-    cdms_paid: cdms.paid, cdms_full: cdms.fullDate,
-    cdms_status: cdms.fullDate ? `Fully paid ${fmtDate(cdms.fullDate)}` : cdms.paid ? `Partly paid ${money(cdms.paid)} of ${money(total)}` : 'No payment',
     // Wish 5: a release with type Return to Seller is the return date; any other release is the release to the buyer
     days_in_yard: v.entry_date ? daysBetween(v.entry_date, v.release || TODAY) : null,
     released_buyer: v.release && v.release_type !== 'Return to Seller' ? v.release : null, returned_seller: v.release_type === 'Return to Seller' ? v.release : null,
@@ -247,17 +236,12 @@ const SCREENS = [
     rows: () => sold().filter(v => v.awarding && !v.buyer_paid), sort: ['buyer_deadline', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Buyer ID', 'cid', 'code'), C('Seller', 'seller', 'code'),
       C('Make/Model', 'model', 'text', { w: 200 }), C('Plate Number', 'plate', 'code'), C('Total (Awarded Price + Transfer Fees)', 'total', 'money'),
-      C('Paid in CDMS', 'cdms_status', 'text', { w: 230, proposed: true, tag: 'P1', warn: r => !r.cdms_full }),
-      C('Confirm', 'cdms_confirm', 'check', { edit: 'check', proposed: true, tag: 'P1', disabledWhen: r => !cdmsConfirmable(r) }),
       C('Buyer Paid', 'buyer_paid', 'date', { edit: 'date' }), C('Buyer Deadline', 'buyer_deadline', 'date', { late: true })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', keys: ['customer', 'cid'], label: 'Customer Name / Buyer ID', w: 'w2' }, { key: 'plate', label: 'Plate Number' }],
     totals: rows => ({ total: money(sumBy(rows, 'total')) }),
     validate: (r, e) => ({ buyer_paid: notFuture(e.buyer_paid) || notBefore(e.buyer_paid, r.awarding, 'the Awarding Date') }),
-    buttons: [{ label: 'Confirm Buyer Paid', kind: 'ol', icon: 'check', act: 'confirmPaid', count: 'cdms_confirm', proposed: true, tag: 'P1' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
-    savedNote: 'Paid vehicles moved to Payment Seller.',
-    queue: true, ready: { key: 'cdms_confirm', when: cdmsConfirmable },
-    saveWarn: { test: (r, e) => !!e.buyer_paid && !r.cdms_full, text: n => `${n} lot(s) saved without full payment in CDMS.` },
-    ruleP: ['P1', 'Paid in CDMS shows the payments CDMS recorded per lot. Fully paid lots are pre-ticked under Confirm; Confirm Buyer Paid sets Buyer Paid to the date CDMS shows the lot fully paid. Typing Buyer Paid still works, with a warning when CDMS does not show the lot fully paid.'] },
+    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
+    savedNote: 'Paid vehicles moved to Payment Seller.' },
   { dept: 'FAD', slug: 'payment-seller', title: 'Payment Seller', actions: VFSU, rule: 'Vehicles with status SOLD, a Buyer Paid date, and a blank Payment to Seller date. Deadline = 3 working days after Buyer Paid. To JBAP = commission + VAT − 15% withholding tax (NET sellers); Payable to Seller = total − To JBAP.',
     rows: () => sold().filter(v => v.buyer_paid && !v.pay_seller), sort: ['pay_deadline', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction Date', 'adate', 'code'), C('Plate Number', 'plate', 'code'),
@@ -269,7 +253,7 @@ const SCREENS = [
     buttons: [{ label: 'Print payment to seller', kind: 'ol', icon: 'print', act: 'printSeller', count: 'print_seller' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Paid sellers moved to Seller Acknowledgement and Commission Billing.',
     queue: true, ready: { key: 'print_seller', when: () => true },
-    ruleP: ['P4', 'Every lot arrives pre-ticked for printing; untick a lot to hold it back. Payment Voucher No. (P3) is typed for now and will come from NOAH once the connection is confirmed.'] },
+    ruleP: ['P4', 'Every lot arrives pre-ticked for printing; untick a lot to hold it back. Payment Voucher No. (P3) is typed for now; it will come through JBAP\'s existing NOAH integration once it is re-routed from Access to CDMS.'] },
   { dept: 'FAD', slug: 'seller-acknowledgement', title: 'Seller Acknowledgement', actions: VFSU,
     rule: 'Vehicles with status SOLD, Buyer Paid and Payment to Seller filled in, and a blank Seller Acknowledgement date.',
     rows: () => sold().filter(v => v.pay_seller && !v.seller_ack), sort: ['pay_deadline', 'asc'],
@@ -336,7 +320,7 @@ const SCREENS = [
     validate: (r, e) => { const p = 'pay' in e ? e.pay : r.pay, cr = 'cr' in e ? e.cr : r.cr;
       return { pay: notFuture(p) || notBefore(p, r.bdate, 'the Billing Date') || (!p && cr ? 'is required with a Collection Receipt' : null), cr: p && !cr ? 'is required with a Payment Date' : null }; },
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid billings removed from the list.',
-    ruleP: ['P3', 'Collection Receipt is typed for now; it will be read from NOAH once the connection is confirmed.'] },
+    ruleP: ['P3', 'Collection Receipt is typed for now; it will come through JBAP\'s existing NOAH integration once it is re-routed from Access to CDMS.'] },
   { dept: 'FAD', slug: 'commission-billing', title: 'Commission Billing', actions: VSU,
     rule: 'Result price records with a Remittance Date and no commission billing yet. Tick Print?, then Print commission billing to record the NOAH billing number and date.',
     rows: () => sold().filter(v => v.pay_seller && !v.billed), sort: ['customer', 'asc'],
@@ -345,7 +329,7 @@ const SCREENS = [
     totals: rows => ({ plate: `${rows.length} units`, price: money(sumBy(rows, 'price')), com: money(sumBy(rows, 'com')), cvat: money(sumBy(rows, 'cvat')), ctotal: money(sumBy(rows, 'ctotal')) }),
     buttons: [{ label: 'Print commission billing', kind: 'ol', icon: 'print', act: 'printComm', count: 'print_comm' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     queue: true, ready: { key: 'print_comm', when: () => true },
-    ruleP: ['P4', 'Every lot arrives pre-ticked. Printing records one billing per seller in one go, each with its own NOAH billing number (P3: typed for now).'] },
+    ruleP: ['P4', 'Every lot arrives pre-ticked. Printing records one billing per seller in one go, each with its own NOAH billing number (P3: typed until JBAP\'s NOAH integration is re-routed to CDMS).'] },
   { dept: 'FAD', slug: 'cancellation-monitoring', title: 'Cancellation Monitoring', actions: VS, rule: 'Information on cancelled vehicles.',
     rows: CX, cols: CXMON_COLS, sort: ['dcancel', 'desc'] },
   { dept: 'FAD', slug: 'cancellation-entry', title: 'Cancellation Entry', actions: VSU, layout: 'entry', queue: () => cdmsCancelsPending().length,
@@ -471,9 +455,8 @@ const SCREENS = [
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
-    // [BEHAVIOR] P1: the Confirm action is offered only with the switch on, or when the log already holds a Confirm entry
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
-      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', ...(PROPOSED || S.log.some(l => l.action === 'Confirm') ? ['Confirm'] : [])] },
+      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel'] },
       { key: 'record', label: 'Record / Plate' }],
     emptyNote: () => { const m = U(LOG_ID).applied.module; return m === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller or, with the proposed improvements on, sends a SAAF.' : m === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : null; } },
 ];
@@ -581,9 +564,8 @@ function queueCounts(scr) {
   const ready = typeof scr.queue === 'function' ? scr.queue() : scr.ready ? rows.filter(r => tickDefault(scr, r, scr.ready.key)).length : rows.length;
   return { ready, late: rows.filter(r => cols.some(c => c.late && r[c.key] && r[c.key] < TODAY)).length };
 }
-const PROPOSALS = [['P1', 'Buyer Paid proposed from CDMS payments; FAD confirms in a batch', 'FAD/unpaid'],
-  ['P2', 'Cancellations made in CDMS wait for FAD to confirm', 'FAD/cancellation-entry'],
-  ['P3', 'NOAH numbers stay typed, marked to come from NOAH; optional Payment Voucher No.', 'FAD/payment-seller'],
+const PROPOSALS = [['P2', 'Cancellations made in CDMS wait for FAD to confirm', 'FAD/cancellation-entry'],
+  ['P3', 'NOAH numbers stay typed for now; JBAP\'s existing NOAH integration will be re-routed from Access to CDMS. Optional Payment Voucher No.', 'FAD/payment-seller'],
   ['P4', 'Ready lots arrive pre-ticked on 7 lists; Commission Billing bills several sellers at once', 'FAD/commission-billing'],
   ['P5', 'SMD sends the SAAF and records the seller approval; approved lots are ready for FAD', 'SMD/saaf'],
   ['P6', 'Counts on the menu and "Waiting for you" on this page', '']];
@@ -607,11 +589,11 @@ function cellHtml(scr, r, c, upd) {
   const v = r[c.key];
   if (c.type === 'rocheck' || c.type === 'check') return `<td class="c"><span class="ro-chk ${v ? 'on' : ''}" role="img" aria-label="${v ? 'Yes' : 'No'}">${v ? IC.check : ''}</span></td>`;
   if (c.type === 'status') { const k = { Sold: 'sold', 'Not Sold': 'ns', Cancelled: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
-  if (c.type === 'action') { const k = { Update: 'up', Create: 'sold', Cancel: 'cx', Confirm: 'up' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
+  if (c.type === 'action') { const k = { Update: 'up', Create: 'sold', Cancel: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
   if (c.type === 'rowbtn') return `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}" aria-label="${esc(c.btn)} ${esc(r.plate || '')}">${esc(c.btn)}</button></td>`;
   if (c.type === 'logval' && (v ?? '') === '') return '<td><span class="blank">(blank)</span></td>';
   let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : c.type === 'datetime' ? `${fmtDate(v.slice(0, 10))} ${v.slice(11)}` : (v ?? '');
-  const late = (c.late && v && v < TODAY) || c.warn?.(r) ? ' late' : '';   // warn: red text for a row that needs attention (P1: not fully paid)
+  const late = (c.late && v && v < TODAY) || c.warn?.(r) ? ' late' : '';   // warn: red text for a row that needs attention
   if (c.w) return `<td class="${cls}${late}"><div class="tx" style="max-width:${c.w}px" title="${esc(t)}">${esc(t)}</div></td>`;
   return `<td class="${cls}${late}">${esc(t)}</td>`;
 }
@@ -827,17 +809,6 @@ function recordDocTransmittal(scr, v, docs, others, remarks = '') {
   clearTick(scr, v.id, 'print_doc_trans');   // unsaved date edits on the row stay pending
   return atf;
 }
-// [BEHAVIOR] P1: Buyer Paid takes the date CDMS shows the lot fully paid; logged with action Confirm so Log Activity shows the source
-function recordCdmsPaid(scr, rows) {
-  const ed = U(scr.id).edits;
-  rows.filter(cdmsConfirmable).forEach(r => { logChange(scr, 'Confirm', r, [['Buyer Paid', 'date', r._raw.buyer_paid, r.cdms_full]]); r._raw.buyer_paid = r.cdms_full; delete ed[r.id]; });
-}
-// [BEHAVIOR] P1: typing Buyer Paid stays allowed; the save message counts lots CDMS does not show fully paid (switch on only)
-function saveWarnCount(scr) {
-  if (!PROPOSED || !scr.saveWarn) return 0;
-  const map = Object.fromEntries(scr.rows().map(r => [r.id, r]));
-  return Object.entries(U(scr.id).edits).filter(([id, e]) => map[id] && scr.saveWarn.test(map[id], e)).length;
-}
 // [BEHAVIOR] Records a cancellation: Cancellation Entry, and P2 confirmations of cancellations made in CDMS
 function recordCancellation(scr, v, f) {
   if (v._raw.status !== 'Sold') return false;   // [BEHAVIOR] a lot is cancelled once (Cancellation Entry and P2 share this guard)
@@ -879,21 +850,8 @@ const ACTIONS = {
     if (!dirtyCount(scr)) { setMsg(scr, 'info', 'There are no changes to save.'); render(); return; }
     const errs = validateEdits(scr);
     if (errs.length) { setMsg(scr, 'error', `Please fix ${errs.length} item(s) before saving:<br>${errs.slice(0, 6).join('<br>')}${errs.length > 6 ? '<br>…' : ''}`); render(); return; }
-    const warn = saveWarnCount(scr), n = applyEdits(scr); setMsg(scr, null); ui.errors = {}; render();
-    toast(`${n} record(s) saved. ${scr.savedNote || ''}${warn ? ` ${scr.saveWarn.text(warn)}` : ''}`, warn ? 'warn' : '');
-  },
-  confirmPaid(scr) {
-    const rows = selectedRows(scr, 'cdms_confirm').filter(cdmsConfirmable);
-    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Confirm</b> on at least one lot that CDMS shows as fully paid.'); render(); return; }
-    setMsg(scr, null); render();
-    // [BEHAVIOR] P1: FAD previews the lots before anything is recorded
-    const th = h => `<th style="padding:6px 8px">${h}</th>`, tr = r => `<tr><td>${esc(r.plate)}</td><td>${esc(r.customer)}</td><td class="r">${esc(money(r.total))}</td><td>${esc(fmtDate(r.cdms_full))}</td></tr>`;
-    const body = `<p>Buyer Paid will be set to the date CDMS shows each lot fully paid.</p><table><thead><tr>${th('Plate')}${th('Customer')}${th('Total')}${th('Paid in CDMS')}</tr></thead><tbody>${rows.map(tr).join('')}</tbody></table>`;
-    openModal({ title: `Confirm Buyer Paid: ${rows.length} lot(s)`, icon: 'check', wide: true, body,
-      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Confirm ${rows.length} lot(s)`, kind: 'pr', icon: 'check', onClick: () => {
-        recordCdmsPaid(scr, rows); closeModal(); render();
-        toast(`Buyer Paid confirmed from CDMS for ${rows.length} lot(s). They moved to Payment Seller.`);
-      } }] });
+    const n = applyEdits(scr); setMsg(scr, null); ui.errors = {}; render();
+    toast(`${n} record(s) saved. ${scr.savedNote || ''}`);
   },
   confirmCdmsCancel(scr, el) {
     const item = cdmsCancelsPending().find(x => x.v.id === el.dataset.rid), ui = U(scr.id); if (!item) return;
@@ -972,7 +930,7 @@ const ACTIONS = {
     if (many && !PROPOSED) { setMsg(scr, 'error', `Selected vehicles belong to ${sellers.length} sellers (${sellers.join(', ')}). Print one seller at a time: each NOAH billing is per seller (to confirm).`); render(); return; }
     setMsg(scr, null); render();
     const nos = sellers.map((code, i) => `<div class="fld"><label for="cb-no-${i}">Billing No. (from NOAH)${many ? ` · ${esc(code)}` : ''}</label><input class="ctl" id="cb-no-${i}" placeholder="e.g. 511" required><span class="err" id="cb-no-${i}-err"></span></div>`).join('');
-    const p3 = PROPOSED ? `<p class="note no-print">${tagHtml({ tag: 'P3' })} Typed for now; read from NOAH once the connection is confirmed.</p>` : '';
+    const p3 = PROPOSED ? `<p class="note no-print">${tagHtml({ tag: 'P3' })} Typed for now; comes through JBAP's NOAH integration once it is re-routed to CDMS.</p>` : '';
     const body = `<div class="fgrid two no-print" style="padding:0 0 12px">${nos}<div class="fld"><label for="cb-date">Billing Date</label><input class="ctl" type="date" id="cb-date" value="${TODAY}" required><span class="err" id="cb-date-err"></span></div></div>${p3}
       ${sellers.map(code => REPORTS.billingComputation(code, '(entered above)', TODAY, of(code))).join('')}`;
     openModal({ title: many ? `Print commission billing: ${sellers.length} sellers` : 'Print commission billing', icon: 'print', wide: true, body, note: 'Recording adds the billing to Billing Monitoring and Unpaid Billing.',
@@ -1145,7 +1103,7 @@ function bind() {
   $('#burger').addEventListener('click', () => document.body.classList.toggle('nav-open'));
   $('#home-logo').addEventListener('click', () => { location.hash = '#/'; });
   const sw = $('#proposed-switch');
-  if (sw) { sw.checked = PROPOSED; sw.addEventListener('change', () => { setProposed(sw.checked); if (!PROPOSED) dropHolds(); closeModal(); render(); toast(PROPOSED ? 'Proposed improvements on: changes are tagged "Proposed P1" to "P6".' : 'Proposed improvements off: the prototype follows the CR form.'); }); }
+  if (sw) { sw.checked = PROPOSED; sw.addEventListener('change', () => { setProposed(sw.checked); if (!PROPOSED) dropHolds(); closeModal(); render(); toast(PROPOSED ? 'Proposed improvements on: changes are tagged "Proposed P2" to "P6".' : 'Proposed improvements off: the prototype follows the CR form.'); }); }
   window.addEventListener('hashchange', () => { closeModal(); render(); window.scrollTo(0, 0); });
 }
 

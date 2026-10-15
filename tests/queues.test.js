@@ -94,3 +94,17 @@ test('F3: held-back ticks do not survive turning the switch off', () => {
   assert.strictEqual(P.dirtyCount(scr), 1, 'only the real edit is left');
   P.U(scr.id).edits = {}; assert.strictEqual(P.dirtyCount(scr), 0);
 });
+test('P4: an untick holds a lot back through Save; Save counts and writes only the other edits', () => {
+  const P = load(), scr = P.byId['FAD/payment-seller']; P.setProposed(true);
+  const [a, b] = scr.rows(), ed = P.U(scr.id).edits, before = P.S.log.length;
+  ed[a.id] = { print_seller: false }; ed[b.id] = { pay_seller: P.TODAY };
+  assert.strictEqual(P.dirtyCount(scr), 1);
+  assert.strictEqual(P.applyEdits(scr), 1);
+  assert.deepStrictEqual(ed[a.id], { print_seller: false }, 'the hold stays');
+  assert.ok(!P.selectedRows(scr, 'print_seller').some(r => r.id === a.id), 'still held back');
+  assert.deepStrictEqual(P.S.log.slice(before).map(e => e.field), ['Payment to Seller Date'], 'only the other edit is logged');
+});
+test('P4: with the switch off, Save counts every edit as before', () => {
+  const P = load(), scr = P.byId['FAD/payment-seller'], a = scr.rows()[0]; P.U(scr.id).edits[a.id] = { print_seller: false };
+  assert.strictEqual(P.dirtyCount(scr), 1);
+});
