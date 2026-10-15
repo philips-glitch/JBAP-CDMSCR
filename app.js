@@ -583,14 +583,14 @@ function queryCard(scr) {
     <p style="font-size:12.5px;color:var(--faint);margin:0 0 9px;max-width:620px">Buyer payment date has no filter. A unit is listed when Payment to Seller is blank, or falls after the date entered.</p>
     <div class="btns"><button type="submit" class="btn pr">${IC.play}Generate</button></div></form></section>`;
 }
-// P2 (switch on): lots cancelled in CDMS, each with the waiver decision and a Confirm button
+// [BEHAVIOR] P2 (switch on): lots cancelled in CDMS, each with the waiver decision and a Confirm button; what FAD types stays in ccDraft
 function cdmsCancelPanel(scr) {
-  const list = cdmsCancelsPending(), err = U(scr.id).ccErr;
+  const list = cdmsCancelsPending(), draft = U(scr.id).ccDraft || {};
   const rows = list.map(({ c, v }, i) => `<tr><td class="c">${esc(v.plate)}</td><td class="c">${esc(v.auction)} / ${esc(v.lot)}</td><td>${esc(v.customer)}</td><td class="c">${fmtDate(c.date)}</td><td>${esc(c.reason)}</td>
-    <td class="c"><input type="checkbox" class="chk" id="cc-w-${i}" aria-label="Waive fee, ${esc(v.plate)}"></td><td><input class="cell-in" id="cc-j-${i}" aria-label="Justification, ${esc(v.plate)}"></td>
+    <td class="c"><input type="checkbox" class="chk" id="cc-w-${i}" aria-label="Waive fee, ${esc(v.plate)}"${draft[v.id]?.waived ? ' checked' : ''}></td><td><input class="cell-in" id="cc-j-${i}" aria-label="Justification, ${esc(v.plate)}" value="${esc(draft[v.id]?.just || '')}"></td>
     <td class="c"><button type="button" class="btn ol" data-act="confirmCdmsCancel" data-rid="${esc(v.id)}" data-i="${i}" aria-label="Confirm cancellation ${esc(v.plate)}">Confirm</button></td></tr>`).join('');
   return `<section class="card" aria-label="Cancelled in CDMS, to confirm"><div class="card-h"><div class="ico">${IC.ban}</div>Cancelled in CDMS, to confirm${tagHtml({ tag: 'P2' })}<span class="bdg">${list.length}</span></div>
-    ${err ? `<div class="msg error" role="alert">${IC.info}<div>${esc(err)}</div></div>` : ''}
+    <div class="msg error" id="cc-err" role="alert" hidden>${IC.info}<div id="cc-err-t"></div></div>
     <div class="tw"><table><thead><tr><th scope="col">Plate</th><th scope="col">Auction / Lot</th><th scope="col">Customer Name</th><th scope="col">Cancelled in CDMS</th><th scope="col">CDMS Reason</th><th scope="col">Waive fee?</th><th scope="col">Justification</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
     <tbody>${rows || `<tr><td colspan="8"><div class="empty">${IC.inbox}<b>Nothing to confirm</b>Every CDMS cancellation is recorded.</div></td></tr>`}</tbody></table></div></section>`;
 }
@@ -750,11 +750,13 @@ function saveWarnCount(scr) {
 }
 // [BEHAVIOR] Records a cancellation: Cancellation Entry, and P2 confirmations of cancellations made in CDMS
 function recordCancellation(scr, v, f) {
+  if (v._raw.status !== 'Sold') return false;   // [BEHAVIOR] a lot is cancelled once (Cancellation Entry and P2 share this guard)
   logChange(scr, 'Cancel', v, [['Status', 'text', v._raw.status, 'Cancelled'], ['Date Cancelled', 'date', null, f.date],
     ['Cancellation Fee Waived', null, null, f.waived], ['Justification of Waiver', 'text', null, f.just]]);
   v._raw.status = 'Cancelled';
   S.cancels.unshift({ id: `C-${v.auction}-${v.lot}-new`, auction: v.auction, lot: v.lot, plate: v.plate, customer: v.customer, cid: v.cid, dcancel: f.date,
     waived: f.waived, just: f.just, seller: v.seller, remitted: null, bill_date: null, paid_date: null, amount: null, for_print: false });
+  return true;
 }
 // [MOCK] P2: lots cancelled in CDMS (data-extra.js > cdmsCancels) that FAD has not recorded yet (the vehicle is still Sold)
 const cdmsCancelsPending = () => (D.cdmsCancels || []).map(c => ({ c, v: V().find(x => x.id === c.vid) })).filter(x => x.v && x.v.status === 'Sold');
@@ -782,10 +784,17 @@ const ACTIONS = {
   },
   confirmCdmsCancel(scr, el) {
     const item = cdmsCancelsPending().find(x => x.v.id === el.dataset.rid), ui = U(scr.id); if (!item) return;
-    const i = el.dataset.i, waived = $(`#cc-w-${i}`).checked, just = $(`#cc-j-${i}`).value.trim();
-    if (waived && !just) { ui.ccErr = `Enter the justification to waive the fee for ${item.v.plate}.`; render(); return; }
-    recordCancellation(scr, item.v, { date: item.c.date, waived, just: just || item.c.reason });
-    ui.ccErr = null; render(); toast(`Cancellation of ${esc(item.v.plate)} confirmed from CDMS.`);
+    cdmsCancelsPending().forEach(({ v }, n) => { const w = $(`#cc-w-${n}`), j = $(`#cc-j-${n}`); if (w && j) (ui.ccDraft ||= {})[v.id] = { waived: w.checked, just: j.value }; });
+    const i = el.dataset.i, d = (ui.ccDraft || {})[item.v.id] || {}, waived = !!d.waived, just = (d.just || '').trim();
+    // [BEHAVIOR] errors show in place (no re-render) so the ticked box and the typed text stay
+    const fail = (msg, focus) => { $('#cc-err-t').textContent = msg; $('#cc-err').hidden = false; if (focus) $(focus)?.focus(); };
+    if (waived && !just) { fail(`Enter the justification to waive the fee for ${item.v.plate}.`, `#cc-j-${i}`); return; }
+    if (item.c.date > TODAY) { fail(`The CDMS cancellation date for ${item.v.plate} is after today.`); return; }
+    if (item.v.awarding && item.c.date < item.v.awarding) { fail(`The CDMS cancellation date for ${item.v.plate} is before the Awarding Date (${fmtDate(item.v.awarding)}).`); return; }
+    const done = recordCancellation(scr, item.v, { date: item.c.date, waived, just: just || item.c.reason });
+    delete (ui.ccDraft || {})[item.v.id];
+    if (ui.entry?.found?.id === item.v.id) ui.entry = null;   // the Find card must not offer a second cancellation of the same lot
+    render(); toast(done ? `Cancellation of ${esc(item.v.plate)} confirmed from CDMS.` : `Lot ${esc(item.v.lot)} of Auction ${item.v.auction} is already cancelled.`, done ? '' : 'warn');
   },
   emailBaaf(scr) {
     const rows = selectedRows(scr, 'for_baaf'), ui = U(scr.id);
@@ -1023,7 +1032,7 @@ function entryCancel(scr) {
     body: `<p>Lot <b>${esc(v.lot)}</b> of Auction <b>${v.auction}</b> (${esc(v.plate)}, ${esc(v.customer)}) will be set to <b>Cancelled</b> on ${fmtDate(e.form.date)}.</p>
       <p>Cancellation fee: <b>${e.form.waived ? 'waived' : 'to be billed'}</b>. The vehicle leaves all FAD work lists${e.form.waived ? '' : ' and appears in Cancellation Billing'}.</p>`,
     footer: [{ label: 'Keep transaction', kind: 'gh', onClick: closeModal }, { label: 'Cancel transaction', kind: 'dg', icon: 'ban', onClick: () => {
-      recordCancellation(scr, v, e.form);
+      if (!recordCancellation(scr, v, e.form)) { U(scr.id).entry = null; closeModal(); render(); toast(`Lot ${esc(v.lot)} of Auction ${v.auction} is already cancelled.`, 'warn'); return; }
       U(scr.id).entry = null; closeModal(); render(); toast(`Lot ${esc(v.lot)} of Auction ${v.auction} cancelled.`);
     } }] });
 }

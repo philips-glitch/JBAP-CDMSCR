@@ -21,3 +21,11 @@ test('Cancellation Entry carries the P2 rule text', () => {
   const P = load(), scr = P.byId['FAD/cancellation-entry'];
   assert.strictEqual(scr.ruleP[0], 'P2');
 });
+test('a lot is cancelled only once, whichever screen records it', () => {
+  const P = load(), scr = P.byId['FAD/cancellation-entry'], { c, v } = P.cdmsCancelsPending().find(x => x.v.id === 'V109');
+  const n = P.S.cancels.length, logs = P.S.log.length;
+  assert.strictEqual(P.recordCancellation(scr, v, { date: c.date, waived: false, just: c.reason }), true);
+  assert.strictEqual(P.recordCancellation(scr, v, { date: c.date, waived: false, just: 'again' }), false);
+  assert.strictEqual(P.S.cancels.length, n + 1);
+  assert.strictEqual(P.S.log.length - logs, 4, 'one set of Cancel log entries');
+});
