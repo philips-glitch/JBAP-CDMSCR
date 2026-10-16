@@ -1,11 +1,17 @@
 const test = require('node:test'), assert = require('node:assert');
 const { load } = require('./harness');
-test('eligible units: not Sold, not in the latest auction, no clearance and no release', () => {
+test('eligible units: Not Sold or Cancelled, not listed in an ongoing or future auction, no clearance and no release', () => {
   const P = load(), rows = P.byId['SMD/return-to-seller'].rows();
-  assert.strictEqual(rows.length, 15);
-  assert.ok(rows.every(r => r.status !== 'Sold' && String(r.auction) !== P.LATEST_AUCTION));
-  assert.ok(!rows.some(r => ['V066', 'V069', 'V070', 'V071', 'V077'].includes(r.id)), 'units in auction 221 stay');
-  assert.strictEqual(P.byId['SMD/return-to-seller'].tag, 'Wish');
+  assert.strictEqual(rows.length, 17);
+  assert.ok(rows.every(r => ['Not Sold', 'Cancelled'].includes(r.status)));
+  assert.ok(!rows.some(r => ['V066', 'V070', 'V077'].includes(r.id)), 'relisted in auction 222 (not ended): they stay');
+  assert.ok(['V069', 'V071'].every(id => rows.some(r => r.id === id)), 'auction 221 has ended: these may go back');
+  assert.strictEqual(P.byId['SMD/return-to-seller'].tag, 'Wish'); assert.strictEqual(P.LATEST_AUCTION, '221');
+  assert.doesNotMatch(P.byId['SMD/return-to-seller'].rule, /latest auction/);
+});
+test('listedAhead: the own auction or the relisting auction has not ended', () => {
+  const P = load();
+  assert.deepStrictEqual([P.listedAhead({ auction: 221 }), P.listedAhead({ auction: 221, next_auction: 222 }), P.listedAhead({ auction: 222 })], [false, true, true]);
 });
 test('clearance: recorded under SMD, units move to VWD For Return to Seller, one form per seller', () => {
   const P = load(), scr = P.byId['SMD/return-to-seller'], units = scr.rows().filter(r => r.seller === 'ORICO'), before = P.S.log.length;

@@ -559,7 +559,7 @@ const SCREENS = [
   { dept: 'SMD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', actions: VS, rule: 'Result price records with status SOLD and a rebate.',
     rows: () => SMD('rebates'), cols: REBMON_COLS, sort: ['buyer_paid', 'desc'] },
   { dept: 'SMD', slug: 'return-to-seller', title: 'Return to Seller', actions: VFSU, tag: 'Wish',
-    rule: `Units that are not sold or pending and not in the latest auction (${LATEST_AUCTION}), with no clearance yet. Tick For Return, then Print & email clearance form: one form per seller, emailed to FAD and VWD; the SMD Manager signs and the FAD Manager notes on paper. "Latest auction" and paper signatures are assumptions to confirm (Q32).`,
+    rule: `Units with status Not Sold or Cancelled that are not listed in an ongoing or future auction (JBAP, 16 Oct 2026), with no clearance yet. Tick For Return, then Print & email clearance form: one form per seller, emailed to FAD and VWD; the SMD Manager signs and the FAD Manager notes on paper (approval in CDMS: Q76).`,
     rows: () => V().filter(rtsEligible), sort: ['seller', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Status', 'status', 'status'), C('Last Auction', 'auction', 'code'),
       C('Date of Entry', 'entry_date', 'date'), C('Days in Yard', 'days_in_yard', 'int'), C('For Return', 'for_return', 'check', { edit: 'check' })],
@@ -1097,8 +1097,10 @@ function recordSaafSent(scr, rows) {
 }
 // [BEHAVIOR] P5: with the switch on the dispatch email is copied to Finance only; VWD sees the lot in its own list
 const dispatchCc = () => { const e = D.meta.company.emails; return PROPOSED ? e.finance : `${e.sales}; ${e.vwd}; ${e.finance}`; };
-// [BEHAVIOR] Wish 4: units SMD may return: not Sold or Pending, not in the latest auction (Q32), no clearance and no release yet
-const rtsEligible = v => !['Sold', 'Pending'].includes(v.status) && String(v.auction) !== LATEST_AUCTION && !v.rts_cleared && !v.release;
+// [BEHAVIOR] JBAP feedback (16 Oct 2026, #19): a unit is listed ahead when its own auction, or the auction it is relisted in (next_auction), has not ended (Q77)
+const listedAhead = v => [v.auction, v.next_auction].some(a => a && (D.auctions[String(a)] || [])[1] >= TODAY);
+// [BEHAVIOR] Return to Seller: status Not Sold or Cancelled, not listed in an ongoing or future auction, no clearance and no release yet
+const rtsEligible = v => ['Not Sold', 'Cancelled'].includes(v.status) && !listedAhead(v) && !v.rts_cleared && !v.release;
 // [BEHAVIOR] Wish 4: sending the clearance form records the clearance date (logged under SMD); the units then wait in VWD For Return to Seller
 function recordReturnClearance(scr, rows) {
   rows.forEach(r => { logChange(scr, 'Update', r, [['Return Clearance Date', 'date', r._raw.rts_cleared, TODAY], ['For Return', 'check', r._raw.for_return, false]]);
