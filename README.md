@@ -152,7 +152,7 @@ Names cut off in Access end in "…". Everything shown in a screenshot is copied
 | Buyer ID when not shown | Placeholder **B9001 to B9041** |
 | Customer name (Liability lots), Make/Model when not shown | Left blank |
 | Billing Date (Unpaid Billing rows) | Auction end of the particulars plus 7 days, never earlier than a lower Billing # |
-| Date of Entry (data-extra.js) | Start of the lot's auction minus 7 to 21 days |
+| Date of Entry (data-extra.js, lots without a usable date from JBAP's parking file) | Start of the lot's auction minus 7 to 21 days |
 
 Edit `data.js` (or `data-extra.js` for the proposal sample data) and refresh the browser to change sample data.
 
