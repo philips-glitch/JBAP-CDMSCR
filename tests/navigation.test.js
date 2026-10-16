@@ -21,6 +21,17 @@ test('old links of moved or merged screens open their new place', () => {
     'SMD/cancellation-monitoring': 'FAD/cancellation-entry', 'FAD/cancellation-payment': 'FAD/cancellation-billing' };
   for (const [from, to] of Object.entries(want)) assert.strictEqual(P.routeOf(from), to, from);
   assert.strictEqual(P.routeOf('FAD/unpaid'), 'FAD/unpaid'); assert.strictEqual(P.routeOf('nope'), ''); assert.strictEqual(P.routeOf('customer/B0313'), 'customer/B0313');
+  for (const h of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) assert.strictEqual(P.routeOf(h), '', `'#/${h}' is not a screen (inherited object properties are not routes)`);
+});
+test('route(): an inherited property name in the address is not a moved screen, and nothing is written to the address bar', () => {
+  const P = load(), calls = [], had = 'history' in globalThis, prev = globalThis.history;
+  globalThis.history = { replaceState: (...a) => calls.push(a) };   // Node has no history: stub it so route() reaches the replaceState branch
+  try {
+    for (const h of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) { P.location.hash = `#/${h}`; assert.strictEqual(P.route(), '', h); }
+    assert.deepStrictEqual(calls, [], 'a non-moved address is left as typed');
+    P.location.hash = '#/FAD/result-summary'; assert.strictEqual(P.route(), 'report/result-summary');
+    assert.deepStrictEqual(calls, [[null, '', '#/report/result-summary']], 'a moved address is rewritten to the new link');
+  } finally { if (had) globalThis.history = prev; else delete globalThis.history; }
 });
 test('sidebar: every menu item shows its record count; grouped entries and Log Activity do not', () => {
   const P = load(), side = P.sideHtml('');

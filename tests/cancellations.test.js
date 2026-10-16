@@ -20,6 +20,16 @@ test('billing keeps the lot on the screen; entering Date Paid removes it', () =>
   P.U(scr.id).edits[r.id] = { paid_date: P.TODAY }; assert.deepStrictEqual(P.validateEdits(scr), []);
   P.applyEdits(scr); assert.ok(!scr.rows().some(x => x.id === r.id), 'paid: removed');
 });
+test('Print cancellation billing never bills a lot that already has a Billing Date', () => {
+  const P = load(), scr = P.byId['FAD/cancellation-billing'], billed = scr.rows().find(x => x.bill_date);
+  assert.ok(billed, 'a billed cancellation is listed');
+  P.CX().find(c => c.id === billed.id)._raw.for_print = true;   // a stray For Print? tick on a billed lot
+  assert.ok(P.selectedRows(scr, 'for_print').some(r => r.id === billed.id), 'the tick is picked up');
+  const before = billed.bill_date;
+  try { P.ACTIONS.printCancel(scr); } catch (e) { /* DOM stub: render() / openModal throw after the message is set */ }
+  const m = P.U(scr.id).msg; assert.ok(m && m.type === 'error' && /at least one record/.test(m.html), 'nothing left to bill: the error is shown, no letter is opened');
+  assert.strictEqual(scr.rows().find(x => x.id === billed.id).bill_date, before, 'the Billing Date is untouched');
+});
 test('Date Paid: not before the Billing Date; Amount more than 0', () => {
   const P = load(), scr = P.byId['FAD/cancellation-billing'], b = scr.rows().find(x => x.bill_date);
   assert.match(scr.validate(b, { paid_date: '2000-01-01' }).paid_date, /before/);

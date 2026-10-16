@@ -240,7 +240,7 @@ function buyerRows() {
       cancels: cx.filter(c => c.cid === b.cid).length, last_auction: b.last };
   });
 }
-// [BEHAVIOR] JBAP feedback (16 Oct 2026): DOAS waiting for the buyer's signature = Receipt of DOAS filled, signed DOAS not back; documents for release = JBAP has them, the buyer not yet (Q82)
+// [BEHAVIOR] JBAP feedback (16 Oct 2026): DOAS waiting for the buyer's signature = Receipt of DOAS filled, signed DOAS not back by any route (JBAP, seller, or EWB branch: the same test as Document Status and the release check); documents for release = JBAP has them, the buyer not yet (Q82)
 function buyerOf(cid) {
   const b = buyerIndex().get(cid); if (!b) return null;
   const sold = V().filter(v => v.cid === cid && v.status === 'Sold')
@@ -251,7 +251,7 @@ function buyerOf(cid) {
     return { id: code, seller: code, seller_full: SELLER[code]?.name || code, units: mine.length, amount: r2(sumBy(mine, 'price')), unpaid: mine.filter(isUnpaidLot).length, last: Math.max(...mine.map(v => +v.auction)) };
   }).sort((x, y) => y.units - x.units || y.amount - x.amount);
   return Object.assign({}, b, { sold, pending: sold.filter(isPendingAward), unpaid: sold.filter(isUnpaidLot),
-    pending_doas: sold.filter(v => v.rcv_doas && !v.buyer_doas).map(v => Object.assign(v, { doas_days: workdaysBetween(v.rcv_doas, TODAY) })), docs_release: sold.filter(v => v.orig_docs && !v.to_buyer), cancels: CX().filter(c => c.cid === cid).sort((x, y) => y.auction - x.auction), sellers });
+    pending_doas: sold.filter(v => v.rcv_doas && !v.buyer_doas && !v.seller_doas && !(v.doas === 'branch' && v.ewb_signed)).map(v => Object.assign(v, { doas_days: workdaysBetween(v.rcv_doas, TODAY) })), docs_release: sold.filter(v => v.orig_docs && !v.to_buyer), cancels: CX().filter(c => c.cid === cid).sort((x, y) => y.auction - x.auction), sellers });
 }
 const CUST_TABS = [['sold', 'Sold'], ['pending-awarding', 'Pending Awarding'], ['unpaid', 'Unpaid'], ['pending-doas', 'Pending DOAS signature'], ['docs-release', 'Documents for release'], ['cancellation', 'Cancellation']];
 const custHref = (cid, tab) => `#/customer/${encodeURIComponent(cid)}${tab && tab !== 'sold' ? '/' + tab : ''}`;
@@ -332,7 +332,7 @@ const REBMON_COLS = [   // SMD Rebate Monitoring (Access snapshot); FAD has its 
   C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 320 }), C('Plate', 'plate', 'code'),
   C('Rebate', 'rebate', 'money'), C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date')];
 // Wish 5 + JBAP feedback (16 Oct 2026, #2, #20, #23): Inventory Monitoring in the columns of JBAP's parking inventory file; view only, status calculated
-const INVENTORY = { slug: 'inventory', title: 'Inventory', actions: VFS, tag: 'Wish',
+const INVENTORY = { slug: 'inventory', title: 'Inventory', actions: VFS, tag: 'Wish', compact: true,
   rule: `One row per vehicle, in the columns of JBAP's parking inventory file (Logistics, Originating Warehouse, Parking Location, Transfer Date, Returned to Seller WH and Date of Entry come from that file, as of 12 Oct 2026; Date of Entry is inferred when the plate is not in it or the file has no entry on or before the lot's auction end). Inventory Status is calculated: Listed, Awarded (sold), For Release (dispatched, waiting for the buyer's pull-out), For Return (cleared by SMD), Released or Returned. View only. Days in Yard runs to the release or return date, or to today while the unit is in the yard. "Not in latest auction" shows units that were not in auction ${LATEST_AUCTION}.`,
   rows: V, sort: ['entry_date', 'asc'], initial: { yard: 'In yard' },
   cols: [C('Date of Entry', 'entry_date', 'date'), C('VCN', 'vcn', 'code'), C('Plate Number', 'plate', 'code'), C('CS No.', 'cs_no', 'code'), C('Make/Model', 'model', 'text', { w: 200 }),
@@ -936,10 +936,11 @@ function homeLayout() {
 const MOVED = { 'FAD/result-summary': 'report/result-summary', 'SMD/result-summary': 'report/result-summary',
   'FAD/auction-monitoring': 'report/auction-monitoring', 'SMD/auction-monitoring': 'report/auction-monitoring', 'VWD/auction-monitoring': 'VWD/inventory',
   'FAD/cancellation-monitoring': 'FAD/cancellation-entry', 'SMD/cancellation-monitoring': 'FAD/cancellation-entry', 'FAD/cancellation-payment': 'FAD/cancellation-billing' };
-const routeOf = h => { const t = MOVED[h] || h; return byId[t] && shown(byId[t]) ? t : custRoute(t) ? t : ''; };   // a proposed screen opens only with the switch on
+const moved = h => Object.hasOwn(MOVED, h) ? MOVED[h] : null;   // own keys only: '#/constructor' is neither a moved nor a known screen
+const routeOf = h => { const t = moved(h) || h, scr = Object.hasOwn(byId, t) ? byId[t] : null; return scr && shown(scr) ? t : custRoute(t) ? t : ''; };   // a proposed screen opens only with the switch on
 function route() {
   const h = location.hash.replace(/^#\/?/, '');
-  if (MOVED[h] && typeof history !== 'undefined' && history.replaceState) history.replaceState(null, '', `#/${MOVED[h]}`);   // the address bar shows the new link
+  if (moved(h) && typeof history !== 'undefined' && history.replaceState) history.replaceState(null, '', `#/${moved(h)}`);   // the address bar shows the new link
   return routeOf(h);
 }
 function render() {
@@ -1219,7 +1220,7 @@ const ACTIONS = {
       } }] });
   },
   printCancel(scr) {
-    const rows = selectedRows(scr, 'for_print');
+    const rows = selectedRows(scr, 'for_print').filter(r => !r.bill_date);   // [BEHAVIOR] a billed lot is never billed again
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For Print?</b> on at least one record first.'); render(); return; }
     setMsg(scr, null); render();
     const body = cancelLetterGroups(rows).map(list => REPORTS.cancellationLetter({ customer: list[0].customer }, list, TODAY)).join('');
@@ -1351,6 +1352,7 @@ const ACTIONS = {
         const amount = recordPenaltyPayment(scr, v, $('#pp-ref').value.trim()); closeModal(); render();
         toast(`Penalty of PHP ${money(amount)} recorded for ${esc(v.plate)}. The dispatch deadline is now ${fmtDate(TODAY)}; the penalty no longer blocks the release.`);
       } }] });
+    $('#pp-ref')?.focus();   // openModal focuses the first input (the read-only Customer)
   },
   resetFilter(scr) { const ui = U(scr.id); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); },
   entryClear(scr) { U(scr.id).entry = null; render(); },

@@ -86,10 +86,10 @@ test('customer page: Customer Information is disabled, Transaction History shows
 });
 
 test('customer page: Pending DOAS signature and Documents for release (JBAP, 16 Oct 2026)', () => {
-  const P = load(), all = P.V().filter(v => v.cid && v.status === 'Sold'), cid = all.find(v => v.rcv_doas && !v.buyer_doas)?.cid;
+  const P = load(), all = P.V().filter(v => v.cid && v.status === 'Sold'), cid = all.find(v => v.rcv_doas && !v.buyer_doas && !v.seller_doas)?.cid;
   assert.ok(cid, 'a buyer with a DOAS waiting for signature');
   const b = P.buyerOf(cid), mine = all.filter(v => v.cid === cid);
-  assert.deepStrictEqual(b.pending_doas.map(v => v.id).sort(), mine.filter(v => v.rcv_doas && !v.buyer_doas).map(v => v.id).sort());
+  assert.ok(b.pending_doas.length > 0 && b.pending_doas.every(v => v.rcv_doas), 'Receipt of DOAS is filled on every row');
   assert.deepStrictEqual(b.docs_release.map(v => v.id).sort(), mine.filter(v => v.orig_docs && !v.to_buyer).map(v => v.id).sort());
   const h = P.customerPage(cid, 'pending-doas'), t = h.slice(h.indexOf('aria-label="Lot lists"'));
   for (const x of ['Seller Payment', 'Receipt of DOAS', 'Working Days Since Receipt']) assert.ok(t.includes(`>${x}<`), x);
@@ -98,6 +98,30 @@ test('customer page: Pending DOAS signature and Documents for release (JBAP, 16 
   const withDocs = all.find(v => v.orig_docs && !v.to_buyer).cid, d = P.customerPage(withDocs, 'docs-release');
   assert.ok(d.includes('>JBAP Receipt of Documents<') && d.includes('>ATF No.<'));
   assert.deepStrictEqual(P.custRoute(`customer/${cid}/docs-release`), { cid, tab: 'docs-release' });
+});
+
+test('Pending DOAS signature: a lot whose signed DOAS is back (buyer, seller or EWB branch) is never listed', () => {
+  const P = load(), buyers = [...new Set(P.V().filter(v => v.cid && v.status === 'Sold').map(v => v.cid))];
+  let listed = 0;
+  for (const cid of buyers) for (const v of P.buyerOf(cid).pending_doas) {   // independent of the page rule: check each listed lot against the three ways a signed DOAS comes back
+    listed++;
+    assert.ok(v.rcv_doas, `${v.id}: Receipt of DOAS filled`);
+    assert.ok(!v.buyer_doas, `${v.id}: buyer's signed DOAS not back`);
+    assert.ok(!v.seller_doas, `${v.id}: seller's signed DOAS not back`);
+    assert.ok(!(v.doas === 'branch' && v.ewb_signed), `${v.id}: not signed at the seller's branch (EWB)`);
+  }
+  assert.ok(listed > 0, 'some lots are pending');
+  // a lot with Receipt of DOAS and the signed DOAS back from the seller is excluded; setting seller_doas on a pending lot drops it
+  const back = P.V().find(v => v.cid && v.status === 'Sold' && v.rcv_doas && v.seller_doas && !v.buyer_doas);
+  assert.ok(back, 'sample data has a lot whose signed DOAS came back from the seller');
+  assert.ok(!P.buyerOf(back.cid).pending_doas.some(v => v.id === back.id), 'seller signed DOAS back: not pending');
+  const pend = P.V().find(v => v.cid && v.status === 'Sold' && P.buyerOf(v.cid).pending_doas.some(x => x.id === v.id));
+  assert.ok(pend, 'a pending lot');
+  pend._raw.seller_doas = P.TODAY;
+  assert.ok(!P.buyerOf(pend.cid).pending_doas.some(v => v.id === pend.id), 'seller_doas set on a pending lot: it drops out');
+  const hold = P.V().find(v => v.cid && v.status === 'Sold' && v.rcv_doas && !v.buyer_doas && !v.seller_doas && !(v.doas === 'branch' && v.ewb_signed) && v.release);
+  assert.ok(hold, 'sample data has a released lot still waiting for the buyer signed DOAS');
+  assert.ok(P.buyerOf(hold.cid).pending_doas.some(v => v.id === hold.id), 'a released lot stays in the list');
 });
 
 test('buyer names and Buyer IDs link to the customer page when the lot has a Buyer ID', () => {
