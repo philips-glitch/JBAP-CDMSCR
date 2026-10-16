@@ -184,7 +184,12 @@ function recordCancellationBilling(scr, rows) {
 }
 // [MOCK] legacy billed cancellations without an amount default to the penalty, so Save on Cancellation Payment works
 if (S) S.cancels.forEach(c => { if (c.bill_date && (c.amount === null || c.amount === undefined)) c.amount = cancelSplit(Object.assign({}, c, { seller: cancelSeller(c) })).penalty; });
-const SMD = k => D.smd[k].map((r, i) => Object.assign({ id: `${k}-${i}` }, r));
+// [BEHAVIOR] JBAP feedback (16 Oct 2026): SMD lists show the seller code and the Auction No.; the legacy snapshot has only the seller's name and the auction dates
+const SELLER_BY_NAME = D ? Object.fromEntries(D.sellers.map(s => [String(s.name).toUpperCase().trim(), s.code])) : {};
+const AUCTION_BY_DATES = D ? Object.fromEntries(Object.entries(D.auctions).map(([k, [s, e]]) => [`${fmtDate(s)} - ${fmtDate(e)}`, Number(k)])) : {};
+const SMD = k => D.smd[k].map((r, i) => Object.assign({ id: `${k}-${i}` }, r,
+  r.seller === undefined && r.seller_full ? { seller: SELLER_BY_NAME[String(r.seller_full).toUpperCase().trim()] || r.seller_full } : {},
+  r.auction === undefined && r.adate ? { auction: AUCTION_BY_DATES[r.adate] ?? null } : {}));
 // ─── Customers (Customer › Customer Inquiry and the customer page; user request of 16 Oct 2026) ──
 // [BEHAVIOR] A customer is a buyer with a Buyer ID (cid), found on the lots and the cancellations. The name is the one on the buyer's latest auction.
 // Lots without a Buyer ID have no customer page.
@@ -296,7 +301,7 @@ const amTotals = rows => { const s = rows.filter(r => r.status === 'Sold'); retu
 const RESULT_COLS = [C('Auction Number', 'auction', 'code'), C('Sold Units', 'units', 'int'), C('Total Awarded Price', 'total', 'money'), C('Average Price per Unit', 'avg', 'money'),
   C('Total Commission', 'comm', 'money'), C('Rebates', 'rebates', 'money'), C('Month', 'month', 'code')];
 const resultTotals = rows => { const u = sumBy(rows, 'units'), t = sumBy(rows, 'total'); return { units: intf(u), total: money(t), avg: money(u ? t / u : 0), comm: money(sumBy(rows, 'comm')), rebates: money(sumBy(rows, 'rebates')) }; };
-const UNREL_COLS = [C('Customer Name', 'customer', 'text', { w: 280 }), C('Auction Date', 'adate', 'code'), C('Make/Model', 'model', 'text', { w: 240 }), C('Plate Number', 'plate', 'code'),
+const UNREL_COLS = [C('Customer Name', 'customer', 'text', { w: 280 }), C('Auction No.', 'auction', 'code'), C('Make/Model', 'model', 'text', { w: 240 }), C('Plate Number', 'plate', 'code'),
   C('Location', 'location', 'code'), C('Dispatch Deadline', 'dispatch_deadline', 'date', { late: true }), C('Penalty', 'penalty', 'money')];
 const UNREL_FILTERS = [AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }, { key: 'dispatch_deadline', label: 'Dispatch Deadline', type: 'daterange', w: 'w2' }];
 const CXMON_COLS = [C('Auction No.', 'auction', 'code'), C('Lot No.', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 260 }), C('Customer ID', 'cid', 'code'),
@@ -321,14 +326,13 @@ const INVENTORY = { slug: 'inventory', title: 'Inventory', actions: VFS, tag: 'W
 const SCREENS = [
   // ===================== FAD =====================
   { dept: 'FAD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFSU,
-    rule: 'Vehicles with status SOLD and a blank Awarding Date. Tick For BAAF and press Email BAAF to award. Transfer fees default from the seller settings; override when the actual fee differs. Security Bond works the same way for sellers with a bond.',
+    rule: 'Vehicles with status SOLD and a blank Awarding Date. Tick For BAAF and press Email BAAF to award. Transfer Fees come from the seller parameters and are not changed here (JBAP, 16 Oct 2026). Security Bond defaults from the seller settings; override it when needed.',
     rows: () => sold().filter(v => !v.awarding), sort: ['lot', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('For BAAF', 'for_baaf', 'check', { edit: 'check' }), C('Seller Approved', 'saaf_approved', 'date', { proposed: true, tag: 'P5' }),
       C('Awarding Date', 'awarding', 'date', { edit: 'date' }), C('Rebate', 'rebate', 'money'), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
-      C('Make/Model', 'model', 'text', { w: 210 }), C('Result Price', 'price', 'money'), C('Transfer Fees', 'transfer_fee', 'money', { edit: 'money' }), C('Security Bond', 'security_bond', 'money', { edit: 'money' })],
+      C('Make/Model', 'model', 'text', { w: 210 }), C('Result Price', 'price', 'money'), C('Transfer Fees', 'transfer_fee', 'money'), C('Security Bond', 'security_bond', 'money', { edit: 'money' })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ awarding: notFuture(e.awarding) || notBefore(e.awarding, r.auction_end, 'the auction end'),
-      transfer_fee: 'transfer_fee' in e && (e.transfer_fee === '' || Number(e.transfer_fee) < 0) ? 'must be 0 or more' : null,
       security_bond: 'security_bond' in e && (e.security_bond === '' || Number(e.security_bond) < 0) ? 'must be 0 or more' : null }),
     buttons: [{ label: 'Email BAAF', kind: 'ol', icon: 'mail', act: 'emailBaaf', count: 'for_baaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Vehicles with an Awarding Date moved to Unpaid.',
@@ -346,10 +350,10 @@ const SCREENS = [
     savedNote: 'Paid vehicles moved to Payment Seller.' },
   { dept: 'FAD', slug: 'payment-seller', title: 'Payment Seller', actions: VFSU, rule: 'Vehicles with status SOLD, a Buyer Paid date, and a blank Payment to Seller date. Deadline = 3 working days after Buyer Paid. To JBAP = commission + VAT − 15% withholding tax (NET sellers); Payable to Seller = total − To JBAP.',
     rows: () => sold().filter(v => v.buyer_paid && !v.pay_seller), sort: ['pay_deadline', 'asc'],
-    cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction Date', 'adate', 'code'), C('Plate Number', 'plate', 'code'),
+    cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction No.', 'auction', 'code'), C('Plate Number', 'plate', 'code'),
       C('Total (Awarded Price + Transfer Fees + Security Bond)', 'total', 'money'), C('To JBAP', 'to_jbap', 'money'), C('Payable to Seller', 'payable', 'money'), C('Payment to Seller Date', 'pay_seller', 'date', { edit: 'date' }), C('Payment Voucher No.', 'voucher_no', 'text', { edit: 'text', proposed: true, tag: 'P3' }),
       C('Payment to Seller Deadline', 'pay_deadline', 'date', { late: true }), C('Print Payment to Seller', 'print_seller', 'check', { edit: 'check' })],
-    filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'auction_start', label: 'Auction Date', type: 'daterange', w: 'w2' }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
+    filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     totals: rows => ({ total: money(sumBy(rows, 'total')), to_jbap: money(sumBy(rows, 'to_jbap')), payable: money(sumBy(rows, 'payable')) }),
     validate: (r, e) => ({ pay_seller: notFuture(e.pay_seller) || notBefore(e.pay_seller, r.buyer_paid, 'Buyer Paid') }),
     buttons: [{ label: 'Print payment to seller', kind: 'ol', icon: 'print', act: 'printSeller', count: 'print_seller' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
@@ -359,15 +363,15 @@ const SCREENS = [
   { dept: 'FAD', slug: 'seller-acknowledgement', title: 'Seller Acknowledgement', actions: VFSU,
     rule: 'Vehicles with status SOLD, Buyer Paid and Payment to Seller filled in, and a blank Seller Acknowledgement date.',
     rows: () => sold().filter(v => v.pay_seller && !v.seller_ack), sort: ['pay_deadline', 'asc'],
-    cols: [C('Seller', 'seller_full', 'text', { w: 300 }), C('Customer Name', 'customer', 'text', { w: 260 }), C('Buyer ID', 'cid', 'code'), C('Plate Number', 'plate', 'code'),
+    cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 260 }), C('Buyer ID', 'cid', 'code'), C('Plate Number', 'plate', 'code'),
       C('Seller Acknowledgement Date', 'seller_ack', 'date', { edit: 'date' }), C('Payment to Seller Deadline', 'pay_deadline', 'date')],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ seller_ack: notFuture(e.seller_ack) || notBefore(e.seller_ack, r.pay_seller, 'Payment to Seller') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Acknowledged vehicles removed from the list.' },
   { dept: 'FAD', slug: 'for-dispatch', title: 'For Dispatch', actions: VFSU,
     rule: 'Vehicles with status SOLD and a blank Dispatch Date whose seller condition is met: Buyer Payment and DOAS sellers after Buyer Paid, other sellers after Seller Acknowledgement (Dispatch Condition per seller). DOAS sellers need the signed DOAS before release. Buyer must release within 3 working days after dispatch.',
-    rows: () => sold().filter(v => !v.dispatch && dispatchReady(v)), sort: ['adate', 'asc'],
-    cols: [C('Seller Full Name', 'seller_full', 'text', { w: 250 }), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction Date', 'adate', 'code'),
+    rows: () => sold().filter(v => !v.dispatch && dispatchReady(v)), sort: ['auction_lot', 'asc'],
+    cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction No.', 'auction', 'code'),
       C('Make/Model', 'model', 'text', { w: 190 }), C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Release Condition', 'release_cond', 'text', { w: 220 }),
       C('For Dispatch Email?', 'for_dispatch_email', 'check', { edit: 'check' }), C('Dispatch Date', 'dispatch', 'date', { edit: 'date' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
@@ -416,10 +420,10 @@ const SCREENS = [
   { dept: 'FAD', slug: 'liability-to-seller', title: 'Liability to Seller', actions: VS, layout: 'query',
     rule: 'Units the buyer has paid for where Payment to Seller is still blank, or happened after the date entered.',
     rows: () => { const d = U('FAD/liability-to-seller').asOf || TODAY; return sold().filter(v => v.buyer_paid && v.buyer_paid <= d && (!v.pay_seller || v.pay_seller > d)); },
-    sort: ['seller_full', 'asc'],
-    cols: [C('Seller', 'seller_full', 'text', { w: 290 }), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }),
+    sort: ['seller', 'asc'],
+    cols: [C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }),
       C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller Deadline', 'pay_deadline', 'date'), C('Total (Result Price + Transfer Fees + Security Bond)', 'total', 'money')],
-    totals: rows => ({ seller_full: 'Total liability to sellers', total: money(sumBy(rows, 'total')) }) },
+    totals: rows => ({ seller: 'Total liability to sellers', total: money(sumBy(rows, 'total')) }) },
   // FAD › Rebate: Rebate Monitoring and Rebate Payable as two tabs (user request of 16 Oct 2026); SMD keeps its own Rebate Monitoring
   // The key columns of JBAP's Rebate Monitoring file (user choice of 16 Oct 2026); Month, VCN, Year, Color, Buyer ID and Awarded Price stay in the download only
   { dept: 'FAD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', group: 'Rebate', actions: VS,
@@ -441,7 +445,7 @@ const SCREENS = [
   { dept: 'FAD', slug: 'commission-billing', title: 'Commission Billing', group: 'Billing', actions: VSU,
     rule: 'Result price records with a Remittance Date and no commission billing yet. Tick Print?, then Print commission billing to record the NOAH billing number and date.',
     rows: () => sold().filter(v => v.pay_seller && !v.billed), sort: ['customer', 'asc'],
-    cols: [C('Customer Name', 'customer', 'text', { w: 300 }), C('Plate Number', 'plate', 'code'), C('Print?', 'print_comm', 'check', { edit: 'check' }), C('Remittance Date', 'pay_seller', 'date'),
+    cols: [C('Customer Name', 'customer', 'text', { w: 260 }), C('Seller', 'seller', 'code'), C('Auction Date', 'adate', 'code'), C('Plate Number', 'plate', 'code'), C('Print?', 'print_comm', 'check', { edit: 'check' }), C('Remittance Date', 'pay_seller', 'date'),
       C('Winning Bid', 'price', 'money'), C('Commission', 'com', 'money'), C('VAT', 'cvat', 'money'), C('Total', 'ctotal', 'money')],
     totals: rows => ({ plate: `${rows.length} units`, price: money(sumBy(rows, 'price')), com: money(sumBy(rows, 'com')), cvat: money(sumBy(rows, 'cvat')), ctotal: money(sumBy(rows, 'ctotal')) }),
     buttons: [{ label: 'Print commission billing', kind: 'ol', icon: 'print', act: 'printComm', count: 'print_comm' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
@@ -505,9 +509,9 @@ const SCREENS = [
   { dept: 'SMD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFS, rule: 'Vehicles with status SOLD and a blank Awarding Date.',
     rows: () => SMD('pending'), sort: ['customer', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 200 }), C('For BAAF', 'for_baaf', 'rocheck'),
-      C('Awarding Date', 'awarding', 'date'), C('Rebate', 'rebate', 'money'), C('Seller', 'seller_full', 'text', { w: 220 }), C('Plate Number', 'plate', 'code'),
+      C('Awarding Date', 'awarding', 'date'), C('Rebate', 'rebate', 'money'), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
       C('Make/Model', 'model', 'text', { w: 230 }), C('Result Price', 'price', 'money'), C('Transfer Fees', 'tfee', 'money')],
-    filters: [AUCTION_FILTER, { key: 'seller_full', label: 'Seller', type: 'select', options: () => [...new Set(D.smd.pending.map(r => r.seller_full))] }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }] },
+    filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: () => [...new Set(SMD('pending').map(r => r.seller))].sort() }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }] },
   { dept: 'SMD', slug: 'unpaid', title: 'Unpaid', actions: VFS, rule: 'Vehicles with status SOLD, an Awarding Date, and a blank Buyer Paid date. Total = Awarded price + Transfer fees.',
     rows: () => SMD('unpaid'), sort: ['buyer_deadline', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 220 }), C('Buyer ID', 'cid', 'code'), C('Seller', 'seller', 'code'),
@@ -517,21 +521,21 @@ const SCREENS = [
     totals: rows => ({ customer: `${rows.length} units`, total: money(sumBy(rows, 'total')) }) },
   { dept: 'SMD', slug: 'seller-acknowledgement', title: 'Seller Acknowledgement', actions: VFS,
     rule: 'Vehicles with status SOLD, Buyer Paid and Payment to Seller filled in, and a blank Seller Acknowledgement date.',
-    rows: () => SMD('ack'), sort: ['seller_full', 'asc'],
-    cols: [C('Seller', 'seller_full', 'text', { w: 300 }), C('Customer Name', 'customer', 'text', { w: 260 }), C('Buyer ID', 'cid', 'code'), C('Plate Number', 'plate', 'code'),
+    rows: () => SMD('ack'), sort: ['seller', 'asc'],
+    cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 260 }), C('Buyer ID', 'cid', 'code'), C('Plate Number', 'plate', 'code'),
       C('Seller Acknowledgement Date', 'seller_ack', 'date'), C('Payment to Seller Deadline', 'pay_deadline', 'date')],
     filters: [{ key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }] },
   { dept: 'SMD', slug: 'for-dispatch', title: 'For Dispatch', actions: VFS,
     rule: 'Vehicles with status SOLD, Buyer Paid, Payment to Seller and Seller Acknowledgement filled in, and a blank Dispatch Date.',
     rows: () => SMD('dispatch'), sort: ['customer', 'asc'],
-    cols: [C('Seller Full Name', 'seller_full', 'text', { w: 290 }), C('Customer Name', 'customer', 'text', { w: 250 }), C('Auction Date', 'adate', 'code'),
+    cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }), C('Auction No.', 'auction', 'code'),
       C('Make/Model', 'model', 'text', { w: 210 }), C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Dispatch Date', 'dispatch', 'date')],
     filters: [{ key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }], totals: rows => ({ customer: `${rows.length} units` }) },
   { dept: 'SMD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
     rule: 'Dispatched vehicles that have not been released to the buyer yet. Penalty shows once the dispatch deadline has passed.',
     rows: () => SMD('unreleased'), sort: ['customer', 'asc'], cols: UNREL_COLS.filter(c => c.key !== 'location'),
     filters: [{ key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }, { key: 'dispatch_deadline', label: 'Dispatch Deadline', type: 'daterange', w: 'w2' }],
-    totals: rows => ({ adate: `${rows.length} units`, penalty: money(sumBy(rows, 'penalty')) }) },
+    totals: rows => ({ auction: `${rows.length} units`, penalty: money(sumBy(rows, 'penalty')) }) },
   { dept: 'SMD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', actions: VS, rule: 'Result price records with status SOLD and a rebate.',
     rows: () => SMD('rebates'), cols: REBMON_COLS, sort: ['buyer_paid', 'desc'] },
   { dept: 'SMD', slug: 'cancellation-monitoring', title: 'Cancellation Monitoring', actions: VS, rule: 'Information on cancelled vehicles.',
@@ -553,7 +557,7 @@ const SCREENS = [
   { dept: 'VWD', slug: 'for-dispatch', title: 'For Dispatch', actions: VFS, rule: 'Vehicles with status SOLD and a blank Dispatch Date (all stages before dispatch).',
     rows: () => sold().filter(v => !v.dispatch), sort: ['awarding', 'asc'],
     cols: [C('Vehicle Control Number', 'vcn', 'code'), C('Plate Number', 'plate', 'code'), C('Auction No.', 'auction', 'code'), C('Buyer', 'customer', 'text', { w: 250 }),
-      C('Seller', 'seller_full', 'text', { w: 250 }), C('Awarding Date', 'awarding', 'date'), C('Payment Date', 'buyer_paid', 'date'), C('Payment to Seller Date', 'pay_seller', 'date'),
+      C('Seller', 'seller', 'code'), C('Awarding Date', 'awarding', 'date'), C('Payment Date', 'buyer_paid', 'date'), C('Payment to Seller Date', 'pay_seller', 'date'),
       C('Seller Acknowledgement', 'seller_ack', 'date')],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Buyer' }, { key: 'plate', label: 'Plate Number' }] },
   { dept: 'VWD', slug: 'unreleased-unit-overdue', title: 'Unreleased Unit (Overdue)', actions: VFSU, queue: true,
@@ -835,7 +839,7 @@ function entryLayout(scr) {
     const ro = v.status !== 'Sold';
     det = `<section class="card" style="flex:1"><div class="card-h"><div class="ico">${IC.ban}</div>Transaction details<span class="sp"></span><span class="hint"><span>${IC.lock} Locked</span><span>${IC.pen} Editable</span></span></div>
       <form data-form="cancel" novalidate><div class="fgrid">
-      ${lk('Lot', v.lot)}${lk('Auction Date', v.adate)}${lk('Customer Name', v.customer)}${lk('Plate Number', v.plate)}
+      ${lk('Lot', v.lot)}${lk('Auction No.', v.auction)}${lk('Customer Name', v.customer)}${lk('Plate Number', v.plate)}
       <div class="fld"><label for="ce-status">Status</label><select class="ctl ${e.errors.status ? 'is-invalid' : ''}" id="ce-status" ${ro ? 'disabled' : ''}>${['Sold', 'Cancelled'].map(s => `<option ${f.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select>${ferr('status')}</div>
       <div class="fld"><label for="ce-date">Date Cancelled</label><input type="date" class="ctl ${e.errors.date ? 'is-invalid' : ''}" id="ce-date" value="${esc(f.date)}" ${ro ? 'disabled' : ''}>${ferr('date')}</div>
       <div class="fld"><span class="lbl">Cancellation Fee Waived</span><label class="chkline"><input type="checkbox" class="chk" id="ce-waived" ${f.waived ? 'checked' : ''} ${ro ? 'disabled' : ''}>Waive the cancellation fee</label></div><div></div>
@@ -996,11 +1000,11 @@ function recordDispatch(scr, rows, dateFor) {
   const ui = U(scr.id);
   rows.forEach(r => { const d = dateFor(r); logChange(scr, 'Update', r, [['Dispatch Date', 'date', r._raw.dispatch, d], ['For Dispatch Email?', 'check', r._raw.for_dispatch_email, false]]); r._raw.dispatch = d; r._raw.for_dispatch_email = false; delete ui.edits[r.id]; });
 }
-// [BEHAVIOR] Sending the BAAF records the Awarding Date (date entered, else today), the transfer fee and, when there is one, the security bond on each lot
+// [BEHAVIOR] Sending the BAAF records the Awarding Date (date entered, else today), the transfer fee (seller parameter) and, when there is one, the security bond on each lot
 function recordAwarding(scr, rows) {
   const ui = U(scr.id);
   rows.forEach(r => {
-    const e = ui.edits[r.id] || {}, award = e.awarding || TODAY, tf = 'transfer_fee' in e && e.transfer_fee !== '' ? Number(e.transfer_fee) : r._raw.transfer_fee;
+    const e = ui.edits[r.id] || {}, award = e.awarding || TODAY, tf = r._raw.transfer_fee;
     const sb = 'security_bond' in e && e.security_bond !== '' ? Number(e.security_bond) : r.security_bond, bond = !!(sb || r.security_bond);   // a bond, or a bond overridden to 0
     logChange(scr, 'Update', r, [['Awarding Date', 'date', r._raw.awarding, award], ['Transfer Fees', 'money', r._raw.transfer_fee, tf],
       ...(bond ? [['Security Bond', 'money', r._raw.security_bond ?? null, sb]] : []), ['For BAAF', 'check', r._raw.for_baaf, false]]);
