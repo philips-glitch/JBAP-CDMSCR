@@ -99,7 +99,7 @@ test('buyer names and Buyer IDs link to the customer page when the lot has a Buy
 test('sidebar: Customer is active with Customer Inquiry; Sales Actions stays disabled', () => {
   const P = load(), side = P.sideHtml('customer-inquiry');
   assert.match(side, /data-group="Customer"/);
-  assert.match(side, /<a class="mis is-active" href="#\/customer-inquiry" aria-current="page">Customer Inquiry<\/a>/);
+  assert.match(side, /<a class="mis is-active" href="#\/customer-inquiry" aria-current="page">Customer Inquiry<span class="cnt">\d+<\/span><\/a>/);
   assert.match(side, /data-disabled="Sales Actions"/);
   assert.doesNotMatch(side, /data-disabled="Customer"/, 'Customer is no longer a disabled menu');
   assert.match(P.sideHtml('customer/B0313'), /<a class="mis is-active" href="#\/customer-inquiry" aria-current="page">/, 'a customer page keeps Customer Inquiry highlighted');

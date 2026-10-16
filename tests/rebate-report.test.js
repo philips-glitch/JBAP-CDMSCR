@@ -16,7 +16,7 @@ test('FAD Rebate Monitoring has a Download report button, shown although the scr
   assert.deepStrictEqual(fad.buttons.map(b => [b.act, b.view]), [['downloadRebate', true]]);
   assert.match(P.dataCard(fad, 'Rebate Monitoring list'), /data-act="downloadRebate"/);
   assert.ok(!(P.byId['SMD/rebate-monitoring'].buttons || []).length);
-  assert.doesNotMatch(P.dataCard(P.byId['FAD/result-summary'], 'x'), /data-act=/, 'other view-only screens still show no buttons');
+  assert.doesNotMatch(P.dataCard(P.byId['report/result-summary'], 'x'), /data-act=/, 'other view-only screens still show no buttons');
 });
 test('rebateRecord: one row per lot, with the derived columns', () => {
   const P = load(), v = P.byId['FAD/rebate-monitoring'].rows().find(r => r.price && r.rebate && r.model && r.model.includes(' '));

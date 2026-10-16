@@ -64,7 +64,7 @@ const deptSvg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-
 const S = D ? JSON.parse(JSON.stringify({ veh: D.vehicles, cancels: D.cancellations, billing: D.billing, log: [] })) : null;
 const SELLER = D ? Object.fromEntries(D.sellers.map(s => [s.code, s])) : {};
 const UI = {};          // per-screen UI state: filters, sort, page, edits, errors, message
-const OPEN = { Customer: false, FAD: false, SMD: false, VWD: false };
+const OPEN = { Customer: false, Report: false, FAD: false, SMD: false, VWD: false };
 
 // ─── Proposed improvements switch (spec 2026-10-15) ──────────────────
 // [BEHAVIOR] Off = the CR scope exactly; on = LOGIQUE's proposals P2–P6 (P1 withdrawn after JBAP's feedback of 15 Oct 2026). A link with ?proposed=1 opens with the switch on.
@@ -320,14 +320,6 @@ const INVENTORY = { slug: 'inventory', title: 'Inventory', actions: VFS, tag: 'W
 
 const SCREENS = [
   // ===================== FAD =====================
-  // [MOCK] Snapshot of the Access Result Summary (10/08/2026): the sample has only some lots per auction, so totals are not recalculated
-  { dept: 'FAD', slug: 'result-summary', title: 'Result Summary', actions: VFS, rule: 'One row per auction. Average price per unit = Total awarded price ÷ Sold units. Prototype: figures copied from the Access Result Summary of 10/08/2026; they do not change when lots are updated here.',
-    rows: () => D.fadResult.map(r => Object.assign({ id: r.auction }, r)), cols: RESULT_COLS, sort: ['auction', 'desc'], totals: resultTotals,
-    filters: [{ key: 'month', label: 'Month', type: 'select', options: () => [...new Set(D.fadResult.map(r => r.month))] },
-      { key: 'year', label: 'Year', type: 'select', w: 'w1', options: () => [...new Set(D.fadResult.map(r => r.year))] }, AUCTION_FILTER] },
-  { dept: 'FAD', slug: 'auction-monitoring', title: 'Auction Monitoring', actions: VFS, compact: true,
-    rule: 'Auction result per auction and lot, with every milestone date from awarding to release to the buyer.',
-    rows: V, cols: AM_COLS, sort: ['auction', 'desc'], filters: AM_FILTERS, totals: amTotals },
   { dept: 'FAD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFSU,
     rule: 'Vehicles with status SOLD and a blank Awarding Date. Tick For BAAF and press Email BAAF to award. Transfer fees default from the seller settings; override when the actual fee differs. Security Bond works the same way for sellers with a bond.',
     rows: () => sold().filter(v => !v.awarding), sort: ['lot', 'asc'],
@@ -499,14 +491,6 @@ const SCREENS = [
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid cancellations removed from the list.' },
 
   // ===================== SMD (legacy SMD sample data, read-only; Return to Seller, Inventory and SAAF use live data) =====================
-  { dept: 'SMD', slug: 'result-summary', title: 'Result Summary', actions: VFS, rule: 'One row per auction. Average price per unit = Total awarded price ÷ Sold units.',
-    rows: () => SMD('result'), cols: RESULT_COLS, sort: ['auction', 'desc'], totals: resultTotals,
-    filters: [{ key: 'month', label: 'Month', type: 'select', options: () => [...new Set(D.smd.result.map(r => r.month))] }, AUCTION_FILTER] },
-  { dept: 'SMD', slug: 'auction-monitoring', title: 'Auction Monitoring', actions: VFS, compact: true,
-    rule: 'Auction result per auction and lot, with every milestone date from awarding to release to the buyer.',
-    rows: () => SMD('auction'), cols: AM_COLS.map(c => c.key === 'customer' ? C('Customer Name', 'customer', 'text', { w: 190 }) : c), sort: ['auction', 'desc'],
-    filters: AM_FILTERS, initial: { plate: 'NFW4473' },
-    totals: rows => ({ customer: `${rows.length} lots`, price: money(sumBy(rows, 'price')) }) },
   // P5 (switch on): SMD's update screen for the SAAF; live data, unlike the legacy SMD snapshot screens
   { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU, proposed: true, tag: 'P5',
     rule: 'Sold lots with no Awarding Date (live data; the other SMD screens show the legacy snapshot). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; approved lots arrive pre-ticked in FAD Pending Awarding.',
@@ -582,13 +566,17 @@ const SCREENS = [
     cols: [C('Seller', 'seller_full', 'text', { w: 280 }), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 240 }), C('Location', 'location', 'code'),
       C('Cleared by SMD', 'rts_cleared', 'date'), C('Return', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }] },
-  { dept: 'VWD', slug: 'auction-monitoring', title: 'Auction Monitoring', actions: VFS, rule: 'Auction result per auction and lot, from awarding to vehicle release.',
-    rows: V, sort: ['auction', 'desc'], filters: AM_FILTERS,
-    cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Seller', 'seller', 'code'),
-      C('Status', 'status', 'status'), C('Awarding Date', 'awarding', 'date'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller', 'pay_seller', 'date'),
-      C('Seller Acknowledgement', 'seller_ack', 'date'), C('Dispatch Date', 'dispatch', 'date'), C('Vehicle Release Date', 'release', 'date')],
-    totals: rows => ({ customer: `${rows.length} lots, ${rows.filter(r => r.status === 'Sold').length} sold` }) },
   { dept: 'VWD', ...INVENTORY, actions: VFSU, buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },   // VWD updates the Inventory Status; SMD only views
+
+  // ===================== Report (JBAP feedback 16 Oct 2026, #1: moved from FAD and SMD) =====================
+  // [MOCK] Snapshot of the Access Result Summary (10/08/2026): the sample has only some lots per auction, so totals are not recalculated
+  { id: 'report/result-summary', dept: 'Report', title: 'Result Summary', actions: VFS, rule: 'One row per auction. Average price per unit = Total awarded price ÷ Sold units. Prototype: figures copied from the Access Result Summary of 10/08/2026; they do not change when lots are updated here.',
+    rows: () => D.fadResult.map(r => Object.assign({ id: r.auction }, r)), cols: RESULT_COLS, sort: ['auction', 'desc'], totals: resultTotals,
+    filters: [{ key: 'month', label: 'Month', type: 'select', options: () => [...new Set(D.fadResult.map(r => r.month))] },
+      { key: 'year', label: 'Year', type: 'select', w: 'w1', options: () => [...new Set(D.fadResult.map(r => r.year))] }, AUCTION_FILTER] },
+  { id: 'report/auction-monitoring', dept: 'Report', title: 'Auction Monitoring', actions: VFS, compact: true,
+    rule: 'Auction result per auction and lot, with every milestone date from awarding to release to the buyer (live data, for FAD and SMD).',
+    rows: V, cols: AM_COLS, sort: ['auction', 'desc'], filters: AM_FILTERS, totals: amTotals },
 
   // ===================== Customer › Customer Inquiry (read-only; Sales Actions is not part of the prototype) =====================
   { id: CUST_ID, dept: 'Customer', title: 'Customer Inquiry', actions: VFS,
@@ -667,22 +655,28 @@ function sideHtml(route) {
       const qs = list.map(queueCounts).filter(Boolean), q = qs.length ? { ready: sumBy(qs, 'ready'), late: sumBy(qs, 'late') } : null;
       const b = q && (q.ready || q.late) ? `<span class="qbs" aria-hidden="true">${q.late ? `<span class="qb late">${q.late}</span>` : ''}${q.ready ? `<span class="qb">${q.ready}</span>` : ''}</span>` : '';
       const label = q ? ` aria-label="${esc(title)}: ${q.ready} waiting, ${q.late} overdue"` : '';
-      return `<a class="mis ${on ? 'is-active' : ''}" href="#/${list[0].id}" ${on ? 'aria-current="page"' : ''}${label}>${esc(title)}${g ? '' : tagMini(s)}${b}</a>`;
+      // [BEHAVIOR] JBAP feedback (16 Oct 2026, #3): the record count of each list; a group shows its counts on its tabs, a P6 queue (switch on) its badges
+      const cnt = g || q ? '' : `<span class="cnt">${s.rows().length.toLocaleString()}</span>`;
+      return `<a class="mis ${on ? 'is-active' : ''}" href="#/${list[0].id}" ${on ? 'aria-current="page"' : ''}${label}>${esc(title)}${g ? '' : tagMini(s)}${b}${cnt}</a>`;
     }).join('');
     return `<button type="button" class="mi" data-group="${d}" aria-expanded="${open}" aria-controls="grp-${d}">${deptSvg(d)}${d}<span class="caret"></span></button>
       <div class="lvs" id="grp-${d}" ${open ? '' : 'hidden'}>${items}</div>`;
   }).join('');
   const logOn = route === LOG_ID;
   const log = `<a class="mi ${logOn ? 'is-active' : ''}" href="#/${LOG_ID}" ${logOn ? 'aria-current="page"' : ''}>${deptSvg('LOG')}Log Activity</a>`;
-  return TOP_BEFORE.map(x => x[1] === 'customer' ? customerMenu(route) : disabledItem(x)).join('') + groups + TOP_AFTER.map(disabledItem).join('') + log +
-    '<p class="side-note">Prototype: only Customer Inquiry, FAD, SMD, VWD and Log Activity are active. Other menus are disabled.</p>';
+  return TOP_BEFORE.map(x => TOP_MENUS[x[1]] ? topMenu(x[1], route) : disabledItem(x)).join('') + groups + TOP_AFTER.map(disabledItem).join('') + log +
+    '<p class="side-note">Prototype: only Customer Inquiry, Report, FAD, SMD, VWD and Log Activity are active. Other menus are disabled.</p>';
 }
-// Customer menu: Customer Inquiry (also highlighted on a customer page); Sales Actions is not part of the prototype
-function customerMenu(route) {
-  const open = OPEN.Customer, on = route === CUST_ID || !!custRoute(route);
-  return `<button type="button" class="mi" data-group="Customer" aria-expanded="${open}" aria-controls="grp-Customer"><img src="assets/ic-customer.png" alt="">Customer<span class="caret"></span></button>
-    <div class="lvs" id="grp-Customer" ${open ? '' : 'hidden'}><a class="mis ${on ? 'is-active' : ''}" href="#/${CUST_ID}" ${on ? 'aria-current="page"' : ''}>Customer Inquiry</a>
-    <button type="button" class="mis is-disabled" aria-disabled="true" data-disabled="Sales Actions" title="Not part of this prototype">Sales Actions</button></div>`;
+// Top-level menus outside FAD / SMD / VWD: Customer (Customer Inquiry; a customer page keeps it highlighted) and Report. Items show their record count.
+const TOP_MENUS = { customer: { dept: 'Customer', disabled: ['Sales Actions'], on: (s, r) => r === s.id || (s.id === CUST_ID && !!custRoute(r)) },
+  report: { dept: 'Report', disabled: [], on: (s, r) => r === s.id } };
+function topMenu(key, route) {
+  const m = TOP_MENUS[key], open = OPEN[m.dept];
+  const items = SCREENS.filter(s => s.dept === m.dept && shown(s)).map(s => { const on = m.on(s, route);
+    return `<a class="mis ${on ? 'is-active' : ''}" href="#/${s.id}" ${on ? 'aria-current="page"' : ''}>${esc(s.title)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`; }).join('');
+  const off = m.disabled.map(t => `<button type="button" class="mis is-disabled" aria-disabled="true" data-disabled="${esc(t)}" title="Not part of this prototype">${esc(t)}</button>`).join('');
+  return `<button type="button" class="mi" data-group="${m.dept}" aria-expanded="${open}" aria-controls="grp-${m.dept}"><img src="assets/ic-${key}.png" alt="">${m.dept}<span class="caret"></span></button>
+    <div class="lvs" id="grp-${m.dept}" ${open ? '' : 'hidden'}>${items}${off}</div>`;
 }
 function renderSide(route) { $('#menu').innerHTML = sideHtml(route); }
 
@@ -897,16 +891,26 @@ function proposedPanels() {
 function homeLayout() {
   const card = d => {
     const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
-    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Monitoring (legacy SMD sample data); Return to Seller and Inventory use live data', VWD: 'Units for dispatch and release; VWD records the vehicle release' }[d];
-    return `<section class="hcard"><div class="card-h"><div class="ico">${deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox')}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
+    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Monitoring (legacy SMD sample data); Return to Seller and Inventory use live data', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Result Summary and Auction Monitoring, for FAD and SMD' }[d];
+    const icon = d === 'Report' ? '<img src="assets/ic-report.png" alt="" width="20" height="20">' : deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox');
+    return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
   return `<div class="home"><nav class="crumb" aria-label="Breadcrumb"><b>Home</b></nav><h1>Post-Auction Menus</h1>
     <p class="lead">Clickable prototype of the new FAD, SMD and VWD menus that replace the MS Access post-auction forms. Data is sample data and resets when you refresh the page. Demo date: <b>${fmtDate(TODAY)}</b>.</p>
-    ${PROPOSED ? proposedPanels() : ''}<div class="hgrid">${['FAD', 'SMD', 'VWD'].map(card).join('')}</div></div>`;
+    ${PROPOSED ? proposedPanels() : ''}<div class="hgrid">${['FAD', 'SMD', 'VWD', 'Report'].map(card).join('')}</div></div>`;
 }
 
 // ─── Router ───────────────────────────────────────────────────────────
-function route() { const h = location.hash.replace(/^#\/?/, ''); return byId[h] && shown(byId[h]) ? h : custRoute(h) ? h : ''; }   // a proposed screen opens only with the switch on
+// [BEHAVIOR] JBAP feedback (16 Oct 2026): moved or merged screens; their old links open the new place
+const MOVED = { 'FAD/result-summary': 'report/result-summary', 'SMD/result-summary': 'report/result-summary',
+  'FAD/auction-monitoring': 'report/auction-monitoring', 'SMD/auction-monitoring': 'report/auction-monitoring', 'VWD/auction-monitoring': 'VWD/inventory',
+  'FAD/cancellation-monitoring': 'FAD/cancellation-entry', 'SMD/cancellation-monitoring': 'FAD/cancellation-entry', 'FAD/cancellation-payment': 'FAD/cancellation-billing' };
+const routeOf = h => { const t = MOVED[h] || h; return byId[t] && shown(byId[t]) ? t : custRoute(t) ? t : ''; };   // a proposed screen opens only with the switch on
+function route() {
+  const h = location.hash.replace(/^#\/?/, '');
+  if (MOVED[h] && typeof history !== 'undefined' && history.replaceState) history.replaceState(null, '', `#/${MOVED[h]}`);   // the address bar shows the new link
+  return routeOf(h);
+}
 function render() {
   const r = route(), scr = byId[r], cust = custRoute(r);
   if (scr) OPEN[scr.dept] = true;
@@ -1313,7 +1317,7 @@ function bind() {
   const content = $('#content'), menu = $('#menu');
   menu.addEventListener('click', ev => {
     const g = ev.target.closest('[data-group]'); if (g) { OPEN[g.dataset.group] = !OPEN[g.dataset.group]; renderSide(route()); return; }
-    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, FAD, SMD, VWD and Log Activity are active.`, 'warn'); return; }
+    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, Report, FAD, SMD, VWD and Log Activity are active.`, 'warn'); return; }
     if (ev.target.closest('.mis, a.mi')) document.body.classList.remove('nav-open');
   });
   content.addEventListener('change', ev => {
