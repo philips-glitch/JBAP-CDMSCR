@@ -124,6 +124,10 @@ function sellerMoney(v) {
   const vat = com * VAT_RATE, net = s.net !== false, wtax = net ? com * WTAX_RATE : 0, toJbap = net ? com + vat - wtax : 0;
   return { com: r2(com), cvat: r2(r2(com + vat) - r2(com)), ctotal: r2(com + vat), wtax: r2(wtax), to_jbap: r2(toJbap), payable: r2(price + (v.transfer_fee || 0) + bondOf(v) - toJbap) };
 }
+// [BEHAVIOR] Inventory status (user decision of 16 Oct 2026, JBAP to confirm in Q57): CDMS suggests it from the lot, VWD can change it while the unit
+// is in the yard (lot field inv_status); once the unit has left the yard it follows the release record.
+const INV_STATUSES = ['Released', 'Returned', 'Listed', 'Awarded', 'For Return'];
+const invStatusOf = v => v.release ? (v.release_type === 'Return to Seller' ? 'Returned' : 'Released') : v.rts_cleared ? 'For Return' : v.status === 'Sold' ? 'Awarded' : 'Listed';
 function enrichV(v) {
   const [as, ae] = D.auctions[String(v.auction)] || [null, null];
   const buyer_deadline = v.awarding ? addWorkdays(v.awarding, 3) : null;     // 3 working days after awarding
@@ -142,6 +146,7 @@ function enrichV(v) {
     days_in_yard: v.entry_date ? daysBetween(v.entry_date, v.release || TODAY) : null,
     released_buyer: v.release && v.release_type !== 'Return to Seller' ? v.release : null, returned_seller: v.release_type === 'Return to Seller' ? v.release : null,
     yard: v.release ? 'Out' : 'In yard', latest: String(v.auction) === LATEST_AUCTION ? 'In latest auction' : 'Not in latest auction',
+    inv_status: v.release ? invStatusOf(v) : v.inv_status || invStatusOf(v),
     buyer_deadline, pay_deadline, dispatch_deadline,
     penalty: overdue && PENALTY_LOCATIONS.includes(v.location || 'Pasay City') ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
     ...sellerMoney(v),
@@ -248,11 +253,13 @@ const REBMON_COLS = [C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code')
   C('Rebate', 'rebate', 'money'), C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date')];
 // Wish 5: Inventory report (VWD, also viewable by SMD). Replaces VWD's Excel file; check the columns against it when JBAP sends it.
 const INVENTORY = { slug: 'inventory', title: 'Inventory', actions: VFS, tag: 'Wish',
-  rule: `One row per vehicle: Date of Entry (CDMS Cars > Car List; sample dates inferred), status, and the date it left the yard. Days in Yard runs to the release or return date, or to today while the unit is in the yard. "Not in latest auction" (auction ${LATEST_AUCTION}) helps SMD spot units to return.`,
+  rule: `One row per vehicle: Date of Entry (CDMS Cars > Car List; sample dates inferred), status, and the date it left the yard. Inventory Status (Released, Returned, Listed, Awarded, For Return) starts from the lot: released, returned, cleared for return, sold, otherwise listed; VWD can change it while the unit is in the yard. Days in Yard runs to the release or return date, or to today while the unit is in the yard. "Not in latest auction" (auction ${LATEST_AUCTION}) helps SMD spot units to return.`,
   rows: V, sort: ['entry_date', 'asc'], initial: { yard: 'In yard' },
   cols: [C('Date of Entry', 'entry_date', 'date'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Seller', 'seller', 'code'), C('Location', 'location', 'code'),
-    C('CDMS Status', 'status', 'status'), C('Released to Buyer', 'released_buyer', 'date'), C('Returned to Seller', 'returned_seller', 'date'), C('Days in Yard', 'days_in_yard', 'int')],
+    C('CDMS Status', 'status', 'status'), C('Inventory Status', 'inv_status', 'text', { edit: 'select', options: INV_STATUSES, lockWhen: r => !!r.release }),
+    C('Released to Buyer', 'released_buyer', 'date'), C('Returned to Seller', 'returned_seller', 'date'), C('Days in Yard', 'days_in_yard', 'int')],
   filters: [{ key: 'yard', label: 'In yard / Out', type: 'select', w: 'w1', options: () => ['In yard', 'Out'] }, { key: 'status', label: 'Status', type: 'select', w: 'w1', options: () => ['Sold', 'Not Sold', 'Cancelled'] },
+    { key: 'inv_status', label: 'Inventory Status', type: 'select', options: () => INV_STATUSES },
     { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'location', label: 'Location', type: 'select', options: () => [...new Set(S.veh.map(v => v.location || 'Pasay City'))].sort() },
     { key: 'latest', label: 'Latest auction', type: 'select', options: () => ['In latest auction', 'Not in latest auction'] }, { key: 'plate', label: 'Plate Number' }],
   totals: rows => ({ plate: `${rows.length} units`, model: ['Sold', 'Not Sold', 'Cancelled'].map(s => `${s} ${rows.filter(r => r.status === s).length}`).join(' · ') }) };
@@ -520,7 +527,7 @@ const SCREENS = [
       C('Status', 'status', 'status'), C('Awarding Date', 'awarding', 'date'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller', 'pay_seller', 'date'),
       C('Seller Acknowledgement', 'seller_ack', 'date'), C('Dispatch Date', 'dispatch', 'date'), C('Vehicle Release Date', 'release', 'date')],
     totals: rows => ({ customer: `${rows.length} lots, ${rows.filter(r => r.status === 'Sold').length} sold` }) },
-  { dept: 'VWD', ...INVENTORY },
+  { dept: 'VWD', ...INVENTORY, actions: VFSU, buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },   // VWD updates the Inventory Status; SMD only views
 
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
@@ -658,7 +665,7 @@ function cellHtml(scr, r, c, upd) {
   const ui = U(scr.id), ed = ui.edits[r.id] || {}, err = (ui.errors[r.id] || {})[c.key];
   const cls = [RIGHT.has(c.type) ? 'r' : '', CEN.has(c.type) ? 'c' : ''].join(' ');
   if (c.na?.(r)) return '<td class="c na" title="Does not apply to this seller">n/a</td>';   // [BEHAVIOR] JBAP feedback: EWB / DOAS columns that do not apply to the seller
-  if (c.edit && upd) {
+  if (c.edit && upd && !c.lockWhen?.(r)) {   // lockWhen: an editable column shown read-only on some rows
     const has = c.key in ed, val = has ? ed[c.key] : c.edit === 'check' ? tickDefault(scr, r, c.key) : r[c.key];
     const aria = `${c.label}, lot ${r.lot || ''} ${r.plate || ''}`.trim();
     const common = `data-row="${esc(r.id)}" data-key="${c.key}" aria-label="${esc(aria)}" ${err ? `aria-invalid="true" title="${esc(c.label + ' ' + err)}"` : ''}`;

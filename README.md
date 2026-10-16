@@ -32,7 +32,7 @@ Sample data for the proposed improvements and the wish-list screens sits in `dat
 8. **Rebate › Rebate Payable**: enter *Rebate Paid* > **Save**. **Liability to Seller**: pick a date > **Generate**.
 9. **Log Activity**: every change from steps 1 to 8, every VWD release or return and every SMD Return to Seller clearance appears here as user `system`, one row per changed field with the old and new value (newest first). Filter by date, user, module, action or record/plate. Prints and emails that record a value (Awarding Date, Billing #, Transmittal Date, Dispatch Date, cancellation billing date and amount, vehicle release with type and checklist, documents received with Others/Remarks and ATF No.) are logged; previews that change nothing and *Generate* are not.
 10. **Return to Seller** (SMD, wish 4): tick *For Return* on units that are not sold and not in the latest auction > **Print & email clearance form** > **Send & print**. The units move to VWD **For Return to Seller** > **Release vehicle** (type *Return to Seller*).
-11. **Inventory** (VWD, also in SMD, wish 5): one row per vehicle with Date of Entry, status, release or return date and days in yard. Filter *In yard / Out* or *Not in latest auction*.
+11. **Inventory** (VWD, also in SMD, wish 5): one row per vehicle with Date of Entry, status, release or return date and days in yard. Filter *In yard / Out*, *Inventory Status* or *Not in latest auction*. VWD sets the *Inventory Status* (Released, Returned, Listed, Awarded, For Return) of units in the yard and presses **Save**; CDMS suggests it from the lot, and a released or returned unit follows its release record. SMD only views it.
 12. **Security Bond** (FAD, JBAP feedback): lots with a bond appear once paid. Enter the ORCR and refund dates, Refund Via, or Forfeited. Tip: enter JBAP Receipt of Documents and Buyer Receipt of Documents for Auction 220, Lot 119 (plate NYL9684) in Document Monitoring, any date from 10/04 to 10/08/2026, to see *Waiting ORCR*.
 13. **Proposed improvements**: turn on the switch in the header (see *Proposed improvements* below).
 
@@ -76,6 +76,7 @@ With the switch **off**, every screen works as the CR form describes. With it **
 | Security Bond monitor | FAD › Security Bond (Wish list) | ORCR transfer, refund (with Refund Via), forfeiture; status worked out from the dates; Open view hides Complete and Forfeited |
 | Billing menu | FAD › Billing | Commission Billing, Billing Monitoring and Unpaid Billing as three tabs of one menu entry (Commission Billing first) |
 | Rebate menu | FAD › Rebate | Rebate Monitoring and Rebate Payable as two tabs of one menu entry (SMD keeps its own Rebate Monitoring) |
+| Inventory status | VWD › Inventory | Released, Returned, Listed, Awarded or For Return; suggested from the lot, VWD can change it while the unit is in the yard (JBAP to confirm, Q57) |
 
 ## Access per menu
 
