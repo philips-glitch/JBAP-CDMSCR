@@ -825,7 +825,7 @@ function effectiveCount(scr, key) {   // ticks: unsaved edit, else saved value o
 function queryCard(scr) {
   const d = U(scr.id).asOf || TODAY;
   return `<section class="card filter"><div class="card-h"><div class="ico">${IC.search}</div>Query</div>
-    <form class="fb" data-form="query"><div class="fld w2"><label for="q-asof">Payment to seller still blank before</label>${dateField('q-asof', d, 'required')}</div>
+    <form class="fb" data-form="query"><div class="fld w2"><label for="q-asof">Payment to seller still blank before</label>${dateField('q-asof', d, 'required')}<span class="err" id="q-asof-err"></span></div>
     <p style="font-size:12.5px;color:var(--faint);margin:0 0 9px;max-width:620px">Buyer payment date has no filter. A unit is listed when Payment to Seller is blank, or falls after the date entered.</p>
     <div class="btns"><button type="submit" class="btn pr">${IC.play}Generate</button></div></form></section>`;
 }
@@ -1385,7 +1385,13 @@ function bind() {
   content.addEventListener('submit', ev => {
     ev.preventDefault(); const scr = currentScr(); if (!scr) return; const ui = U(scr.id), form = ev.target.dataset.form;
     if (form === 'filter') { content.querySelectorAll('[data-filter]').forEach(i => { ui.filters[i.dataset.filter] = i.value; }); ui.applied = Object.assign({}, ui.filters); ui.page = 1; render(); }
-    if (form === 'query') { ui.asOf = parseDateInput($('#q-asof').value, TODAY) || TODAY; ui.page = 1; render(); toast(`Liability generated as of ${fmtDate(ui.asOf)}.`); }
+    if (form === 'query') {
+      // [BEHAVIOR] text that is not a date stays in the box, marked invalid, and no query is run; a blank box still means today
+      const iso = parseDateInput($('#q-asof').value, TODAY), box = $('#q-asof'), err = $('#q-asof-err');
+      if (iso === null) { err.textContent = 'Type the date as mm/dd/yyyy, or t for today.'; box.classList.add('is-invalid'); return; }
+      err.textContent = ''; box.classList.remove('is-invalid');
+      ui.asOf = iso || TODAY; ui.page = 1; render(); toast(`Liability generated as of ${fmtDate(ui.asOf)}.`);
+    }
     if (form === 'find') entryFind(scr);
     if (form === 'cancel') entryCancel(scr);
   });

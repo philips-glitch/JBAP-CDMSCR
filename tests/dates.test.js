@@ -29,3 +29,8 @@ test('form date fields are typed text boxes too', () => {
   assert.match(h, /<input type="text" class="ctl dt" autocomplete="off" placeholder="mm\/dd\/yyyy" value="10\/08\/2026" id="rl-date"/); assert.match(h, /data-pick/);
   assert.match(P.dateField('ce-date', '', 'disabled', 'is-invalid'), /class="ctl dt is-invalid"[^>]*value="" id="ce-date" disabled/);
 });
+test('Liability query: the date box has an error line for text it cannot read', () => {
+  const P = load(), scr = P.byId['FAD/liability-to-seller'], h = P.queryCard(scr);
+  assert.match(h, /class="ctl dt"[^>]*value="10\/08\/2026" id="q-asof"/);
+  assert.match(h, /<span class="err" id="q-asof-err"><\/span>/);
+});
