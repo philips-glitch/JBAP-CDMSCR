@@ -27,7 +27,7 @@
   D.vehicles.forEach(v => { const s = saaf[v.id]; if (s) { v.saaf_sent = s[0]; v.saaf_approved = s[1]; } });
   // [MOCK] Wish 5: Date of Entry (CDMS Cars > Car List). Inferred: start of the lot's auction minus 7 to 21 days
   const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-  D.vehicles.forEach(v => { const a = D.auctions[String(v.auction)]; if (a && !v.entry_date) v.entry_date = addDays(a[0], -(7 + Number(v.id.slice(1)) % 15)); });   // [MOCK] only for lots not found in JBAP's parking inventory
+  D.vehicles.forEach(v => { const a = D.auctions[String(v.auction)]; if (a && !v.entry_date) v.entry_date = addDays(a[0], -(7 + Number(v.id.slice(1)) % 15)); });   // [MOCK] only for lots without a usable date of entry from JBAP's parking inventory
   // [MOCK] JBAP feedback (16 Oct 2026, #19): auction 222 (JBAP's parking file shows A222 lots by 12 Oct) with three unsold units relisted, so Return to Seller leaves them out
   D.auctions['222'] = ['2026-10-12', '2026-10-14'];
   D.vehicles.forEach(v => { if (['V066', 'V070', 'V077'].includes(v.id)) v.next_auction = 222; });
