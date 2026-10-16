@@ -367,15 +367,26 @@ const SCREENS = [
     cols: [C('Seller', 'seller_full', 'text', { w: 290 }), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }),
       C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller Deadline', 'pay_deadline', 'date'), C('Total (Result Price + Transfer Fees + Security Bond)', 'total', 'money')],
     totals: rows => ({ seller_full: 'Total liability to sellers', total: money(sumBy(rows, 'total')) }) },
-  { dept: 'FAD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', actions: VS, rule: 'Result price records with status SOLD and a rebate.',
+  // FAD › Rebate: Rebate Monitoring and Rebate Payable as two tabs (user request of 16 Oct 2026); SMD keeps its own Rebate Monitoring
+  { dept: 'FAD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', group: 'Rebate', actions: VS, rule: 'Result price records with status SOLD and a rebate.',
     rows: () => sold().filter(v => v.rebate), cols: REBMON_COLS, sort: ['adate', 'desc'] },
-  { dept: 'FAD', slug: 'rebate-payable', title: 'Rebate Payable', actions: VSU, rule: 'Result price records with status SOLD, a rebate, a Buyer Paid date, and a blank Rebate Paid date.',
+  { dept: 'FAD', slug: 'rebate-payable', title: 'Rebate Payable', group: 'Rebate', actions: VSU, rule: 'Result price records with status SOLD, a rebate, a Buyer Paid date, and a blank Rebate Paid date.',
     rows: () => sold().filter(v => v.rebate && v.buyer_paid && !v.rebate_paid), sort: ['adate', 'asc'],
     cols: [C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 360 }), C('Rebate', 'rebate', 'money'),
       C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date', { edit: 'date' })],
     totals: rows => ({ rebate: money(sumBy(rows, 'rebate')) }),
     validate: (r, e) => ({ rebate_paid: notFuture(e.rebate_paid) || notBefore(e.rebate_paid, r.buyer_paid, 'Buyer Paid') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid rebates removed from the list.' },
+  // FAD › Billing: Commission Billing first, then Billing Monitoring and Unpaid Billing (tabs in this order; user requests of 15 and 16 Oct 2026)
+  { dept: 'FAD', slug: 'commission-billing', title: 'Commission Billing', group: 'Billing', actions: VSU,
+    rule: 'Result price records with a Remittance Date and no commission billing yet. Tick Print?, then Print commission billing to record the NOAH billing number and date.',
+    rows: () => sold().filter(v => v.pay_seller && !v.billed), sort: ['customer', 'asc'],
+    cols: [C('Customer Name', 'customer', 'text', { w: 300 }), C('Plate Number', 'plate', 'code'), C('Print?', 'print_comm', 'check', { edit: 'check' }), C('Remittance Date', 'pay_seller', 'date'),
+      C('Winning Bid', 'price', 'money'), C('Commission', 'com', 'money'), C('VAT', 'cvat', 'money'), C('Total', 'ctotal', 'money')],
+    totals: rows => ({ plate: `${rows.length} units`, price: money(sumBy(rows, 'price')), com: money(sumBy(rows, 'com')), cvat: money(sumBy(rows, 'cvat')), ctotal: money(sumBy(rows, 'ctotal')) }),
+    buttons: [{ label: 'Print commission billing', kind: 'ol', icon: 'print', act: 'printComm', count: 'print_comm' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
+    queue: true, ready: { key: 'print_comm', when: () => true },
+    ruleP: ['P4', 'Every lot arrives pre-ticked. Printing records one billing per seller in one go, each with its own NOAH billing number (P3: typed until JBAP\'s NOAH integration is re-routed to CDMS).'] },
   { dept: 'FAD', slug: 'billing-monitoring', title: 'Billing Monitoring', group: 'Billing', actions: VSU, rule: 'All records from the billing table. New commission billings appear here after printing. Tick Print Transmittal? and print the billing transmittal to record the Transmittal Date.',
     rows: B, sort: ['bdate', 'desc'],
     cols: [C('Billing #', 'no', 'code'), C('Customer', 'customer', 'text', { w: 320 }), C('Auction Date / Particulars', 'particular', 'text', { w: 230 }), C('Billing Date', 'bdate', 'date'), C('Total', 'total', 'money'),
@@ -392,15 +403,6 @@ const SCREENS = [
       return { pay: notFuture(p) || notBefore(p, r.bdate, 'the Billing Date') || (!p && cr ? 'is required with a Collection Receipt' : null), cr: p && !cr ? 'is required with a Payment Date' : null }; },
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid billings removed from the list.',
     ruleP: ['P3', 'Collection Receipt is typed for now; it will come through JBAP\'s existing NOAH integration once it is re-routed from Access to CDMS.'] },
-  { dept: 'FAD', slug: 'commission-billing', title: 'Commission Billing', actions: VSU,
-    rule: 'Result price records with a Remittance Date and no commission billing yet. Tick Print?, then Print commission billing to record the NOAH billing number and date.',
-    rows: () => sold().filter(v => v.pay_seller && !v.billed), sort: ['customer', 'asc'],
-    cols: [C('Customer Name', 'customer', 'text', { w: 300 }), C('Plate Number', 'plate', 'code'), C('Print?', 'print_comm', 'check', { edit: 'check' }), C('Remittance Date', 'pay_seller', 'date'),
-      C('Winning Bid', 'price', 'money'), C('Commission', 'com', 'money'), C('VAT', 'cvat', 'money'), C('Total', 'ctotal', 'money')],
-    totals: rows => ({ plate: `${rows.length} units`, price: money(sumBy(rows, 'price')), com: money(sumBy(rows, 'com')), cvat: money(sumBy(rows, 'cvat')), ctotal: money(sumBy(rows, 'ctotal')) }),
-    buttons: [{ label: 'Print commission billing', kind: 'ol', icon: 'print', act: 'printComm', count: 'print_comm' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
-    queue: true, ready: { key: 'print_comm', when: () => true },
-    ruleP: ['P4', 'Every lot arrives pre-ticked. Printing records one billing per seller in one go, each with its own NOAH billing number (P3: typed until JBAP\'s NOAH integration is re-routed to CDMS).'] },
   { dept: 'FAD', slug: 'cancellation-monitoring', title: 'Cancellation Monitoring', actions: VS, rule: 'Information on cancelled vehicles.',
     rows: CX, cols: CXMON_COLS, sort: ['dcancel', 'desc'] },
   { dept: 'FAD', slug: 'cancellation-entry', title: 'Cancellation Entry', actions: VSU, layout: 'entry', queue: () => cdmsCancelsPending().length,
@@ -1021,7 +1023,7 @@ const ACTIONS = {
     const p3 = PROPOSED ? `<p class="note no-print">${tagHtml({ tag: 'P3' })} Typed for now; comes through JBAP's NOAH integration once it is re-routed to CDMS.</p>` : '';
     const body = `<div class="fgrid two no-print" style="padding:0 0 12px">${nos}<div class="fld"><label for="cb-date">Billing Date</label><input class="ctl" type="date" id="cb-date" value="${TODAY}" required><span class="err" id="cb-date-err"></span></div></div>${p3}
       ${sellers.map(code => REPORTS.billingComputation(code, '(entered above)', TODAY, of(code))).join('')}`;
-    openModal({ title: many ? `Print commission billing: ${sellers.length} sellers` : 'Print commission billing', icon: 'print', wide: true, body, note: 'Recording adds the billing to Billing (Billing Monitoring and Unpaid Billing tabs).',
+    openModal({ title: many ? `Print commission billing: ${sellers.length} sellers` : 'Print commission billing', icon: 'print', wide: true, body, note: 'Recording adds the billing to the Billing Monitoring and Unpaid Billing tabs.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: many ? `Record ${sellers.length} billings & print` : 'Record billing & print', kind: 'pr', icon: 'print', onClick: () => {
         const bd = $('#cb-date').value, entered = sellers.map((_, i) => $(`#cb-no-${i}`).value.trim()); let ok = true;
         $('#cb-date-err').textContent = ''; $('#cb-date').classList.remove('is-invalid');
@@ -1035,7 +1037,7 @@ const ACTIONS = {
         if (!ok) return;
         const html = sellers.map((code, i) => { recordCommissionBilling(scr, code, entered[i], bd, of(code)); return REPORTS.billingComputation(code, entered[i], bd, of(code)); }).join('');
         render(); openModal({ title: many ? `Billing computation: ${sellers.length} billings` : `Billing computation #${entered[0]}`, icon: 'print', wide: true, body: html, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
-        printModal(); toast(`${many ? `${sellers.length} billings` : `Billing #${esc(entered[0])}`} recorded for ${rows.length} vehicle(s). See Billing (Billing Monitoring and Unpaid Billing tabs).`);
+        printModal(); toast(`${many ? `${sellers.length} billings` : `Billing #${esc(entered[0])}`} recorded for ${rows.length} vehicle(s). See the Billing Monitoring and Unpaid Billing tabs.`);
       } }] });
   },
   printCancel(scr) {

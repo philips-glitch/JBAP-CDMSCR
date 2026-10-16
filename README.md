@@ -17,19 +17,19 @@ Sample data for the proposed improvements and the wish-list screens sits in `dat
 ## What is clickable
 
 - **Only FAD, SMD, VWD and Log Activity are active.** All other CDMS menus (Dashboard, Customer, Cars, Report, Payment, etc.) are disabled and show a short message when clicked.
-- **39 screens**: FAD 20, SMD 12, VWD 6, Log Activity 1 (last item in the sidebar, below Staff), plus a Home page with counts per list. FAD's **Billing Monitoring** and **Unpaid Billing** are two tabs of one **Billing** menu entry. The SMD **Seller Awarding Acknowledgement** screen shows only with the **Proposed improvements** switch on (38 screens with it off).
+- **39 screens**: FAD 20, SMD 12, VWD 6, Log Activity 1 (last item in the sidebar, below Staff), plus a Home page with counts per list. FAD's **Commission Billing**, **Billing Monitoring** and **Unpaid Billing** are three tabs of one **Billing** menu entry, and **Rebate Monitoring** and **Rebate Payable** are two tabs of one **Rebate** menu entry. The SMD **Seller Awarding Acknowledgement** screen shows only with the **Proposed improvements** switch on (38 screens with it off).
 - Every list has working **filters, column sorting, page size and paging**, an empty state, and totals where the design has them.
 
 ## Flow walkthrough (FAD, data flows between lists and into VWD)
 
 1. **Pending Awarding**: tick *For BAAF* on 1 or more lots (optionally change Awarding Date, Transfer Fees or Security Bond) > **Email BAAF** > preview one email per buyer > **Send**. Lots move to **Unpaid**.
 2. **Unpaid**: enter *Buyer Paid* > **Save changes**. Lot moves to **Payment Seller**. Try a future date to see validation.
-3. **Payment Seller**: tick *Print Payment to Seller* > **Print payment to seller** (report per seller). Enter *Payment to Seller Date* > **Save**. Lot moves to **Seller Acknowledgement** and **Commission Billing**.
+3. **Payment Seller**: tick *Print Payment to Seller* > **Print payment to seller** (report per seller). Enter *Payment to Seller Date* > **Save**. Lot moves to **Seller Acknowledgement** and **Billing › Commission Billing**.
 4. **Seller Acknowledgement**: enter the date and save. **For Dispatch** lists lots whose seller condition is met (Buyer Payment / DOAS sellers after Buyer Paid, others after Seller Acknowledgement): enter the date and save. **Document Monitoring** (JBAP's Documents Monitoring columns): enter the EWB, DOAS and document dates; Status and the two aging columns update by themselves, and the Open view hides Complete and Cancelled lots. Dispatched lots appear in **Unreleased Unit** (FAD) and in VWD **Unreleased Unit / Unreleased Unit (Overdue)**. VWD can then click **Release vehicle** on a row (see *Reports and emails*).
-5. **Commission Billing**: tick *Print?* for lots of **one seller** > **Print commission billing** > enter NOAH Billing No. and date > **Record billing & print**. A new billing appears in **Billing** (tabs *Billing Monitoring* and *Unpaid Billing*).
+5. **Billing › Commission Billing**: tick *Print?* for lots of **one seller** > **Print commission billing** > enter NOAH Billing No. and date > **Record billing & print**. A new billing appears in the *Billing Monitoring* and *Unpaid Billing* tabs.
 6. **Billing › Unpaid Billing**: enter Payment Date + Collection Receipt > **Save**.
 7. **Cancellation Entry**: enter an Auction No. and Lot (tip: copy one from Unpaid) > **Find** > set Status to *Cancelled*, date, waiver and reason > **Cancel transaction**. It appears in **Cancellation Monitoring** and (if not waived) **Cancellation Billing** > print to bill > **Cancellation Payment** > enter date paid and amount.
-8. **Rebate Payable**: enter *Rebate Paid* > **Save**. **Liability to Seller**: pick a date > **Generate**.
+8. **Rebate › Rebate Payable**: enter *Rebate Paid* > **Save**. **Liability to Seller**: pick a date > **Generate**.
 9. **Log Activity**: every change from steps 1 to 8, every VWD release or return and every SMD Return to Seller clearance appears here as user `system`, one row per changed field with the old and new value (newest first). Filter by date, user, module, action or record/plate. Prints and emails that record a value (Awarding Date, Billing #, Transmittal Date, Dispatch Date, cancellation billing date and amount, vehicle release with type and checklist, documents received with Others/Remarks and ATF No.) are logged; previews that change nothing and *Generate* are not.
 10. **Return to Seller** (SMD, wish 4): tick *For Return* on units that are not sold and not in the latest auction > **Print & email clearance form** > **Send & print**. The units move to VWD **For Return to Seller** > **Release vehicle** (type *Return to Seller*).
 11. **Inventory** (VWD, also in SMD, wish 5): one row per vehicle with Date of Entry, status, release or return date and days in yard. Filter *In yard / Out* or *Not in latest auction*.
@@ -42,7 +42,7 @@ Sample data for the proposed improvements and the wish-list screens sits in `dat
 |---|---|---|
 | JBAP_AWARDING + qryRebatePrint | Pending Awarding › Email BAAF (attachments in the email preview) | Awarding Date |
 | qryPAYMENTSELLERPrint | Payment Seller › Print payment to seller | – |
-| qryBillingSeller | Commission Billing › Print commission billing | Billing # and date |
+| qryBillingSeller | Billing › Commission Billing › Print commission billing | Billing # and date |
 | BILLING TRANSMITTAL | Billing › Billing Monitoring › Print Transmittal? › Print billing transmittal | Transmittal Date |
 | VEHICLE_DISPATCH (email + form) | For Dispatch › For Dispatch Email? › Email dispatch form | Dispatch Date |
 | rptVehiclerelease (release form + gate pass) | VWD Unreleased Unit / Overdue › Release vehicle; VWD For Return to Seller › Release vehicle (type Return to Seller) | Release date, VRF No. |
@@ -74,7 +74,8 @@ With the switch **off**, every screen works as the CR form describes. With it **
 | DOAS signing per seller | Seller settings | `doas_signing`: at JBAP (default), at the seller's branch (EWB), none (sellers released on Buyer Payment) |
 | Security Bond billing | Pending Awarding, BAAF, Unpaid, Payment Seller, Liability to Seller | Seller setting `security_bond` (sample: PHP 20,000 for INSPIRO, ORICO, ASIALINK), editable per lot; on the BAAF only when a lot has one; inside *Notarial / Transfer / Bond* and Payable to Seller. Only INSPIRO bills a bond in JBAP's sheet; ORICO and ASIALINK carry a sample bond for the demo. Access lots keep their Access amounts (no bond) |
 | Security Bond monitor | FAD › Security Bond (Wish list) | ORCR transfer, refund (with Refund Via), forfeiture; status worked out from the dates; Open view hides Complete and Forfeited |
-| Billing menu | FAD › Billing | Billing Monitoring and Unpaid Billing as two tabs of one menu entry |
+| Billing menu | FAD › Billing | Commission Billing, Billing Monitoring and Unpaid Billing as three tabs of one menu entry (Commission Billing first) |
+| Rebate menu | FAD › Rebate | Rebate Monitoring and Rebate Payable as two tabs of one menu entry (SMD keeps its own Rebate Monitoring) |
 
 ## Access per menu
 
