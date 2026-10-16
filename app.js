@@ -182,7 +182,7 @@ function recordCancellationBilling(scr, rows) {
     r._raw.bill_date = TODAY; r._raw.amount = amount; r._raw.for_print = false; delete ui.edits[r.id];
   });
 }
-// [MOCK] legacy billed cancellations without an amount default to the penalty, so Save on Cancellation Payment works
+// [MOCK] legacy billed cancellations without an amount default to the penalty, so Save on Cancellation Billing & Payment works
 if (S) S.cancels.forEach(c => { if (c.bill_date && (c.amount === null || c.amount === undefined)) c.amount = cancelSplit(Object.assign({}, c, { seller: cancelSeller(c) })).penalty; });
 // [BEHAVIOR] JBAP feedback (16 Oct 2026): SMD lists show the seller code and the Auction No.; the legacy snapshot has only the seller's name and the auction dates
 const SELLER_BY_NAME = D ? Object.fromEntries(D.sellers.map(s => [String(s.name).toUpperCase().trim(), s.code])) : {};
@@ -304,9 +304,6 @@ const resultTotals = rows => { const u = sumBy(rows, 'units'), t = sumBy(rows, '
 const UNREL_COLS = [C('Customer Name', 'customer', 'text', { w: 280 }), C('Auction No.', 'auction', 'code'), C('Make/Model', 'model', 'text', { w: 240 }), C('Plate Number', 'plate', 'code'),
   C('Location', 'location', 'code'), C('Dispatch Deadline', 'dispatch_deadline', 'date', { late: true }), C('Penalty', 'penalty', 'money')];
 const UNREL_FILTERS = [AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }, { key: 'dispatch_deadline', label: 'Dispatch Deadline', type: 'daterange', w: 'w2' }];
-const CXMON_COLS = [C('Auction No.', 'auction', 'code'), C('Lot No.', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 260 }), C('Customer ID', 'cid', 'code'),
-  C('Plate Num', 'plate', 'code'), C('Date Cancelled', 'dcancel', 'date'), C('Waived?', 'waived', 'rocheck'), C('Justification', 'just', 'text', { w: 330 }),
-  C('Cancellation Fee Remitted', 'remitted', 'date')];
 const REBMON_COLS = [   // SMD Rebate Monitoring (Access snapshot); FAD has its own columns from JBAP's Rebate Monitoring file
   C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 320 }), C('Plate', 'plate', 'code'),
   C('Rebate', 'rebate', 'money'), C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date')];
@@ -467,32 +464,31 @@ const SCREENS = [
       return { pay: notFuture(p) || notBefore(p, r.bdate, 'the Billing Date') || (!p && cr ? 'is required with a Collection Receipt' : null), cr: p && !cr ? 'is required with a Payment Date' : null }; },
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid billings removed from the list.',
     ruleP: ['P3', 'Collection Receipt is typed for now; it will come through JBAP\'s existing NOAH integration once it is re-routed from Access to CDMS.'] },
-  { dept: 'FAD', slug: 'cancellation-monitoring', title: 'Cancellation Monitoring', actions: VS, rule: 'Information on cancelled vehicles.',
-    rows: CX, cols: CXMON_COLS, sort: ['dcancel', 'desc'] },
-  { dept: 'FAD', slug: 'cancellation-entry', title: 'Cancellation Entry', actions: VSU, layout: 'entry', queue: () => cdmsCancelsPending().length,
-    rule: 'Enter the Auction No. and Lot to find the transaction, then record the cancellation.',
+  // JBAP feedback (16 Oct 2026, #14): the list under the entry form is the cancellation monitoring (Cancellation Monitoring removed from FAD and SMD)
+  { dept: 'FAD', slug: 'cancellation-entry', title: 'Cancellation Entry', actions: VFSU, layout: 'entry', queue: () => cdmsCancelsPending().length,
+    rule: 'Enter the Auction No. and Lot to find the transaction, then record the cancellation. The list below shows every cancellation with its billing and payment dates.',
     ruleP: ['P2', 'Lots already cancelled in CDMS wait at the top: add the waiver decision and Confirm. The record and the penalty billing are the same as for a cancellation entered here.'],
     rows: CX, sort: ['dcancel', 'desc'],
-    cols: [C('Lot', 'lot', 'code'), C('Auction Date', 'adate', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }), C('Status', 'status', 'status'),
-      C('Date Cancelled', 'dcancel', 'date'), C('Cancellation Fee Waived', 'waived', 'rocheck'), C('Justification of Waiver', 'just', 'text', { w: 330 }), C('Plate Number', 'plate', 'code')] },
-  { dept: 'FAD', slug: 'cancellation-billing', title: 'Cancellation Billing', actions: VSU,
-    rule: 'Cancelled lots, fee not waived, with a blank Cancellation Billing Date. Penalty PHP 10,000 per lot: PHP 5,000 to the seller and PHP 5,000 to JBAP (EWB: all to JBAP). Printing records the billing date and the amount due.',
-    rows: () => CX().filter(c => !c.bill_date && !c.waived), sort: ['auction', 'desc'],
-    cols: [C('Auction No.', 'auction', 'code'), C('Plate', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 300 }), C('Date Cancelled', 'dcancel', 'date'),
-      C('Penalty', 'penalty', 'money'), C('To Seller', 'pen_seller', 'money'), C('To JBAP', 'pen_jbap', 'money'), C('Billing Date', 'bill_date', 'date'), C('For Print?', 'for_print', 'check', { edit: 'check' })],
+    cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Buyer ID', 'cid', 'code'), C('Plate Number', 'plate', 'code'),
+      C('Date Cancelled', 'dcancel', 'date'), C('Waived?', 'waived', 'rocheck'), C('Justification', 'just', 'text', { w: 260 }), C('Billing Date', 'bill_date', 'date'),
+      C('Date Paid', 'paid_date', 'date'), C('Cancellation Fee Remitted', 'remitted', 'date')],
+    filters: [AUCTION_FILTER, { key: 'customer', keys: ['customer', 'cid'], label: 'Customer Name / Buyer ID', w: 'w2' }, { key: 'plate', label: 'Plate Number' },
+      { key: 'waived', label: 'Waived', type: 'select', w: 'w1', options: () => ['Yes', 'No'], match: (r, v) => (v === 'Yes') === !!r.waived }] },
+  // JBAP feedback (16 Oct 2026, #13): Cancellation Billing and Cancellation Payment in one screen
+  { dept: 'FAD', slug: 'cancellation-billing', title: 'Cancellation Billing & Payment', actions: VSU,
+    rule: 'Cancelled lots with the fee not waived and no Date Paid. Penalty PHP 10,000 per lot: PHP 5,000 to the seller and PHP 5,000 to JBAP (EWB: all to JBAP). Tick For Print? and print to bill: printing records the Billing Date and the amount due. When the buyer pays, enter Date Paid (and Amount) and save; paid lots leave the list.',
+    rows: () => CX().filter(c => !c.waived && !c.paid_date), sort: ['auction', 'desc'],
+    cols: [C('Auction No.', 'auction', 'code'), C('Plate', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 260 }), C('Date Cancelled', 'dcancel', 'date'),
+      C('Penalty', 'penalty', 'money'), C('To Seller', 'pen_seller', 'money'), C('To JBAP', 'pen_jbap', 'money'),
+      C('For Print?', 'for_print', 'check', { edit: 'check', lockWhen: r => !!r.bill_date }), C('Billing Date', 'bill_date', 'date'),
+      C('Date Paid', 'paid_date', 'date', { edit: 'date', lockWhen: r => !r.bill_date }), C('Amount', 'amount', 'money', { edit: 'money', lockWhen: r => !r.bill_date })],
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), pen_seller: money(sumBy(rows, 'pen_seller')), pen_jbap: money(sumBy(rows, 'pen_jbap')) }),
-    buttons: [{ label: 'Print cancellation billing', kind: 'ol', icon: 'print', act: 'printCancel', count: 'for_print' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
-    queue: true, ready: { key: 'for_print', when: () => true },
-    ruleP: ['P4', 'Every lot arrives pre-ticked for billing.'] },
-  { dept: 'FAD', slug: 'cancellation-payment', title: 'Cancellation Payment', actions: VSU,
-    rule: 'Result price records with a Cancellation Billing Date and a blank Cancellation Payment.',
-    rows: () => CX().filter(c => c.bill_date && !c.paid_date), sort: ['bill_date', 'asc'],
-    cols: [C('Auction No.', 'auction', 'code'), C('Plate No.', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 360 }), C('Date Cancelled', 'dcancel', 'date'),
-      C('Billing Date', 'bill_date', 'date'), C('Penalty', 'penalty', 'money'), C('To Seller', 'pen_seller', 'money'), C('To JBAP', 'pen_jbap', 'money'),
-      C('Date Paid', 'paid_date', 'date', { edit: 'date' }), C('Amount', 'amount', 'money', { edit: 'money' })],
     validate: (r, e) => { const d = 'paid_date' in e ? e.paid_date : r.paid_date, a = 'amount' in e ? e.amount : r.amount;
-      return { paid_date: notFuture(d) || notBefore(d, r.bill_date, 'the Billing Date') || (!d && a ? 'is required with an Amount' : null), amount: d && !(Number(a) > 0) ? 'must be more than 0' : null }; },
-    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid cancellations removed from the list.' },
+      return { paid_date: notFuture(d) || notBefore(d, r.bill_date, 'the Billing Date') || (!d && a && 'amount' in e ? 'is required with an Amount' : null), amount: d && !(Number(a) > 0) ? 'must be more than 0' : null }; },
+    buttons: [{ label: 'Print cancellation billing', kind: 'ol', icon: 'print', act: 'printCancel', count: 'for_print' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
+    savedNote: 'Paid cancellations removed from the list.',
+    queue: true, ready: { key: 'for_print', when: r => !r.bill_date },
+    ruleP: ['P4', 'Lots not billed yet arrive pre-ticked for billing.'] },
 
   // ===================== SMD (legacy SMD sample data, read-only; Return to Seller, Inventory and SAAF use live data) =====================
   // P5 (switch on): SMD's update screen for the SAAF; live data, unlike the legacy SMD snapshot screens
@@ -538,8 +534,6 @@ const SCREENS = [
     totals: rows => ({ auction: `${rows.length} units`, penalty: money(sumBy(rows, 'penalty')) }) },
   { dept: 'SMD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', actions: VS, rule: 'Result price records with status SOLD and a rebate.',
     rows: () => SMD('rebates'), cols: REBMON_COLS, sort: ['buyer_paid', 'desc'] },
-  { dept: 'SMD', slug: 'cancellation-monitoring', title: 'Cancellation Monitoring', actions: VS, rule: 'Information on cancelled vehicles.',
-    rows: () => SMD('cancellations'), cols: CXMON_COLS, sort: ['dcancel', 'desc'] },
   { dept: 'SMD', slug: 'return-to-seller', title: 'Return to Seller', actions: VFSU, tag: 'Wish',
     rule: `Units that are not sold or pending and not in the latest auction (${LATEST_AUCTION}), with no clearance yet. Tick For Return, then Print & email clearance form: one form per seller, emailed to FAD and VWD; the SMD Manager signs and the FAD Manager notes on paper. "Latest auction" and paper signatures are assumptions to confirm (Q32).`,
     rows: () => V().filter(rtsEligible), sort: ['seller', 'asc'],
@@ -847,7 +841,7 @@ function entryLayout(scr) {
       </div>${ro ? `<p class="note">This lot is already <b>${esc(v.status)}</b>. Only SOLD transactions can be cancelled.</p>` : ''}
       <div class="fact"><button type="button" class="btn gh" data-act="entryClear">Discard</button><button type="submit" class="btn dg" ${ro ? 'disabled' : ''}>${IC.ban}Cancel transaction</button></div></form></section>`;
   }
-  return `${PROPOSED ? cdmsCancelPanel(scr) : ''}<div class="row2">${find}${det}</div>${dataCard(scr, 'Recent cancellation entries')}`;
+  return `${PROPOSED ? cdmsCancelPanel(scr) : ''}<div class="row2">${find}${det}</div>${scr.filters && scr.actions.includes('Filter') ? filterCard(scr) : ''}${dataCard(scr, 'Cancellations')}`;
 }
 // Read-only table for the customer page (no sorting, paging or editing)
 function plainTable(cols, rows, totals, empty) {
@@ -1185,7 +1179,7 @@ const ACTIONS = {
     openModal({ title: 'Print cancellation billing', icon: 'print', wide: true, body, note: 'Recording sets the Cancellation Billing Date to today and the amount due to the penalty. The payment deadline stays blank until JBAP confirms it (Q33).',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record billing date & print', kind: 'pr', icon: 'print', onClick: () => {
         recordCancellationBilling(scr, rows);
-        printModal(); closeModal(); render(); toast(`${rows.length} cancellation(s) billed. They moved to Cancellation Payment.`);
+        printModal(); closeModal(); render(); toast(`${rows.length} cancellation(s) billed. Enter Date Paid on this screen when the buyer pays.`);
       } }] });
   },
   // [BEHAVIOR] Rebate report: pick an auction range, then download an .xlsx (REPORTS.rebateWorkbook). It changes no data, so nothing is logged.
@@ -1383,7 +1377,7 @@ function entryCancel(scr) {
   if (Object.keys(e.errors).length) { render(); return; }
   openModal({ title: 'Cancel this transaction?', icon: 'ban',
     body: `<p>Lot <b>${esc(v.lot)}</b> of Auction <b>${v.auction}</b> (${esc(v.plate)}, ${esc(v.customer)}) will be set to <b>Cancelled</b> on ${fmtDate(e.form.date)}.</p>
-      <p>Cancellation fee: <b>${e.form.waived ? 'waived' : 'to be billed'}</b>. The vehicle leaves all FAD work lists${e.form.waived ? '' : ' and appears in Cancellation Billing'}.</p>`,
+      <p>Cancellation fee: <b>${e.form.waived ? 'waived' : 'to be billed'}</b>. The vehicle leaves all FAD work lists${e.form.waived ? '' : ' and appears in Cancellation Billing & Payment'}.</p>`,
     footer: [{ label: 'Keep transaction', kind: 'gh', onClick: closeModal }, { label: 'Cancel transaction', kind: 'dg', icon: 'ban', onClick: () => {
       if (!recordCancellation(scr, v, e.form)) { U(scr.id).entry = null; closeModal(); render(); toast(`Lot ${esc(v.lot)} of Auction ${v.auction} is already cancelled.`, 'warn'); return; }
       U(scr.id).entry = null; closeModal(); render(); toast(`Lot ${esc(v.lot)} of Auction ${v.auction} cancelled.`);
