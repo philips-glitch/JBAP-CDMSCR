@@ -129,6 +129,10 @@ function sellerMoney(v) {
 // is in the yard (lot field inv_status); once the unit has left the yard it follows the release record.
 const INV_STATUSES = ['Released', 'Returned', 'Listed', 'Awarded', 'For Return'];
 const invStatusOf = v => v.release ? (v.release_type === 'Return to Seller' ? 'Returned' : 'Released') : v.rts_cleared ? 'For Return' : v.status === 'Sold' ? 'Awarded' : 'Listed';
+// [BEHAVIOR] Rebate figures shared by the Rebate Monitoring screen and its download (JBAP's Rebate Monitoring file): Minimum Bid = Awarded Price,
+// Highest Offer = Awarded Price − Rebate, Revenue = Commission − Rebate; blank when there is no price / commission.
+const rebateMoney = (price, rebate, com) => { const has = n => n !== null && n !== undefined && n !== '';
+  return { min_bid: has(price) ? price : null, highest_offer: has(price) ? r2(price - (rebate || 0)) : null, revenue: has(com) ? r2(com - (rebate || 0)) : null }; };
 function enrichV(v) {
   const [as, ae] = D.auctions[String(v.auction)] || [null, null];
   const buyer_deadline = v.awarding ? addWorkdays(v.awarding, 3) : null;     // 3 working days after awarding
@@ -137,6 +141,7 @@ function enrichV(v) {
   const overdue = v.dispatch && !v.release && dispatch_deadline < TODAY;
   const bond = bondOf(v), total = v.price === null ? null : v.price + (v.transfer_fee || 0) + bond;
   const doas = doasOf(v), doc_status = docStatus(v);
+  const sm = sellerMoney(v), rb = rebateMoney(v.price, v.rebate, sm.com);
   return Object.assign({}, v, {
     _raw: v, auction_start: as, auction_end: ae, adate: as ? `${fmtDate(as)} - ${fmtDate(ae)}` : '',
     seller_full: SELLER[v.seller]?.name || v.seller, total, security_bond: bond,
@@ -150,7 +155,7 @@ function enrichV(v) {
     inv_status: v.release ? invStatusOf(v) : v.inv_status || invStatusOf(v),
     buyer_deadline, pay_deadline, dispatch_deadline,
     penalty: overdue && PENALTY_LOCATIONS.includes(v.location || 'Pasay City') ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
-    ...sellerMoney(v),
+    ...sm, min_bid: rb.min_bid, highest_offer: rb.highest_offer, rebate_revenue: rb.revenue,
   });
 }
 const V = () => S.veh.map(enrichV);
@@ -250,7 +255,8 @@ const UNREL_FILTERS = [AUCTION_FILTER, { key: 'customer', label: 'Customer Name'
 const CXMON_COLS = [C('Auction No.', 'auction', 'code'), C('Lot No.', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 260 }), C('Customer ID', 'cid', 'code'),
   C('Plate Num', 'plate', 'code'), C('Date Cancelled', 'dcancel', 'date'), C('Waived?', 'waived', 'rocheck'), C('Justification', 'just', 'text', { w: 330 }),
   C('Cancellation Fee Remitted', 'remitted', 'date')];
-const REBMON_COLS = [C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 320 }), C('Plate', 'plate', 'code'),
+const REBMON_COLS = [   // SMD Rebate Monitoring (Access snapshot); FAD has its own columns from JBAP's Rebate Monitoring file
+  C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 320 }), C('Plate', 'plate', 'code'),
   C('Rebate', 'rebate', 'money'), C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date')];
 // Wish 5: Inventory report (VWD, also viewable by SMD). Replaces VWD's Excel file; check the columns against it when JBAP sends it.
 const INVENTORY = { slug: 'inventory', title: 'Inventory', actions: VFS, tag: 'Wish',
@@ -376,8 +382,14 @@ const SCREENS = [
       C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller Deadline', 'pay_deadline', 'date'), C('Total (Result Price + Transfer Fees + Security Bond)', 'total', 'money')],
     totals: rows => ({ seller_full: 'Total liability to sellers', total: money(sumBy(rows, 'total')) }) },
   // FAD › Rebate: Rebate Monitoring and Rebate Payable as two tabs (user request of 16 Oct 2026); SMD keeps its own Rebate Monitoring
-  { dept: 'FAD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', group: 'Rebate', actions: VS, rule: 'Result price records with status SOLD and a rebate. Download report saves an Excel file of the rebates in an auction range, laid out like JBAP\'s Rebate Monitoring file.',
-    rows: () => sold().filter(v => v.rebate), cols: REBMON_COLS, sort: ['adate', 'desc'],
+  // The key columns of JBAP's Rebate Monitoring file (user choice of 16 Oct 2026); Month, VCN, Year, Color, Buyer ID and Awarded Price stay in the download only
+  { dept: 'FAD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', group: 'Rebate', actions: VS,
+    rule: 'Result price records with status SOLD and a rebate. Minimum Bid = Awarded Price, Highest Offer = Minimum Bid − Rebate, Revenue = Commission − Rebate (JBAP\'s Rebate Monitoring file). Download report saves an Excel file of the rebates in an auction range with all the file\'s columns.',
+    rows: () => sold().filter(v => v.rebate), sort: ['auction_lot', 'desc'],
+    cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 180 }), C('Seller', 'seller', 'code'),
+      C('Buyer', 'customer', 'text', { w: 220 }), C('Minimum Bid', 'min_bid', 'money'), C('Highest Offer', 'highest_offer', 'money'), C('Rebate', 'rebate', 'money'),
+      C('Commission', 'com', 'money'), C('Revenue (Net of Rebate)', 'rebate_revenue', 'money'), C('Date Remitted', 'rebate_paid', 'date')],
+    totals: rows => ({ plate: `${rows.length} lots`, rebate: money(sumBy(rows, 'rebate')), com: money(sumBy(rows, 'com')), rebate_revenue: money(sumBy(rows, 'rebate_revenue')) }),
     buttons: [{ label: 'Download report', kind: 'ol', icon: 'download', act: 'downloadRebate', view: true }] },   // view: shown on a view-only screen (it changes no data)
   { dept: 'FAD', slug: 'rebate-payable', title: 'Rebate Payable', group: 'Rebate', actions: VSU, rule: 'Result price records with status SOLD, a rebate, a Buyer Paid date, and a blank Rebate Paid date.',
     rows: () => sold().filter(v => v.rebate && v.buyer_paid && !v.rebate_paid), sort: ['adate', 'asc'],

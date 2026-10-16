@@ -67,3 +67,17 @@ test('rebate workbook escapes text and writes dates as Excel dates', () => {
   assert.match(cellText(sh, 'P5'), /<v>46303<\/v>/, '08/10/2026 is Excel day 46303');
   assert.strictEqual(P.XLSX.serial('2026-10-08'), 46303); assert.deepStrictEqual([0, 25, 26, 27].map(P.XLSX.colName), ['A', 'Z', 'AA', 'AB']);
 });
+test('FAD Rebate Monitoring shows the key report columns with totals; SMD keeps its Access snapshot columns', () => {
+  const P = load(), scr = P.byId['FAD/rebate-monitoring'], rows = scr.rows();
+  assert.deepStrictEqual(scr.cols.map(c => c.label), ['Auction No.', 'Lot', 'Plate Number', 'Make/Model', 'Seller', 'Buyer', 'Minimum Bid', 'Highest Offer', 'Rebate', 'Commission', 'Revenue (Net of Rebate)', 'Date Remitted']);
+  assert.deepStrictEqual(P.byId['SMD/rebate-monitoring'].cols.map(c => c.key), ['adate', 'lot', 'customer', 'plate', 'rebate', 'buyer_paid', 'rebate_paid']);
+  const v = rows.find(r => r.price && r.com), x = P.rebateRecord(v);
+  assert.deepStrictEqual([v.min_bid, v.highest_offer, v.rebate_revenue], [x.minBid, x.highestOffer, x.revenue], 'screen and download agree');
+  assert.strictEqual(v.highest_offer, Math.round((v.price - v.rebate) * 100) / 100);
+  const noPrice = rows.find(r => r.price === null || r.price === undefined);
+  if (noPrice) assert.deepStrictEqual([noPrice.min_bid, noPrice.highest_offer], [null, null], 'no price: blank, not 0');
+  const t = scr.totals(rows), fmt = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  assert.strictEqual(t.plate, `${rows.length} lots`);
+  assert.strictEqual(t.rebate, fmt(rows.reduce((a, r) => a + (r.rebate || 0), 0)));
+  assert.strictEqual(t.rebate_revenue, fmt(rows.reduce((a, r) => a + (Number(r.rebate_revenue) || 0), 0)));
+});
