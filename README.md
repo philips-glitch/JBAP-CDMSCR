@@ -88,7 +88,7 @@ With the switch **off**, every screen works as the CR form describes. With it **
 
 ## JBAP feedback, 16 Oct 2026 (round 2)
 
-Item numbers are those of JBAP's feedback. Qn = our question to JBAP (Q69 to Q82). Where JBAP left a point open we either built our assumption and asked (Q70, Q71, Q75, Q77, Q78, Q82) or built nothing and asked (Q73, Q74, Q76, Q81).
+Item numbers are those of JBAP's feedback. Qn = our question to JBAP (Q69 to Q82). Where JBAP left a point open, we either built our best assumption (marked Done in the response workbook) or left the prototype unchanged, and asked; JBAP's answers may change it (Q69–Q82).
 
 | Change | Where | What it does |
 |---|---|---|
