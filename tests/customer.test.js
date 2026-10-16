@@ -73,7 +73,7 @@ test('customer page: Customer Information is disabled, Transaction History shows
   for (const k of ['Lots bought', 'Total bought (PHP)', 'Pending awarding', 'Unpaid', 'Cancellations']) assert.ok(html.includes(`>${k}<`), k);
   assert.ok(html.includes(money(b.sold.reduce((a, v) => a + (v.price || 0), 0))), 'total bought');
   for (const h of ['Seller', 'Seller Name', 'Units Bought', 'Total Amount (PHP)', 'Unpaid Units', 'Last Auction']) assert.ok(html.includes(`>${h}<`), h);
-  for (const [slug, label, n] of [['sold', 'Sold', b.sold.length], ['pending-awarding', 'Pending Awarding', b.pending.length], ['unpaid', 'Unpaid', b.unpaid.length], ['cancellation', 'Cancellation', b.cancels.length]])
+  for (const [slug, label, n] of [['sold', 'Sold', b.sold.length], ['pending-awarding', 'Pending Awarding', b.pending.length], ['unpaid', 'Unpaid', b.unpaid.length], ['pending-doas', 'Pending DOAS signature', b.pending_doas.length], ['docs-release', 'Documents for release', b.docs_release.length], ['cancellation', 'Cancellation', b.cancels.length]])
     assert.match(html, new RegExp(`href="#/customer/${cid}${slug === 'sold' ? '' : '/' + slug}"[^>]*>${label}<span class="cnt">${n}</span>`), slug);
   assert.doesNotMatch(html, /Sales Actions/, 'no Sales Actions tab');
   for (const h of ['Auction Month', 'Auction No.', 'Lot', 'Plate', 'Make/Model', 'Result Price', 'Notarial', 'Commission', 'Total', 'Step']) assert.ok(html.includes(`>${h}<`), h);
@@ -83,6 +83,21 @@ test('customer page: Customer Information is disabled, Transaction History shows
   const cx = P.customerPage(cid, 'cancellation').slice(html.indexOf('aria-label="Lot lists"'));
   for (const h of ['Date Cancelled', 'Waived?', 'Penalty', 'Billing Date', 'Paid Date']) assert.ok(cx.includes(`>${h}<`), h);
   assert.match(P.customerPage('NO-SUCH-ID', 'sold'), /No buyer with Buyer ID NO-SUCH-ID/);
+});
+
+test('customer page: Pending DOAS signature and Documents for release (JBAP, 16 Oct 2026)', () => {
+  const P = load(), all = P.V().filter(v => v.cid && v.status === 'Sold'), cid = all.find(v => v.rcv_doas && !v.buyer_doas)?.cid;
+  assert.ok(cid, 'a buyer with a DOAS waiting for signature');
+  const b = P.buyerOf(cid), mine = all.filter(v => v.cid === cid);
+  assert.deepStrictEqual(b.pending_doas.map(v => v.id).sort(), mine.filter(v => v.rcv_doas && !v.buyer_doas).map(v => v.id).sort());
+  assert.deepStrictEqual(b.docs_release.map(v => v.id).sort(), mine.filter(v => v.orig_docs && !v.to_buyer).map(v => v.id).sort());
+  const h = P.customerPage(cid, 'pending-doas'), t = h.slice(h.indexOf('aria-label="Lot lists"'));
+  for (const x of ['Seller Payment', 'Receipt of DOAS', 'Working Days Since Receipt']) assert.ok(t.includes(`>${x}<`), x);
+  assert.strictEqual((t.match(/<tr data-lot=/g) || []).length, b.pending_doas.length);
+  assert.match(t, /aria-current="page">Pending DOAS signature<span class="cnt">/);
+  const withDocs = all.find(v => v.orig_docs && !v.to_buyer).cid, d = P.customerPage(withDocs, 'docs-release');
+  assert.ok(d.includes('>JBAP Receipt of Documents<') && d.includes('>ATF No.<'));
+  assert.deepStrictEqual(P.custRoute(`customer/${cid}/docs-release`), { cid, tab: 'docs-release' });
 });
 
 test('buyer names and Buyer IDs link to the customer page when the lot has a Buyer ID', () => {
