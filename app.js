@@ -40,6 +40,7 @@ const IC = {
   search: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
   print: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 9V3h10v6"/><rect x="3.5" y="9" width="17" height="8" rx="1.5"/><path d="M7 14h10v7H7z"/></svg>',
   mail: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3.5 6l8.5 7 8.5-7"/></svg>',
+  download: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
   save: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></svg>',
   reset: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>',
   ban: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>',
@@ -375,8 +376,9 @@ const SCREENS = [
       C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller Deadline', 'pay_deadline', 'date'), C('Total (Result Price + Transfer Fees + Security Bond)', 'total', 'money')],
     totals: rows => ({ seller_full: 'Total liability to sellers', total: money(sumBy(rows, 'total')) }) },
   // FAD › Rebate: Rebate Monitoring and Rebate Payable as two tabs (user request of 16 Oct 2026); SMD keeps its own Rebate Monitoring
-  { dept: 'FAD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', group: 'Rebate', actions: VS, rule: 'Result price records with status SOLD and a rebate.',
-    rows: () => sold().filter(v => v.rebate), cols: REBMON_COLS, sort: ['adate', 'desc'] },
+  { dept: 'FAD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', group: 'Rebate', actions: VS, rule: 'Result price records with status SOLD and a rebate. Download report saves an Excel file of the rebates in an auction range, laid out like JBAP\'s Rebate Monitoring file.',
+    rows: () => sold().filter(v => v.rebate), cols: REBMON_COLS, sort: ['adate', 'desc'],
+    buttons: [{ label: 'Download report', kind: 'ol', icon: 'download', act: 'downloadRebate', view: true }] },   // view: shown on a view-only screen (it changes no data)
   { dept: 'FAD', slug: 'rebate-payable', title: 'Rebate Payable', group: 'Rebate', actions: VSU, rule: 'Result price records with status SOLD, a rebate, a Buyer Paid date, and a blank Rebate Paid date.',
     rows: () => sold().filter(v => v.rebate && v.buyer_paid && !v.rebate_paid), sort: ['adate', 'asc'],
     cols: [C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 360 }), C('Rebate', 'rebate', 'money'),
@@ -694,7 +696,7 @@ function dataCard(scr, title) {
   const pages = Math.max(1, Math.ceil(all.length / ui.size)); ui.page = Math.min(ui.page, pages);
   const rows = all.slice((ui.page - 1) * ui.size, ui.page * ui.size);
   const dirty = dirtyCount(scr);
-  const btns = (upd ? (scr.buttons || []).filter(shown) : []).map(b => {
+  const btns = (scr.buttons || []).filter(b => shown(b) && (upd || b.view)).map(b => {
     const n = b.act === 'save' ? dirty : effectiveCount(scr, b.count);
     return `<button type="button" class="btn ${b.kind}" data-act="${b.act}">${IC[b.icon]}${esc(b.label)}${tagHtml(b)}${n ? `<span class="n" data-count="${b.act}">${n}</span>` : `<span class="n" data-count="${b.act}" hidden></span>`}</button>`;
   }).join('');
@@ -855,6 +857,12 @@ function applyEdits(scr, ids) {
   });
   return n;
 }
+// Saves a generated file (e.g. an .xlsx report) through the browser's download
+function saveFile(name, bytes, type) {
+  const url = URL.createObjectURL(new Blob([bytes], { type })), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 // Opens one report from an email preview; "Back" returns to the emails
 function openReport(title, html, back) {
   openModal({ title, icon: 'print', wide: true, body: html, note: 'Preview of the attached PDF.',
@@ -1057,6 +1065,26 @@ const ACTIONS = {
         recordCancellationBilling(scr, rows);
         printModal(); closeModal(); render(); toast(`${rows.length} cancellation(s) billed. They moved to Cancellation Payment.`);
       } }] });
+  },
+  // [BEHAVIOR] Rebate report: pick an auction range, then download an .xlsx (REPORTS.rebateWorkbook). It changes no data, so nothing is logged.
+  downloadRebate(scr) {
+    const lots = scr.rows(), auctions = [...new Set(lots.map(v => Number(v.auction)))].sort((a, b) => a - b);
+    if (!lots.length) { setMsg(scr, 'info', 'There are no rebates to report.'); render(); return; }
+    const opts = sel => auctions.map(a => `<option ${a === sel ? 'selected' : ''}>${a}</option>`).join('');
+    const body = `<div class="fgrid two" style="padding:0 0 8px"><div class="fld"><label for="rb-from">From auction</label><select class="ctl" id="rb-from">${opts(auctions[0])}</select></div>
+      <div class="fld"><label for="rb-to">To auction</label><select class="ctl" id="rb-to">${opts(auctions.at(-1))}</select></div></div>
+      <p class="note" id="rb-count" role="status"></p><span class="err" id="rb-err"></span>`;
+    const range = () => [Number($('#rb-from').value), Number($('#rb-to').value)];
+    openModal({ title: 'Download rebate report', icon: 'download', body, note: 'Excel file (.xlsx): one row per lot with a rebate, laid out like JBAP\'s Rebate Monitoring file.',
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Download .xlsx', kind: 'pr', icon: 'download', onClick: () => {
+        const [from, to] = range(), pick = rebateLotsIn(lots, from, to);
+        if (from > to) { $('#rb-err').textContent = 'From auction cannot be after To auction.'; return; }
+        if (!pick.length) { $('#rb-err').textContent = 'No lot in this range has a rebate.'; return; }
+        saveFile(`JBAP Rebate Monitoring A${from}-A${to}.xlsx`, REPORTS.rebateWorkbook(pick, from, to), XLSX_TYPE);
+        closeModal(); toast(`Rebate report downloaded: ${pick.length} lot(s), auctions ${from} to ${to}.`);
+      } }] });
+    const count = () => { const [from, to] = range(); $('#rb-err').textContent = ''; $('#rb-count').textContent = from > to ? '' : `${rebateLotsIn(lots, from, to).length} lot(s) with a rebate in this range.`; };
+    count(); $('#rb-from').addEventListener('change', count); $('#rb-to').addEventListener('change', count);
   },
   printTransmittal(scr) {
     const rows = selectedRows(scr, 'print_trans');

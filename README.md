@@ -8,7 +8,7 @@
 
 **Double-click `index.html`.** That's it: no server and no setup needed.
 
-The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is loaded with a `<script>` tag, so it works straight from the folder (no `fetch()`).
+The prototype is plain HTML, CSS and JavaScript. Data sits in `data.js` and is loaded with a `<script>` tag, so it works straight from the folder (no `fetch()`). `xlsx.js` is a small built-in Excel writer for downloadable reports (no library).
 
 Sample data for the proposed improvements and the wish-list screens sits in `data-extra.js` (loaded right after `data.js`). The header switch **Proposed improvements** turns on LOGIQUE's proposals P2 to P6 (P1 was withdrawn after JBAP's feedback of 15 Oct 2026: JBAP keeps the Access format for Buyer Paid); a link ending in `?proposed=1` (for example `index.html?proposed=1`) opens with it on.
 
@@ -29,7 +29,7 @@ Sample data for the proposed improvements and the wish-list screens sits in `dat
 5. **Billing › Commission Billing**: tick *Print?* for lots of **one seller** > **Print commission billing** > enter NOAH Billing No. and date > **Record billing & print**. A new billing appears in the *Billing Monitoring* and *Unpaid Billing* tabs.
 6. **Billing › Unpaid Billing**: enter Payment Date + Collection Receipt > **Save**.
 7. **Cancellation Entry**: enter an Auction No. and Lot (tip: copy one from Unpaid) > **Find** > set Status to *Cancelled*, date, waiver and reason > **Cancel transaction**. It appears in **Cancellation Monitoring** and (if not waived) **Cancellation Billing** > print to bill > **Cancellation Payment** > enter date paid and amount.
-8. **Rebate › Rebate Payable**: enter *Rebate Paid* > **Save**. **Liability to Seller**: pick a date > **Generate**.
+8. **Rebate › Rebate Payable**: enter *Rebate Paid* > **Save**. **Rebate › Rebate Monitoring** > **Download report**: pick From and To auction > **Download .xlsx**. **Liability to Seller**: pick a date > **Generate**.
 9. **Log Activity**: every change from steps 1 to 8, every VWD release or return and every SMD Return to Seller clearance appears here as user `system`, one row per changed field with the old and new value (newest first). Filter by date, user, module, action or record/plate. Prints and emails that record a value (Awarding Date, Billing #, Transmittal Date, Dispatch Date, cancellation billing date and amount, vehicle release with type and checklist, documents received with Others/Remarks and ATF No.) are logged; previews that change nothing and *Generate* are not.
 10. **Return to Seller** (SMD, wish 4): tick *For Return* on units that are not sold and not in the latest auction > **Print & email clearance form** > **Send & print**. The units move to VWD **For Return to Seller** > **Release vehicle** (type *Return to Seller*).
 11. **Inventory** (VWD, also in SMD, wish 5): one row per vehicle with Date of Entry, status, release or return date and days in yard. Filter *In yard / Out*, *Inventory Status* or *Not in latest auction*. VWD sets the *Inventory Status* (Released, Returned, Listed, Awarded, For Return) of units in the yard and presses **Save**; CDMS suggests it from the lot, and a released or returned unit follows its release record. SMD only views it.
@@ -48,6 +48,7 @@ Sample data for the proposed improvements and the wish-list screens sits in `dat
 | rptVehiclerelease (release form + gate pass) | VWD Unreleased Unit / Overdue › Release vehicle; VWD For Return to Seller › Release vehicle (type Return to Seller) | Release date, VRF No. |
 | rptCancellationPenalty | Cancellation Billing › Print cancellation billing (one letter per buyer) | Billing date, amount due |
 | DocumentTransmittalPrint | Document Monitoring › Print Transmittal? › Print document transmittal | Documents received, ATF control no. |
+| Rebate Monitoring (JBAP's Excel file) | Rebate › Rebate Monitoring › Download report (an .xlsx file, auction range) | Nothing: download only |
 | SAAF (proposed P5; layout to be confirmed, no Access sample) | SMD Seller Awarding Acknowledgement › For SAAF › Email SAAF (switch on) | SAAF Sent |
 | Vehicle Dispatch Clearance Form (Return to Seller), wish 4 | SMD Return to Seller › For Return › Print & email clearance form | Return Clearance Date |
 
@@ -77,6 +78,7 @@ With the switch **off**, every screen works as the CR form describes. With it **
 | Billing menu | FAD › Billing | Commission Billing, Billing Monitoring and Unpaid Billing as three tabs of one menu entry (Commission Billing first) |
 | Rebate menu | FAD › Rebate | Rebate Monitoring and Rebate Payable as two tabs of one menu entry (SMD keeps its own Rebate Monitoring) |
 | Inventory status | VWD › Inventory | Released, Returned, Listed, Awarded or For Return; suggested from the lot, VWD can change it while the unit is in the yard (JBAP to confirm, Q57) |
+| Rebate report | FAD › Rebate › Rebate Monitoring | **Download report** saves an Excel file of the rebates in an auction range, laid out like JBAP's Rebate Monitoring file: Month, Auction No., Lot, VCN, Year, Brand, Model, Color, Seller, Minimum Bid, Highest Offer, Awarded Price, Buyer ID, Buyer, Rebate, Date Remitted to Buyer, Commission, Revenue (Net of Rebate), with SUM totals. CDMS keeps no minimum bid or highest offer, so Minimum Bid = Awarded Price and Highest Offer = Awarded Price − Rebate, as in JBAP's file; Revenue = Commission − Rebate. Left out because CDMS has no data for them: Open House, ONOF, transmission, mileage, condition grades, start price (Q64, Q65) |
 
 ## Access per menu
 

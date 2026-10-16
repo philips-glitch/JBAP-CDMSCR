@@ -14,6 +14,18 @@ const rptBank = () => `${esc(CO().name)}<br>${esc(CO().bank)}`;
 const DOC_TYPES = ['LTO Official Receipt', 'LTO Certificate of Registration', 'Deed of Motor Sale', 'Cancellation of Mortgage', 'Release of Mortgage', 'Promissory with Chattel Mortgage',
   'Voluntary surrender with SPA to sell', "Secretary's Certificate with ID", 'ID of Previous owner', 'Certificate of Sale', 'Lease Agreement', 'Car History and Used Car Waiver Form',
   'Extra-Judicial Foreclosure of Chattel', 'LRA - RD Official Receipt', 'Official Receipt representing notarial', 'Service Invoice from the seller', 'Spare Key', 'TPL Insurance Premium', 'Others'];
+// [BEHAVIOR] Rebate report (FAD › Rebate › Rebate Monitoring › Download report), modelled on JBAP's Rebate Monitoring file. CDMS keeps no minimum bid or
+// highest offer, so they follow JBAP's file: Minimum Bid = Awarded Price (761 of 810 rows) and Highest Offer = Awarded Price − Rebate (797 of 810 rows).
+// Revenue = Commission − Rebate, as in the file; Commission is CDMS's commission for the seller (the file's rate is open, Q63).
+const r2x = n => Math.round(n * 100) / 100;
+function rebateRecord(v) {
+  const has = n => n !== null && n !== undefined && n !== '', words = String(v.model || '').trim().split(/\s+/);
+  return { month: v.auction_start ? MON[+v.auction_start.slice(5, 7) - 1].toUpperCase() : '', auction: Number(v.auction), lot: v.lot, vcn: v.vcn, year: v.year || null,
+    brand: words[0] || '', model: words.slice(1).join(' '), color: v.color || '', seller: v.seller_full, minBid: has(v.price) ? v.price : null,
+    highestOffer: has(v.price) ? r2x(v.price - (v.rebate || 0)) : null, awarded: has(v.price) ? v.price : null, cid: v.cid, buyer: v.customer, rebate: v.rebate,
+    remitted: v.rebate_paid || null, commission: has(v.com) ? v.com : null, revenue: has(v.com) ? r2x(v.com - (v.rebate || 0)) : null };
+}
+const rebateLotsIn = (lots, from, to) => lots.filter(v => +v.auction >= from && +v.auction <= to);
 const REPORTS = {
   email({ from, to, cc, subject, body, atts }) {
     return `<article class="mail"><div class="mail-h"><b>From</b><span>${esc(from)}</span><b>To</b><span>${esc(to)}</span>${cc ? `<b>CC</b><span>${esc(cc)}</span>` : ''}<b>Subject</b><span>${esc(subject)}</span>
@@ -140,5 +152,27 @@ const REPORTS = {
       <table><thead><tr><th>Last Auction #</th><th>Make / Model</th><th>Plate</th><th>Location</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
       <p>The units listed above are cleared for return to the seller. VWD records the date each unit leaves the yard.</p>
       ${rptSign([`Prepared by: ${CO().roles.smdStaff}`, `Signed: ${CO().roles.smdManager}`, `Noted: ${CO().roles.fadManager}`])}<p class="fn">Signatures on the printed form until JBAP confirms Q32.</p>`);
+  },
+  // Rebate Monitoring download: one sheet, one row per lot with a rebate in the auction range, money totals as SUM formulas (with cached values)
+  rebateWorkbook(lots, from, to) {
+    const recs = [...lots].sort((a, b) => String(a.auction_lot || '').localeCompare(String(b.auction_lot || ''), 'en', { numeric: true })).map(rebateRecord);
+    const money = n => (n === null || n === undefined ? null : { v: n, t: 'n', s: 'money' });
+    const head = ['Month', 'Auction No.', 'Lot', 'VCN', 'Year', 'Brand', 'Model', 'Color', 'Seller', 'Minimum Bid', 'Highest Offer', 'Awarded Price', 'Buyer ID', 'Buyer', 'Rebate',
+      'Date Remitted to Buyer', 'Commission', 'Revenue (Net of Rebate)'].map(h => ({ v: h, s: 'head' }));
+    const rows = recs.map(x => [x.month, x.auction, x.lot, x.vcn, x.year, x.brand, x.model, x.color, x.seller, money(x.minBid), money(x.highestOffer), money(x.awarded),
+      x.cid, x.buyer, money(x.rebate), x.remitted ? { v: x.remitted, t: 'd' } : null, money(x.commission), money(x.revenue)]);
+    const first = 5, last = first + rows.length - 1, MONEY = { J: 'minBid', K: 'highestOffer', L: 'awarded', O: 'rebate', Q: 'commission', R: 'revenue' };
+    const total = Array.from({ length: head.length }, (_, i) => {
+      const col = XLSX.colName(i);
+      if (i === 0) return { v: 'Total', s: 'bold' };
+      if (i === 2) return { v: `${rows.length} lot(s)`, s: 'bold' };
+      if (MONEY[col]) return { f: `SUM(${col}${first}:${col}${last})`, v: r2x(recs.reduce((a, x) => a + (Number(x[MONEY[col]]) || 0), 0)), s: 'boldMoney' };
+      return { v: '', s: 'bold' };
+    });
+    return XLSX.build([{ name: 'Rebate Monitoring', freezeRow: 4, filter: `A4:R${last}`,
+      widths: [8, 10, 7, 15, 7, 12, 28, 12, 34, 14, 14, 14, 10, 32, 12, 14, 13, 15],
+      rows: [[{ v: `JBAP Rebate Monitoring · Auctions ${from} to ${to}`, s: 'title' }],
+        [`From the CDMS prototype, demo date ${fmtDate(TODAY)}. Minimum Bid = Awarded Price; Highest Offer = Awarded Price − Rebate; Revenue = Commission − Rebate.`],
+        [], head, ...rows, total] }]);
   },
 };

@@ -12,7 +12,8 @@ const EXPORTS = ['D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enric
   'dropHolds', 'dispatchCc', 'queueCounts', 'PROPOSALS', 'LATEST_AUCTION', 'rtsEligible', 'recordReturnClearance',
   // JBAP feedback round 1 (spec 2026-10-15)
   'doasOf', 'docStatus', 'DOC_STATUSES', 'workdaysBetween', 'cellHtml', 'applyFilters', 'bondOf', 'recordAwarding',
-  'bondStatus', 'BOND_STATUSES', 'bondValidate', 'groupOf', 'sideHtml', 'pageHead', 'homeLayout', 'invStatusOf', 'INV_STATUSES'];
+  'bondStatus', 'BOND_STATUSES', 'bondValidate', 'groupOf', 'sideHtml', 'pageHead', 'homeLayout', 'invStatusOf', 'INV_STATUSES',
+  'dataCard', 'XLSX', 'rebateRecord', 'rebateLotsIn'];
 function load() {
   const window = { addEventListener() {} };
   new Function('window', fs.readFileSync(path.join(ROOT, 'data.js'), 'utf8'))(window);
@@ -21,7 +22,7 @@ function load() {
   const cls = { add() {}, remove() {}, toggle() {}, contains() { return false; } };
   const document = { addEventListener() {}, querySelector() { return null; }, querySelectorAll() { return []; }, body: { classList: cls } };
   let src = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
-  if (fs.existsSync(path.join(ROOT, 'reports.js'))) src += '\n' + fs.readFileSync(path.join(ROOT, 'reports.js'), 'utf8');
+  for (const f of ['xlsx.js', 'reports.js']) if (fs.existsSync(path.join(ROOT, f))) src += '\n' + fs.readFileSync(path.join(ROOT, f), 'utf8');   // same order as index.html
   const ret = EXPORTS.map(n => `${n}: typeof ${n} === 'undefined' ? undefined : ${n}`).join(', ');
   const api = new Function('window', 'document', 'location', `${src}\n;return { ${ret} };`)(window, document, { hash: '' });
   return Object.assign({ api }, api);
