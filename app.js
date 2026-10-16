@@ -138,7 +138,7 @@ function enrichV(v) {
   const [as, ae] = D.auctions[String(v.auction)] || [null, null];
   const buyer_deadline = v.awarding ? addWorkdays(v.awarding, 3) : null;     // 3 working days after awarding
   const pay_deadline = v.buyer_paid ? addWorkdays(v.buyer_paid, 3) : null;   // 3 working days after buyer paid
-  const dispatch_deadline = v.dispatch ? addWorkdays(v.dispatch, 3) : null;  // 3 working days after dispatch
+  const dispatch_deadline = v.dispatch ? v.deadline_reset || addWorkdays(v.dispatch, 3) : null;  // 3 working days after dispatch; a penalty payment moves it to the payment date
   const overdue = v.dispatch && !v.release && dispatch_deadline < TODAY;
   const bond = bondOf(v), total = v.price === null ? null : v.price + (v.transfer_fee || 0) + bond;
   const doas = doasOf(v), doc_status = docStatus(v);
@@ -156,6 +156,7 @@ function enrichV(v) {
     inv_status: v.release ? invStatusOf(v) : v.inv_status || invStatusOf(v),
     buyer_deadline, pay_deadline, dispatch_deadline,
     penalty: overdue && PENALTY_LOCATIONS.includes(v.location || 'Pasay City') ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
+    penalty_paid: (v.penalty_payments || []).reduce((a, p) => a + p.amount, 0) || null,
     ...sm, min_bid: rb.min_bid, highest_offer: rb.highest_offer, rebate_revenue: rb.revenue,
   });
 }
@@ -410,10 +411,11 @@ const SCREENS = [
     totals: rows => ({ plate: `${rows.length} lots`, security_bond: money(sumBy(rows, 'security_bond')) }),
     validate: bondValidate,
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Complete and forfeited bonds leave the Open view.' },
-  { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
-    rule: `Dispatched vehicles not yet released to the buyer. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15).`,
-    rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'], cols: UNREL_COLS, filters: UNREL_FILTERS,
-    totals: rows => ({ penalty: money(sumBy(rows, 'penalty')) }) },
+  { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFSU,
+    rule: `Dispatched vehicles not yet released to the buyer. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15). Record payment records the penalty paid today and moves the dispatch deadline to today (JBAP, 16 Oct 2026); the penalty starts again the next day if the unit is still in the yard.`,
+    rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'],
+    cols: [...UNREL_COLS, C('Penalty Paid', 'penalty_paid', 'money'), C('Penalty Payment', 'id', 'rowbtn', { act: 'payPenalty', btn: 'Record payment', showWhen: r => r.penalty > 0 })], filters: UNREL_FILTERS,
+    totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), penalty_paid: money(sumBy(rows, 'penalty_paid')) }) },
   { dept: 'FAD', slug: 'liability-to-seller', title: 'Liability to Seller', actions: VS, layout: 'query',
     rule: 'Units the buyer has paid for where Payment to Seller is still blank, or happened after the date entered.',
     rows: () => { const d = U('FAD/liability-to-seller').asOf || TODAY; return sold().filter(v => v.buyer_paid && v.buyer_paid <= d && (!v.pay_seller || v.pay_seller > d)); },
@@ -749,7 +751,7 @@ function cellHtml(scr, r, c, upd) {
   if (c.type === 'rocheck' || c.type === 'check') return `<td class="c"><span class="ro-chk ${v ? 'on' : ''}" role="img" aria-label="${v ? 'Yes' : 'No'}">${v ? IC.check : ''}</span></td>`;
   if (c.type === 'status') { const k = { Sold: 'sold', 'Not Sold': 'ns', Cancelled: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
   if (c.type === 'action') { const k = { Update: 'up', Create: 'sold', Cancel: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
-  if (c.type === 'rowbtn') return `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}" aria-label="${esc(c.btn)} ${esc(r.plate || '')}">${esc(c.btn)}</button></td>`;
+  if (c.type === 'rowbtn') return c.showWhen && !c.showWhen(r) ? '<td class="c"></td>' : `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}" aria-label="${esc(c.btn)} ${esc(r.plate || '')}">${esc(c.btn)}</button></td>`;
   if (c.type === 'logval' && (v ?? '') === '') return '<td><span class="blank">(blank)</span></td>';
   let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : c.type === 'datetime' ? `${fmtDate(v.slice(0, 10))} ${v.slice(11)}` : (v ?? '');
   const late = c.late && v && v < TODAY ? ' late' : '';
@@ -1009,7 +1011,7 @@ function recordAwarding(scr, rows) {
 function releaseBlock(v) {
   if (v.status !== 'Sold') return null;   // [BEHAVIOR] wish 4: a unit returned to the seller was never sold, so DOAS and storage penalty do not apply
   if (releaseOf(v) === 'doas' && !v.buyer_doas && !v.seller_doas && !(doasOf(v) === 'branch' && v.ewb_signed)) return 'JBAP Receipt of Signed DOAS is missing: this seller requires DOAS / legal documents signing. FAD records it in Document Monitoring (EWB: Date DOAS Signed).';
-  if (v.penalty > 0) return `Storage penalty of PHP ${money(v.penalty)} is unpaid. Recording penalty payments comes with step 2 (holidays and extensions).`;
+  if (v.penalty > 0) return `Storage penalty of PHP ${money(v.penalty)} is unpaid. FAD records the payment in FAD › Unreleased Unit (Record payment).`;
   return null;
 }
 // [BEHAVIOR] Records the release on the lot (date, VRF No., released to, type, checklist) and returns the new VRF No. (running number, 5 digits)
@@ -1019,6 +1021,14 @@ function recordRelease(scr, v, f) {
     ['Released To', 'text', v._raw.release_to, f.to], ['Release Type', 'text', v._raw.release_type, f.type], ['Release Checklist', 'text', (v._raw.release_items || []).join(', '), f.items.join(', ')]]);
   Object.assign(v._raw, { release: f.date, vrf_no: vrf, release_to: f.to, release_type: f.type, release_items: f.items });
   return vrf;
+}
+// [BEHAVIOR] JBAP feedback (16 Oct 2026, #9): paying the storage penalty records the full amount due today (optional OR / reference no.) and moves the dispatch deadline to today
+function recordPenaltyPayment(scr, v, ref) {
+  const amount = v.penalty;
+  logChange(scr, 'Update', v, [['Penalty Paid', 'money', null, amount], ['Penalty Reference', 'text', null, ref || ''], ['Dispatch Deadline', 'date', v.dispatch_deadline, TODAY]]);
+  (v._raw.penalty_payments ||= []).push({ date: TODAY, amount, ref: ref || '' });
+  v._raw.deadline_reset = TODAY;
+  return amount;
 }
 const RELEASE_ITEMS = ['No. of Keys', 'Copy of OR/CR', "Owner's Manual", 'Warranty booklet', 'Spare Tire', 'Tools', 'Jack', 'Radio', 'A/C', 'Accessories'];
 // [BEHAVIOR] One cancellation billing letter per buyer name, the name printed on the letter (cid is missing on some lots).
@@ -1291,6 +1301,18 @@ const ACTIONS = {
         openModal({ title: `Vehicle release form VRF No. ${vrf}`, icon: 'print', wide: true, body: REPORTS.releaseForm(enrichV(v._raw), f, vrf),
           footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
         printModal(); toast(`${esc(v.plate)} ${f.type === 'Return to Seller' ? 'returned to the seller' : 'released'} (VRF No. ${vrf}).`);
+      } }] });
+  },
+  payPenalty(scr, el) {
+    const v = scr.rows().find(r => r.id === el.dataset.rid); if (!v || !(v.penalty > 0)) return;
+    const ro = (label, val) => `<div class="fld"><label>${label}</label><input class="ctl" value="${esc(val)}" readonly></div>`;
+    openModal({ title: `Record penalty payment: ${v.plate}`, icon: 'save',
+      body: `<div class="fgrid two">${ro('Customer', v.customer)}${ro('Dispatch deadline', fmtDate(v.dispatch_deadline))}${ro('Days overdue', daysBetween(v.dispatch_deadline, TODAY))}${ro('Penalty due (PHP)', money(v.penalty))}
+        <div class="fld full"><label for="pp-ref">Reference / OR No. (optional)</label><input class="ctl" id="pp-ref" placeholder="e.g. OR 12345"></div></div>
+        <p class="note">Records the payment today (${fmtDate(TODAY)}) and moves the dispatch deadline to today. If the unit is still in the yard tomorrow, the penalty starts again (to confirm, Q75).</p>`,
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record payment', kind: 'pr', icon: 'save', onClick: () => {
+        const amount = recordPenaltyPayment(scr, v, $('#pp-ref').value.trim()); closeModal(); render();
+        toast(`Penalty of PHP ${money(amount)} recorded for ${esc(v.plate)}. The dispatch deadline is now ${fmtDate(TODAY)}; the penalty no longer blocks the release.`);
       } }] });
   },
   resetFilter(scr) { const ui = U(scr.id); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); },
