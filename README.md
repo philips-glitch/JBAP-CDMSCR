@@ -16,8 +16,8 @@ Sample data for the proposed improvements and the wish-list screens sits in `dat
 
 ## What is clickable
 
-- **Only FAD, SMD, VWD and Log Activity are active.** All other CDMS menus (Dashboard, Customer, Cars, Report, Payment, etc.) are disabled and show a short message when clicked.
-- **39 screens**: FAD 20, SMD 12, VWD 6, Log Activity 1 (last item in the sidebar, below Staff), plus a Home page with counts per list. FAD's **Commission Billing**, **Billing Monitoring** and **Unpaid Billing** are three tabs of one **Billing** menu entry, and **Rebate Monitoring** and **Rebate Payable** are two tabs of one **Rebate** menu entry. The SMD **Seller Awarding Acknowledgement** screen shows only with the **Proposed improvements** switch on (38 screens with it off).
+- **Only Customer › Customer Inquiry, FAD, SMD, VWD and Log Activity are active.** All other CDMS menus (Dashboard, Customer › Sales Actions, Cars, Report, Payment, etc.) are disabled and show a short message when clicked.
+- **40 screens**: Customer Inquiry 1, FAD 20, SMD 12, VWD 6, Log Activity 1 (last item in the sidebar, below Staff), plus a Home page with counts per list and a customer page per buyer. FAD's **Commission Billing**, **Billing Monitoring** and **Unpaid Billing** are three tabs of one **Billing** menu entry, and **Rebate Monitoring** and **Rebate Payable** are two tabs of one **Rebate** menu entry. The SMD **Seller Awarding Acknowledgement** screen shows only with the **Proposed improvements** switch on (39 screens with it off).
 - Every list has working **filters, column sorting, page size and paging**, an empty state, and totals where the design has them.
 
 ## Flow walkthrough (FAD, data flows between lists and into VWD)
@@ -88,6 +88,7 @@ With the switch **off**, every screen works as the CR form describes. With it **
 | FAD | View, filter, sort; update on the screens marked *Update* (CR form) |
 | SMD | View, filter, sort. Shows the **legacy SMD sample data** (snapshot), so FAD actions do not change those lists. Live data on three screens: **Return to Seller** (update: clearance form, wish 4), **Inventory** (view, wish 5) and, with the switch on, **Seller Awarding Acknowledgement** (update: SAAF, P5) |
 | VWD | View, filter, sort; **Release vehicle** on Unreleased Unit and Unreleased Unit (Overdue) (JBAP Q9). Blocked when a DOAS seller's lot has no signed DOAS (*JBAP Receipt of Signed DOAS* or *Seller Receipt of Signed DOAS*; EWB: *Date DOAS Signed (EWB)*) or a storage penalty is unpaid. **For Return to Seller**: Release vehicle with type *Return to Seller* (wish 4; never blocked). **Inventory** (wish 5). Uses the same live data as FAD |
+| Customer | **Customer Inquiry**: view, filter, sort; one row per Buyer ID (lots and cancellations). Click a Buyer ID or buyer name (here or on any FAD, SMD or VWD list) to open the **customer page** (`#/customer/<Buyer ID>`): *Customer Information* is not part of the prototype; *Customer Transaction History* shows Lots bought, Total bought, Pending awarding, Unpaid and Cancellations, Purchases by seller, and the buyer's lots as tabs (Sold, Pending Awarding, Unpaid, Cancellation) with Notarial (transfer fee), Commission, Total (with Security Bond) and Step (Pending award, Unpaid, Paid, Seller Ack., For Dispatch, Unreleased, Released or Returned). Read-only. Sales Actions stays disabled (no data) |
 | Log Activity | View, filter, sort only. Entries cannot be edited or deleted. FAD changes, VWD releases and returns, and SMD Return to Seller clearances (plus the SAAF with the switch on) are logged |
 
 ## Seeded test data (`data.js` > `window.MOCK_DATA`)

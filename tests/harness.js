@@ -13,7 +13,9 @@ const EXPORTS = ['D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enric
   // JBAP feedback round 1 (spec 2026-10-15)
   'doasOf', 'docStatus', 'DOC_STATUSES', 'workdaysBetween', 'cellHtml', 'applyFilters', 'bondOf', 'recordAwarding',
   'bondStatus', 'BOND_STATUSES', 'bondValidate', 'groupOf', 'sideHtml', 'pageHead', 'homeLayout', 'invStatusOf', 'INV_STATUSES',
-  'dataCard', 'XLSX', 'rebateRecord', 'rebateLotsIn'];
+  'dataCard', 'XLSX', 'rebateRecord', 'rebateLotsIn',
+  // Customer Inquiry and customer page (16 Oct 2026)
+  'CUST_ID', 'buyerRows', 'buyerOf', 'stepOf', 'custRoute', 'customerPage'];
 function load() {
   const window = { addEventListener() {} };
   new Function('window', fs.readFileSync(path.join(ROOT, 'data.js'), 'utf8'))(window);

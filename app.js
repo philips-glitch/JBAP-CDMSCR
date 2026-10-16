@@ -30,6 +30,7 @@ function addWorkdays(iso, n) { let d = toDate(iso), left = n; while (left > 0) {
 // [BEHAVIOR] Working days from a to b, both days included, like Excel NETWORKDAYS without holidays. Blank when a is blank or after b.
 function workdaysBetween(a, b) { if (!a || !b || a > b) return null; let n = 0; for (const d = toDate(a), e = toDate(b); d <= e; d.setUTCDate(d.getUTCDate() + 1)) { const w = d.getUTCDay(); if (w !== 0 && w !== 6) n++; } return n; }
 const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / 86400000);
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 const IC = {
   filter: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>',
@@ -63,7 +64,7 @@ const deptSvg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-
 const S = D ? JSON.parse(JSON.stringify({ veh: D.vehicles, cancels: D.cancellations, billing: D.billing, log: [] })) : null;
 const SELLER = D ? Object.fromEntries(D.sellers.map(s => [s.code, s])) : {};
 const UI = {};          // per-screen UI state: filters, sort, page, edits, errors, message
-const OPEN = { FAD: false, SMD: false, VWD: false };
+const OPEN = { Customer: false, FAD: false, SMD: false, VWD: false };
 
 // ─── Proposed improvements switch (spec 2026-10-15) ──────────────────
 // [BEHAVIOR] Off = the CR scope exactly; on = LOGIQUE's proposals P2–P6 (P1 withdrawn after JBAP's feedback of 15 Oct 2026). A link with ?proposed=1 opens with the switch on.
@@ -184,6 +185,52 @@ function recordCancellationBilling(scr, rows) {
 // [MOCK] legacy billed cancellations without an amount default to the penalty, so Save on Cancellation Payment works
 if (S) S.cancels.forEach(c => { if (c.bill_date && (c.amount === null || c.amount === undefined)) c.amount = cancelSplit(Object.assign({}, c, { seller: cancelSeller(c) })).penalty; });
 const SMD = k => D.smd[k].map((r, i) => Object.assign({ id: `${k}-${i}` }, r));
+// ─── Customers (Customer › Customer Inquiry and the customer page; user request of 16 Oct 2026) ──
+// [BEHAVIOR] A customer is a buyer with a Buyer ID (cid), found on the lots and the cancellations. The name is the one on the buyer's latest auction.
+// Lots without a Buyer ID have no customer page.
+const CUST_ID = 'customer-inquiry';
+const knownBuyer = cid => !!cid && (S.veh.some(v => v.cid === cid) || S.cancels.some(c => c.cid === cid));
+function buyerIndex() {
+  const m = new Map();
+  const add = (cid, name, email, auction) => {
+    if (!cid) return; const b = m.get(cid);
+    if (!b) { m.set(cid, { cid, name: name || '', email: email || '', last: +auction }); return; }
+    if (+auction >= b.last && name) b.name = name; b.last = Math.max(b.last, +auction); b.email ||= email || '';
+  };
+  S.veh.forEach(v => add(v.cid, v.customer, v.email, v.auction)); S.cancels.forEach(c => add(c.cid, c.customer, null, c.auction));
+  return m;
+}
+const isPendingAward = v => !v.awarding, isUnpaidLot = v => !!v.awarding && !v.buyer_paid;   // the FAD Pending Awarding and Unpaid rules, on SOLD lots
+// [BEHAVIOR] Step = how far a sold lot has got: Pending award → Unpaid → Paid → Seller Ack. → For Dispatch → Unreleased → Released / Returned.
+// For Dispatch follows the seller's dispatch condition, so lots of sellers released on Buyer Payment go from Paid straight to For Dispatch.
+const stepOf = v => v.status !== 'Sold' ? v.status : v.release ? (v.release_type === 'Return to Seller' ? 'Returned' : 'Released') : v.dispatch ? 'Unreleased'
+  : dispatchReady(v) ? 'For Dispatch' : v.pay_seller ? 'Seller Ack.' : v.buyer_paid ? 'Paid' : v.awarding ? 'Unpaid' : 'Pending award';
+function buyerRows() {
+  const all = V(), cx = CX();
+  return [...buyerIndex().values()].map(b => {
+    const s = all.filter(v => v.cid === b.cid && v.status === 'Sold');
+    return { id: b.cid, cid: b.cid, customer: b.name, email: b.email, lots: s.length, total_bought: r2(sumBy(s, 'price')), unpaid: s.filter(isUnpaidLot).length,
+      cancels: cx.filter(c => c.cid === b.cid).length, last_auction: b.last };
+  });
+}
+function buyerOf(cid) {
+  const b = buyerIndex().get(cid); if (!b) return null;
+  const sold = V().filter(v => v.cid === cid && v.status === 'Sold')
+    .map(v => Object.assign(v, { amonth: v.auction_start ? MONTHS[+v.auction_start.slice(5, 7) - 1] : '', step: stepOf(v) }))
+    .sort((x, y) => y.auction - x.auction || String(x.lot).localeCompare(String(y.lot), 'en', { numeric: true }));
+  const sellers = [...new Set(sold.map(v => v.seller))].map(code => {
+    const mine = sold.filter(v => v.seller === code);
+    return { id: code, seller: code, seller_full: SELLER[code]?.name || code, units: mine.length, amount: r2(sumBy(mine, 'price')), unpaid: mine.filter(isUnpaidLot).length, last: Math.max(...mine.map(v => +v.auction)) };
+  }).sort((x, y) => y.units - x.units || y.amount - x.amount);
+  return Object.assign({}, b, { sold, pending: sold.filter(isPendingAward), unpaid: sold.filter(isUnpaidLot), cancels: CX().filter(c => c.cid === cid).sort((x, y) => y.auction - x.auction), sellers });
+}
+const CUST_TABS = [['sold', 'Sold'], ['pending-awarding', 'Pending Awarding'], ['unpaid', 'Unpaid'], ['cancellation', 'Cancellation']];
+const custHref = (cid, tab) => `#/customer/${encodeURIComponent(cid)}${tab && tab !== 'sold' ? '/' + tab : ''}`;
+function custRoute(h) {   // #/customer/<Buyer ID>[/<list>] → { cid, tab }
+  const m = /^customer\/([^/]+)(?:\/([^/]*))?$/.exec(h || ''); if (!m) return null;
+  let cid; try { cid = decodeURIComponent(m[1]); } catch { cid = m[1]; }
+  return { cid, tab: CUST_TABS.some(t => t[0] === m[2]) ? m[2] : 'sold' };
+}
 // ─── Activity log (one entry per changed field; entries are never edited or deleted) ──
 const LOG_ID = 'log-activity';
 const LOG_USER = 'system';   // [MOCK] the header user; there is no real login in the prototype
@@ -543,6 +590,15 @@ const SCREENS = [
     totals: rows => ({ customer: `${rows.length} lots, ${rows.filter(r => r.status === 'Sold').length} sold` }) },
   { dept: 'VWD', ...INVENTORY, actions: VFSU, buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },   // VWD updates the Inventory Status; SMD only views
 
+  // ===================== Customer › Customer Inquiry (read-only; Sales Actions is not part of the prototype) =====================
+  { id: CUST_ID, dept: 'Customer', title: 'Customer Inquiry', actions: VFS,
+    rule: 'One row per buyer (Buyer ID), from the lots and the cancellations. Lots Bought and Total Bought count SOLD lots at their result price; Unpaid Lots = awarded lots without a Buyer Paid date. Click a Buyer ID or name to open the customer page; buyer names on the FAD, SMD and VWD lists open it too.',
+    rows: buyerRows, sort: ['last_auction', 'desc'],
+    cols: [C('Buyer ID', 'cid', 'code'), C('Buyer Name', 'customer', 'text', { w: 300 }), C('Email', 'email', 'text', { w: 240 }), C('Lots Bought', 'lots', 'int'),
+      C('Total Bought (PHP)', 'total_bought', 'money'), C('Unpaid Lots', 'unpaid', 'int'), C('Cancellations', 'cancels', 'int'), C('Last Auction', 'last_auction', 'code')],
+    filters: [{ key: 'cid', label: 'Buyer ID', type: 'text', w: 'w1' }, { key: 'customer', label: 'Buyer Name' }],
+    totals: rows => ({ customer: `${rows.length} buyers`, lots: intf(sumBy(rows, 'lots')), total_bought: money(sumBy(rows, 'total_bought')), unpaid: intf(sumBy(rows, 'unpaid')), cancels: intf(sumBy(rows, 'cancels')) }) },
+
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
     rule: 'Every data change made in FAD, SMD and VWD, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and, with the proposed improvements on, the SAAF.',
@@ -618,8 +674,15 @@ function sideHtml(route) {
   }).join('');
   const logOn = route === LOG_ID;
   const log = `<a class="mi ${logOn ? 'is-active' : ''}" href="#/${LOG_ID}" ${logOn ? 'aria-current="page"' : ''}>${deptSvg('LOG')}Log Activity</a>`;
-  return TOP_BEFORE.map(disabledItem).join('') + groups + TOP_AFTER.map(disabledItem).join('') + log +
-    '<p class="side-note">Prototype: only FAD, SMD, VWD and Log Activity are active. Other menus are disabled.</p>';
+  return TOP_BEFORE.map(x => x[1] === 'customer' ? customerMenu(route) : disabledItem(x)).join('') + groups + TOP_AFTER.map(disabledItem).join('') + log +
+    '<p class="side-note">Prototype: only Customer Inquiry, FAD, SMD, VWD and Log Activity are active. Other menus are disabled.</p>';
+}
+// Customer menu: Customer Inquiry (also highlighted on a customer page); Sales Actions is not part of the prototype
+function customerMenu(route) {
+  const open = OPEN.Customer, on = route === CUST_ID || !!custRoute(route);
+  return `<button type="button" class="mi" data-group="Customer" aria-expanded="${open}" aria-controls="grp-Customer"><img src="assets/ic-customer.png" alt="">Customer<span class="caret"></span></button>
+    <div class="lvs" id="grp-Customer" ${open ? '' : 'hidden'}><a class="mis ${on ? 'is-active' : ''}" href="#/${CUST_ID}" ${on ? 'aria-current="page"' : ''}>Customer Inquiry</a>
+    <button type="button" class="mis is-disabled" aria-disabled="true" data-disabled="Sales Actions" title="Not part of this prototype">Sales Actions</button></div>`;
 }
 function renderSide(route) { $('#menu').innerHTML = sideHtml(route); }
 
@@ -698,8 +761,10 @@ function cellHtml(scr, r, c, upd) {
   if (c.type === 'logval' && (v ?? '') === '') return '<td><span class="blank">(blank)</span></td>';
   let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : c.type === 'datetime' ? `${fmtDate(v.slice(0, 10))} ${v.slice(11)}` : (v ?? '');
   const late = c.late && v && v < TODAY ? ' late' : '';
-  if (c.w) return `<td class="${cls}${late}"><div class="tx" style="max-width:${c.w}px" title="${esc(t)}">${esc(t)}</div></td>`;
-  return `<td class="${cls}${late}">${esc(t)}</td>`;
+  // [BEHAVIOR] a buyer name or Buyer ID opens the customer page when the row has a known Buyer ID
+  const inner = (c.key === 'customer' || c.key === 'cid') && t !== '' && knownBuyer(r.cid) ? `<a class="blink" href="${custHref(r.cid)}">${esc(t)}</a>` : esc(t);
+  if (c.w) return `<td class="${cls}${late}"><div class="tx" style="max-width:${c.w}px" title="${esc(t)}">${inner}</div></td>`;
+  return `<td class="${cls}${late}">${inner}</td>`;
 }
 
 function dataCard(scr, title) {
@@ -786,6 +851,41 @@ function entryLayout(scr) {
   }
   return `${PROPOSED ? cdmsCancelPanel(scr) : ''}<div class="row2">${find}${det}</div>${dataCard(scr, 'Recent cancellation entries')}`;
 }
+// Read-only table for the customer page (no sorting, paging or editing)
+function plainTable(cols, rows, totals, empty) {
+  const stub = { id: 'customer-page' };
+  const th = cols.map(c => `<th scope="col"><span class="hb">${esc(c.label)}</span></th>`).join('');
+  const body = rows.length ? rows.map(r => `<tr data-lot="${esc(r.id)}">${cols.map(c => cellHtml(stub, r, c, false)).join('')}</tr>`).join('')
+    : `<tr><td colspan="${cols.length}"><div class="empty">${IC.inbox}<b>${esc(empty)}</b></div></td></tr>`;
+  const foot = rows.length && totals ? `<tfoot><tr>${cols.map(c => `<td class="${RIGHT.has(c.type) ? 'r' : CEN.has(c.type) ? 'c' : ''}">${esc(totals[c.key] ?? '')}</td>`).join('')}</tr></tfoot>` : '';
+  return `<div class="tw"><table><thead><tr>${th}</tr></thead><tbody>${body}</tbody>${foot}</table></div>`;
+}
+const CUST_SELLER_COLS = [C('Seller', 'seller', 'code'), C('Seller Name', 'seller_full', 'text', { w: 340 }), C('Units Bought', 'units', 'int'), C('Total Amount (PHP)', 'amount', 'money'),
+  C('Unpaid Units', 'unpaid', 'int'), C('Last Auction', 'last', 'code')];
+const CUST_LOT_COLS = [C('Auction Month', 'amonth', 'code'), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'),
+  C('Make/Model', 'model', 'text', { w: 240 }), C('Result Price', 'price', 'money'), C('Notarial', 'transfer_fee', 'money'), C('Commission', 'com', 'money'), C('Total', 'total', 'money'), C('Step', 'step', 'code')];
+const CUST_CX_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 200 }),
+  C('Date Cancelled', 'dcancel', 'date'), C('Waived?', 'waived', 'rocheck'), C('Justification', 'just', 'text', { w: 240 }), C('Penalty', 'penalty', 'money'), C('Billing Date', 'bill_date', 'date'), C('Paid Date', 'paid_date', 'date')];
+// Customer page: Customer Information (not built) and Customer Transaction History (cards, purchases by seller, lot lists as tabs with their own URL)
+function customerPage(cid, tab) {
+  const b = buyerOf(cid), crumb = last => `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›<span>Customer</span>›<a href="#/${CUST_ID}">Customer Inquiry</a>›<b>${esc(last)}</b></nav>`;
+  if (!b) return `${crumb(cid)}<div class="hrow"><h1>Customer Detail</h1></div><section class="card"><div class="empty">${IC.inbox}<b>No buyer with Buyer ID ${esc(cid)}</b>Open a buyer from <a href="#/${CUST_ID}">Customer Inquiry</a>.</div></section>`;
+  const kpi = (k, v, s) => `<div class="kpi"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`;
+  const cards = `<div class="kpis">${kpi('Lots bought', intf(b.sold.length), `${b.sellers.length} seller(s)`)}${kpi('Total bought (PHP)', money(sumBy(b.sold, 'price')), 'Result prices')}`
+    + `${kpi('Pending awarding', intf(b.pending.length), 'Not yet awarded')}${kpi('Unpaid', intf(b.unpaid.length), `PHP ${money(sumBy(b.unpaid, 'total'))}`)}`
+    + `${kpi('Cancellations', intf(b.cancels.length), `${b.cancels.filter(c => !c.waived).length} with fee`)}</div>`;
+  const sellers = `<section class="card" aria-label="Purchases by seller"><div class="card-h"><div class="ico">${IC.table}</div>Purchases by seller<span class="bdg">${b.sellers.length}</span></div>
+    ${plainTable(CUST_SELLER_COLS, b.sellers, { seller: `Total (${b.sellers.length})`, units: intf(sumBy(b.sellers, 'units')), amount: money(sumBy(b.sellers, 'amount')), unpaid: intf(sumBy(b.sellers, 'unpaid')) }, 'No lots bought yet')}</section>`;
+  const lists = { sold: b.sold, 'pending-awarding': b.pending, unpaid: b.unpaid, cancellation: b.cancels }, rows = lists[tab] || b.sold, t = lists[tab] ? tab : 'sold';
+  const tabs = `<nav class="tabs in-card" aria-label="Lot lists">${CUST_TABS.map(([slug, label]) => `<a href="${custHref(cid, slug)}" class="tab${slug === t ? ' is-active' : ''}"${slug === t ? ' aria-current="page"' : ''}>${label}<span class="cnt">${lists[slug].length}</span></a>`).join('')}</nav>`;
+  const table = t === 'cancellation' ? plainTable(CUST_CX_COLS, rows, { auction: `Total (${rows.length})`, penalty: money(sumBy(rows, 'penalty')) }, 'No cancellations')
+    : plainTable(CUST_LOT_COLS, rows, { amonth: `Total (${rows.length})`, price: money(sumBy(rows, 'price')), transfer_fee: money(sumBy(rows, 'transfer_fee')), com: money(sumBy(rows, 'com')), total: money(sumBy(rows, 'total')) }, 'No lots in this list');
+  return `${crumb(cid)}<div class="hrow"><h1>Customer Detail</h1><div class="acts">Allowed actions&nbsp;<span class="pill">View</span></div></div>
+    <nav class="tabs" aria-label="Customer detail"><span class="tab is-disabled" aria-disabled="true" title="Not part of this prototype">Customer Information</span><a href="${custHref(cid)}" class="tab is-active" aria-current="page">Customer Transaction History${b.unpaid.length ? `<span class="cnt warn">${b.unpaid.length} unpaid</span>` : ''}</a></nav>
+    <p class="rule">${IC.info}<span>Everything this buyer has bought at auction, from the same lot data as the FAD lists (read-only). Notarial = transfer fee; Total = Result Price + Notarial + Security Bond. Step = how far the lot has got: Pending award → Unpaid → Paid → Seller Ack. → For Dispatch → Unreleased → Released or Returned. Customer Information is not part of this prototype.</span></p>
+    <h2 class="cust-h">${esc(cid)} · ${esc(b.name)}</h2>${b.email ? `<p class="cust-sub">${esc(b.email)}</p>` : ''}
+    ${cards}${sellers}<section class="card" aria-label="Lots"><div class="card-h"><div class="ico">${IC.table}</div>Lots</div>${tabs}${table}</section>`;
+}
 // P6 (switch on): what the switch adds, and what is waiting per department
 function proposedPanels() {
   const items = PROPOSALS.map(([id, text, link]) => `<li>${tagHtml({ tag: id })} ${link ? `<a href="#/${link}">${esc(text)}</a>` : esc(text)}</li>`).join('');
@@ -806,12 +906,14 @@ function homeLayout() {
 }
 
 // ─── Router ───────────────────────────────────────────────────────────
-function route() { const h = location.hash.replace(/^#\/?/, ''); return byId[h] && shown(byId[h]) ? h : ''; }   // a proposed screen opens only with the switch on
+function route() { const h = location.hash.replace(/^#\/?/, ''); return byId[h] && shown(byId[h]) ? h : custRoute(h) ? h : ''; }   // a proposed screen opens only with the switch on
 function render() {
-  const r = route(), scr = byId[r];
+  const r = route(), scr = byId[r], cust = custRoute(r);
   if (scr) OPEN[scr.dept] = true;
+  if (cust) OPEN.Customer = true;
   renderSide(r);
   const c = $('#content');
+  if (cust) { c.innerHTML = customerPage(cust.cid, cust.tab); document.title = `${cust.cid} | Customer | CDMS Prototype`; return; }
   if (!scr) { c.innerHTML = homeLayout(); document.title = 'CDMS Prototype | Post-Auction Menus'; return; }
   document.title = `${scr.title} | ${scr.top ? '' : `${scr.dept} | `}CDMS Prototype`;
   let html = pageHead(scr);
@@ -1211,7 +1313,7 @@ function bind() {
   const content = $('#content'), menu = $('#menu');
   menu.addEventListener('click', ev => {
     const g = ev.target.closest('[data-group]'); if (g) { OPEN[g.dataset.group] = !OPEN[g.dataset.group]; renderSide(route()); return; }
-    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only FAD, SMD, VWD and Log Activity are active.`, 'warn'); return; }
+    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, FAD, SMD, VWD and Log Activity are active.`, 'warn'); return; }
     if (ev.target.closest('.mis, a.mi')) document.body.classList.remove('nav-open');
   });
   content.addEventListener('change', ev => {
@@ -1241,7 +1343,11 @@ function bind() {
   $('#home-logo').addEventListener('click', () => { location.hash = '#/'; });
   const sw = $('#proposed-switch');
   if (sw) { sw.checked = PROPOSED; sw.addEventListener('change', () => { setProposed(sw.checked); if (!PROPOSED) dropHolds(); closeModal(); render(); toast(PROPOSED ? 'Proposed improvements on: changes are tagged "Proposed P2" to "P6".' : 'Proposed improvements off: the prototype follows the CR form.'); }); }
-  window.addEventListener('hashchange', () => { closeModal(); render(); window.scrollTo(0, 0); });
+  window.addEventListener('hashchange', ev => {   // switching lot lists on the same customer page keeps the scroll position
+    closeModal(); render();
+    const was = custRoute((ev.oldURL || '').split('#')[1]?.replace(/^\/?/, '')), now = custRoute(route());
+    if (!(was && now && was.cid === now.cid)) window.scrollTo(0, 0);
+  });
 }
 
 // ─── Cancellation Entry behaviour ─────────────────────────────────────
