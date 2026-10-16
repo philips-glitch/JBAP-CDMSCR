@@ -88,7 +88,7 @@ With the switch **off**, every screen works as the CR form describes. With it **
 
 ## JBAP feedback, 16 Oct 2026 (round 2)
 
-Item numbers are those of JBAP's feedback. Qn = our question to JBAP (Q69 to Q82); nothing JBAP left unclear was built.
+Item numbers are those of JBAP's feedback. Qn = our question to JBAP (Q69 to Q82). Where JBAP left a point open we either built our assumption and asked (Q70, Q71, Q75, Q77, Q78, Q82) or built nothing and asked (Q73, Q74, Q76, Q81).
 
 | Change | Where | What it does |
 |---|---|---|
@@ -176,7 +176,7 @@ Qn = question n in JBAP's Open Questions document (Q69 to Q82: the *Questions* s
 | Billing # unique | Not enforced for existing rows | Access lists Billing #428 three times: **data issue to check** |
 | "Sold - Accounting" menu | Not in the prototype | Exists in Access FAD but not in the CR form: **to confirm** if needed |
 | One commission billing per seller | Enforced when printing; with the switch on, several sellers print together, one billing each (P4) | **Assumption** |
-| Waived cancellations are not billed | Excluded from Cancellation Billing | **Assumption** |
+| Waived cancellations are not billed | Excluded from Cancellation Billing & Payment | **Assumption** |
 | Overdue deadlines shown in red | Unpaid, Payment Seller, Unreleased, Unpaid Billing | Prototype suggestion |
 | Log Activity records data changes only (not views, or prints that change nothing), one row per changed field | Update, Create, Cancel | Prototype suggestion, **to confirm** |
 | Return to Seller (wish 4; JBAP, 16 Oct 2026, #19) | Status Not Sold or Cancelled, no clearance and no release yet, and **not listed in an ongoing or future auction**: the lot's own auction has not ended (end on or after the demo date), or its *next auction* names an auction that has not ended. [MOCK] auction 222 (12 to 14 Oct 2026) has three relisted units. One form per seller, signatures on paper | Wish 4, Q18, Q19, JBAP feedback #19; **assumptions**: when a unit counts as listed (Q77), approval by the SMD and FAD Managers in CDMS or on paper (Q76, Q32) |
