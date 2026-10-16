@@ -21,7 +21,7 @@ test('clearance: recorded under SMD, units move to VWD For Return to Seller, one
   assert.deepStrictEqual(P.byId['VWD/for-return-to-seller'].rows().map(r => r.id).sort(), units.map(u => u.id).sort());
   assert.ok(!scr.rows().some(r => r.seller === 'ORICO'));
   const h = P.REPORTS.returnClearance('ORICO', units, P.TODAY);
-  assert.match(h, /Return to Seller/); assert.match(h, /SMD Manager/); assert.match(h, /FAD Manager/); assert.match(h, /Q32/);
+  assert.match(h, /Return to Seller/); assert.match(h, /SMD Manager/); assert.match(h, /FAD Manager/); assert.match(h, /Q76/);
   assert.doesNotMatch(h.replace(/<[^>]*>/g, ' '), /\bnull\b|undefined|NaN/);
 });
 test('a return is recorded like a release and is never blocked by DOAS or penalty', () => {
