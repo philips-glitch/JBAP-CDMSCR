@@ -10,7 +10,7 @@ const TODAY = D ? D.meta.demoToday : '2026-10-09';
 const PENALTY_PER_DAY = 500;     // storage penalty per calendar day after the dispatch deadline (confirmed by Access data, Q15)
 const PENALTY_LOCATIONS = ['Pasay City', 'JBAP'];   // storage penalty applies only to units stored here (JBAP Q15)
 const CANCEL_PENALTY = 10000;    // cancellation penalty per lot (JBAP Q4)
-// [BEHAVIOR] Latest auction = the last auction that has started by the demo date ("current auction" of wish 4 and the inventory filter; to confirm, Q32)
+// [BEHAVIOR] Latest auction = the last auction that has started by the demo date (the Inventory "Latest auction" filter; Return to Seller uses listedAhead since JBAP's feedback of 16 Oct 2026, #19)
 const LATEST_AUCTION = D ? Object.keys(D.auctions).filter(k => D.auctions[k][0] <= TODAY).sort((a, b) => a - b).pop() : null;
 const COMMISSION_RATE = 0.05;    // default commission rate (seller.commission_rate overrides)
 const VAT_RATE = 0.12;
@@ -333,7 +333,7 @@ const REBMON_COLS = [   // SMD Rebate Monitoring (Access snapshot); FAD has its 
   C('Rebate', 'rebate', 'money'), C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date')];
 // Wish 5 + JBAP feedback (16 Oct 2026, #2, #20, #23): Inventory Monitoring in the columns of JBAP's parking inventory file; view only, status calculated
 const INVENTORY = { slug: 'inventory', title: 'Inventory', actions: VFS, tag: 'Wish',
-  rule: `One row per vehicle, in the columns of JBAP's parking inventory file (Logistics, Originating Warehouse, Parking Location, Transfer Date, Returned to Seller WH and Date of Entry come from that file, as of 12 Oct 2026; Date of Entry is inferred when the plate is not in it). Inventory Status is calculated: Listed, Awarded (sold), For Release (dispatched, waiting for the buyer's pull-out), For Return (cleared by SMD), Released or Returned. View only. Days in Yard runs to the release or return date, or to today while the unit is in the yard. "Not in latest auction" (auction ${LATEST_AUCTION}) helps SMD spot units to return.`,
+  rule: `One row per vehicle, in the columns of JBAP's parking inventory file (Logistics, Originating Warehouse, Parking Location, Transfer Date, Returned to Seller WH and Date of Entry come from that file, as of 12 Oct 2026; Date of Entry is inferred when the plate is not in it or the file has no entry on or before the lot's auction end). Inventory Status is calculated: Listed, Awarded (sold), For Release (dispatched, waiting for the buyer's pull-out), For Return (cleared by SMD), Released or Returned. View only. Days in Yard runs to the release or return date, or to today while the unit is in the yard. "Not in latest auction" shows units that were not in auction ${LATEST_AUCTION}.`,
   rows: V, sort: ['entry_date', 'asc'], initial: { yard: 'In yard' },
   cols: [C('Date of Entry', 'entry_date', 'date'), C('VCN', 'vcn', 'code'), C('Plate Number', 'plate', 'code'), C('CS No.', 'cs_no', 'code'), C('Make/Model', 'model', 'text', { w: 200 }),
     C('Color', 'color', 'text', { w: 110 }), C('Year', 'year', 'code'), C('Seller', 'seller', 'code'), C('Logistics', 'logistics', 'text', { w: 130 }), C('Originating Warehouse', 'origin_wh', 'text', { w: 150 }),
@@ -927,7 +927,7 @@ function homeLayout() {
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
   return `<div class="home"><nav class="crumb" aria-label="Breadcrumb"><b>Home</b></nav><h1>Post-Auction Menus</h1>
-    <p class="lead">Clickable prototype of the new FAD, SMD and VWD menus that replace the MS Access post-auction forms. Data is sample data and resets when you refresh the page. Demo date: <b>${fmtDate(TODAY)}</b>.</p>
+    <p class="lead">Clickable prototype of the new Customer Inquiry, Report, FAD, SMD and VWD menus that replace the MS Access post-auction forms. Data is sample data and resets when you refresh the page. Demo date: <b>${fmtDate(TODAY)}</b>.</p>
     ${PROPOSED ? proposedPanels() : ''}<div class="hgrid">${['FAD', 'SMD', 'VWD', 'Report'].map(card).join('')}</div></div>`;
 }
 
