@@ -82,7 +82,7 @@ test('JBAP column order, the editable fields and n/a cells', () => {
   assert.ok(col('ewb_signed').na(sbc) && !col('ewb_signed').na(ewb));
   assert.ok(col('rcv_doas').na(tfs) && !col('rcv_doas').na(sbc) && col('doas_aging').na(tfs));
   const h = P.cellHtml(s, sbc, col('ewb_signed'), true); assert.match(h, /n\/a/); assert.doesNotMatch(h, /<input/);
-  assert.match(P.cellHtml(s, ewb, col('ewb_signed'), true), /<input type="date"/);
+  assert.match(P.cellHtml(s, ewb, col('ewb_signed'), true), /class="cell-in dt/);
 });
 test('VWD release: an EWB lot signed at EWB counts as signed', () => {
   assert.strictEqual(P.releaseBlock(P.enrichV(lot('EWB', { ewb_signed: '2026-09-10' }))), null);

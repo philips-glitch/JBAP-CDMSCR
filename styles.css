@@ -316,3 +316,10 @@ th span.hb:hover{background:none}
 .tabs.in-card{margin:10px 16px 0}
 @media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:768px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Typed dates (JBAP feedback 16 Oct 2026, #4) */
+.dti{position:relative;display:flex;align-items:center}
+.dti .dt{padding-right:26px}
+.dtp{position:absolute;right:3px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--faint);padding:2px;display:flex}
+.dtp:hover{color:var(--navy)}
+#dt-picker{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0;margin:0}

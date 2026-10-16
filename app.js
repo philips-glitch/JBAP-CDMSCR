@@ -31,6 +31,27 @@ function addWorkdays(iso, n) { let d = toDate(iso), left = n; while (left > 0) {
 function workdaysBetween(a, b) { if (!a || !b || a > b) return null; let n = 0; for (const d = toDate(a), e = toDate(b); d <= e; d.setUTCDate(d.getUTCDate() + 1)) { const w = d.getUTCDay(); if (w !== 0 && w !== 6) n++; } return n; }
 const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / 86400000);
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+// [BEHAVIOR] JBAP feedback (16 Oct 2026, #4): dates can be typed. t / today = the demo date; mm/dd/yyyy, mm/dd/yy (20yy), mm/dd and mmdd (year of the demo date),
+// mmddyyyy, yyyy-mm-dd; separators / - . or space. '' = blank, null = not a date.
+const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_ERR = 'is not a valid date (mm/dd/yyyy, or t for today)';
+function parseDateInput(text, today = TODAY) {
+  const s = String(text ?? '').trim().toLowerCase(); if (!s) return '';
+  if (s === 't' || s === 'today') return today;
+  let k, y, m, d;
+  if ((k = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s))) [, y, m, d] = k;
+  else if ((k = /^(\d{1,2})[/\-. ](\d{1,2})(?:[/\-. ](\d{2}|\d{4}))?$/.exec(s))) [, m, d, y] = k;
+  else if ((k = /^(\d{2})(\d{2})(\d{4})?$/.exec(s))) [, m, d, y] = k;
+  else return null;
+  y = y === undefined ? +today.slice(0, 4) : y.length === 2 ? 2000 + +y : +y; m = +m; d = +d;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (y < 1900 || y > 2100 || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return toIso(dt);
+}
+const dateText = v => !v ? '' : ISO_RE.test(v) ? fmtDate(v) : String(v);   // a stored date as mm/dd/yyyy; text that is not a date stays as typed
+// A typed date box with a calendar button (the button opens the browser's picker through one shared hidden input, see bind)
+const dateBox = (cls, val, attrs) => `<span class="dti"><input type="text" class="${cls}" autocomplete="off" placeholder="mm/dd/yyyy" value="${esc(dateText(val))}" ${attrs}><button type="button" class="dtp" data-pick tabindex="-1" aria-label="Open the calendar">${IC.cal}</button></span>`;
+const dateField = (id, iso, attrs = '', cls = '') => dateBox(`ctl dt${cls ? ' ' + cls : ''}`, iso, `id="${id}"${attrs ? ' ' + attrs : ''}`);
 
 const IC = {
   filter: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>',
@@ -42,6 +63,7 @@ const IC = {
   print: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 9V3h10v6"/><rect x="3.5" y="9" width="17" height="8" rx="1.5"/><path d="M7 14h10v7H7z"/></svg>',
   mail: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3.5 6l8.5 7 8.5-7"/></svg>',
   download: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+  cal: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="1.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
   save: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></svg>',
   reset: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>',
   ban: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></svg>',
@@ -742,7 +764,7 @@ function cellHtml(scr, r, c, upd) {
     const common = `data-row="${esc(r.id)}" data-key="${c.key}" aria-label="${esc(aria)}" ${err ? `aria-invalid="true" title="${esc(c.label + ' ' + err)}"` : ''}`;
     const st = `${has ? 'is-dirty' : ''} ${err ? 'is-invalid' : ''}`;
     if (c.edit === 'check') return `<td class="c"><input type="checkbox" class="chk ${st}" ${val ? 'checked' : ''} ${c.disabledWhen?.(r) ? 'disabled' : ''} ${common}></td>`;
-    if (c.edit === 'date') return `<td><input type="date" class="cell-in ${st}" value="${esc(val || '')}" ${common}></td>`;
+    if (c.edit === 'date') return `<td>${dateBox(`cell-in dt ${st}`, val, common)}</td>`;
     if (c.edit === 'money') return `<td><input type="number" min="0" step="0.01" class="cell-in num ${st}" value="${val ?? ''}" ${common}></td>`;
     if (c.edit === 'select') return `<td><select class="cell-in ${st}" ${common}><option value=""></option>${c.options.map(o => `<option${o === val ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></td>`;
     return `<td><input type="text" class="cell-in ${st}" value="${esc(val || '')}" ${common}></td>`;
@@ -803,7 +825,7 @@ function effectiveCount(scr, key) {   // ticks: unsaved edit, else saved value o
 function queryCard(scr) {
   const d = U(scr.id).asOf || TODAY;
   return `<section class="card filter"><div class="card-h"><div class="ico">${IC.search}</div>Query</div>
-    <form class="fb" data-form="query"><div class="fld w2"><label for="q-asof">Payment to seller still blank before</label><input class="ctl" type="date" id="q-asof" value="${d}" required></div>
+    <form class="fb" data-form="query"><div class="fld w2"><label for="q-asof">Payment to seller still blank before</label>${dateField('q-asof', d, 'required')}</div>
     <p style="font-size:12.5px;color:var(--faint);margin:0 0 9px;max-width:620px">Buyer payment date has no filter. A unit is listed when Payment to Seller is blank, or falls after the date entered.</p>
     <div class="btns"><button type="submit" class="btn pr">${IC.play}Generate</button></div></form></section>`;
 }
@@ -837,7 +859,7 @@ function entryLayout(scr) {
       <form data-form="cancel" novalidate><div class="fgrid">
       ${lk('Lot', v.lot)}${lk('Auction No.', v.auction)}${lk('Customer Name', v.customer)}${lk('Plate Number', v.plate)}
       <div class="fld"><label for="ce-status">Status</label><select class="ctl ${e.errors.status ? 'is-invalid' : ''}" id="ce-status" ${ro ? 'disabled' : ''}>${['Sold', 'Cancelled'].map(s => `<option ${f.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select>${ferr('status')}</div>
-      <div class="fld"><label for="ce-date">Date Cancelled</label><input type="date" class="ctl ${e.errors.date ? 'is-invalid' : ''}" id="ce-date" value="${esc(f.date)}" ${ro ? 'disabled' : ''}>${ferr('date')}</div>
+      <div class="fld"><label for="ce-date">Date Cancelled</label>${dateField('ce-date', f.date, ro ? 'disabled' : '', e.errors.date ? 'is-invalid' : '')}${ferr('date')}</div>
       <div class="fld"><span class="lbl">Cancellation Fee Waived</span><label class="chkline"><input type="checkbox" class="chk" id="ce-waived" ${f.waived ? 'checked' : ''} ${ro ? 'disabled' : ''}>Waive the cancellation fee</label></div><div></div>
       <div class="fld full"><label for="ce-just">Justification of Waiver</label><textarea class="ctl ${e.errors.just ? 'is-invalid' : ''}" id="ce-just" ${ro ? 'disabled' : ''} placeholder="Reason, e.g. Did not pay within the buyer deadline">${esc(f.just)}</textarea>${ferr('just')}</div>
       </div>${ro ? `<p class="note">This lot is already <b>${esc(v.status)}</b>. Only SOLD transactions can be cancelled.</p>` : ''}
@@ -955,7 +977,10 @@ function validateEdits(scr, ids) {
   const ui = U(scr.id), map = Object.fromEntries(scr.rows().map(r => [r.id, r])), errors = {}, lines = [];
   (ids || Object.keys(ui.edits)).forEach(id => {
     const r = map[id]; if (!r) { delete ui.edits[id]; return; }
-    const errs = scr.validate ? scr.validate(r, ui.edits[id] || {}) : {};
+    // [BEHAVIOR] a typed date that cannot be read is reported as such; the screen's own rules run on the other values only
+    const e = ui.edits[id] || {}, bad = scr.cols.filter(c => c.edit === 'date' && e[c.key] && !ISO_RE.test(e[c.key])).map(c => c.key);
+    const good = Object.fromEntries(Object.entries(e).filter(([k]) => !bad.includes(k)));
+    const errs = Object.assign(scr.validate ? scr.validate(r, good) : {}, Object.fromEntries(bad.map(k => [k, DATE_ERR])));
     Object.entries(errs).forEach(([k, m]) => { if (m) { (errors[id] ||= {})[k] = m; lines.push(`Lot ${esc(r.lot || '-')} (${esc(r.plate || r.customer)}): <b>${esc(scr.cols.find(c => c.key === k)?.label || k)}</b> ${esc(m)}`); } });
   });
   ui.errors = errors;
@@ -1162,17 +1187,18 @@ const ACTIONS = {
     setMsg(scr, null); render();
     const nos = sellers.map((code, i) => `<div class="fld"><label for="cb-no-${i}">Billing No. (from NOAH)${many ? ` · ${esc(code)}` : ''}</label><input class="ctl" id="cb-no-${i}" placeholder="e.g. 511" required><span class="err" id="cb-no-${i}-err"></span></div>`).join('');
     const p3 = PROPOSED ? `<p class="note no-print">${tagHtml({ tag: 'P3' })} Typed for now; comes through JBAP's NOAH integration once it is re-routed to CDMS.</p>` : '';
-    const body = `<div class="fgrid two no-print" style="padding:0 0 12px">${nos}<div class="fld"><label for="cb-date">Billing Date</label><input class="ctl" type="date" id="cb-date" value="${TODAY}" required><span class="err" id="cb-date-err"></span></div></div>${p3}
+    const body = `<div class="fgrid two no-print" style="padding:0 0 12px">${nos}<div class="fld"><label for="cb-date">Billing Date</label>${dateField('cb-date', TODAY, 'required')}<span class="err" id="cb-date-err"></span></div></div>${p3}
       ${sellers.map(code => REPORTS.billingComputation(code, '(entered above)', TODAY, of(code))).join('')}`;
     openModal({ title: many ? `Print commission billing: ${sellers.length} sellers` : 'Print commission billing', icon: 'print', wide: true, body, note: 'Recording adds the billing to the Billing Monitoring and Unpaid Billing tabs.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: many ? `Record ${sellers.length} billings & print` : 'Record billing & print', kind: 'pr', icon: 'print', onClick: () => {
-        const bd = $('#cb-date').value, entered = sellers.map((_, i) => $(`#cb-no-${i}`).value.trim()); let ok = true;
+        const bd = parseDateInput($('#cb-date').value, TODAY), entered = sellers.map((_, i) => $(`#cb-no-${i}`).value.trim()); let ok = true;
         $('#cb-date-err').textContent = ''; $('#cb-date').classList.remove('is-invalid');
         sellers.forEach((_, i) => {
           const no = entered[i], err = !no ? 'Billing No. is required.' : S.billing.some(b => b.no === no) ? `Billing No. ${no} already exists.` : entered.indexOf(no) !== i ? `Billing No. ${no} is entered twice.` : '';
           $(`#cb-no-${i}-err`).textContent = err; $(`#cb-no-${i}`).classList.toggle('is-invalid', !!err); if (err) ok = false;
         });
         const lastRemit = rows.map(r => r.pay_seller).sort().pop();
+        if (bd === null) { $('#cb-date-err').textContent = 'Type the date as mm/dd/yyyy, or t for today.'; $('#cb-date').classList.add('is-invalid'); return; }
         if (!bd) { $('#cb-date-err').textContent = 'Billing Date is required.'; ok = false; }
         else if (bd > TODAY || bd < lastRemit) { $('#cb-date-err').textContent = `Must be between ${fmtDate(lastRemit)} and ${fmtDate(TODAY)}.`; $('#cb-date').classList.add('is-invalid'); ok = false; }
         if (!ok) return;
@@ -1288,13 +1314,13 @@ const ACTIONS = {
     const preset = scr.releaseType || 'Sold', toDefault = preset === 'Return to Seller' ? v.seller_full : v.customer;
     const items = RELEASE_ITEMS.map((t, i) => `<label class="chkline"><input type="checkbox" class="chk" id="rl-i${i}" value="${esc(t)}">${esc(t)}</label>`).join('');
     openModal({ title: `${preset === 'Return to Seller' ? 'Return' : 'Release'} ${v.plate} (${v.model})`, icon: 'play',
-      body: `<div class="fgrid two"><div class="fld"><label for="rl-date">Release date</label><input class="ctl" type="date" id="rl-date" value="${TODAY}"><span class="err" id="rl-date-err"></span></div>
+      body: `<div class="fgrid two"><div class="fld"><label for="rl-date">Release date</label>${dateField('rl-date', TODAY)}<span class="err" id="rl-date-err"></span></div>
         <div class="fld"><label for="rl-to">Released to</label><input class="ctl" id="rl-to" value="${esc(toDefault)}"></div>
         <div class="fld"><label for="rl-type">Type</label><select class="ctl" id="rl-type">${['Sold', 'Return to Seller', 'Others'].map(t => `<option ${t === preset ? 'selected' : ''}>${t}</option>`).join('')}</select></div><div></div>
         <div class="fld full"><span class="lbl">Checklist</span><div class="cols2">${items}</div></div></div>`,
       note: 'Records the release date and the next VRF No., then prints the release form and gate pass.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Release & print', kind: 'pr', icon: 'print', onClick: () => {
-        const date = $('#rl-date').value, err = !date ? 'Release date is required.' : notFuture(date) || notBefore(date, v.dispatch, 'the Dispatch Date') || notBefore(date, v.rts_cleared, 'the Return to Seller clearance');
+        const date = parseDateInput($('#rl-date').value, TODAY), err = date === null ? 'Type the date as mm/dd/yyyy, or t for today.' : !date ? 'Release date is required.' : notFuture(date) || notBefore(date, v.dispatch, 'the Dispatch Date') || notBefore(date, v.rts_cleared, 'the Return to Seller clearance');
         if (err) { $('#rl-date-err').textContent = err; $('#rl-date').classList.add('is-invalid'); return; }
         const f = { date, to: $('#rl-to').value.trim() || toDefault, type: $('#rl-type').value, items: RELEASE_ITEMS.filter((_, i) => $(`#rl-i${i}`).checked) };
         const vrf = recordRelease(scr, v, f); render();
@@ -1320,15 +1346,21 @@ const ACTIONS = {
 };
 
 // ─── Events (delegated) ───────────────────────────────────────────────
+// Reads a typed date box: shows it as mm/dd/yyyy when it is a date and returns the ISO date, '' (blank) or the text as typed (not a date, flagged red)
+function commitDate(el) {
+  const iso = parseDateInput(el.value, TODAY);
+  if (iso === null) { el.title = 'Type a date as mm/dd/yyyy, or t for today'; return el.value.trim(); }
+  el.value = dateText(iso); el.removeAttribute('title'); return iso;
+}
 function onEdit(el) {
   const scr = currentScr(); if (!scr) return;
   const ui = U(scr.id), id = el.dataset.row, key = el.dataset.key;
   const row = scr.rows().find(r => r.id === id); if (!row) return;
-  const val = el.type === 'checkbox' ? el.checked : el.value;
+  const isDate = el.classList.contains('dt'), val = el.type === 'checkbox' ? el.checked : isDate ? commitDate(el) : el.value;
   const orig = row[key], same = el.type === 'checkbox' ? tickDefault(scr, row, key) === val : String(orig ?? '') === String(val ?? '');   // a pre-ticked box (P4) is the baseline
   if (same) { if (ui.edits[id]) { delete ui.edits[id][key]; if (!Object.keys(ui.edits[id]).length) delete ui.edits[id]; } }
   else (ui.edits[id] ||= {})[key] = val;
-  el.classList.toggle('is-dirty', !same); el.classList.remove('is-invalid');
+  el.classList.toggle('is-dirty', !same); el.classList.toggle('is-invalid', isDate && val !== '' && !ISO_RE.test(val));
   el.closest('tr')?.classList.toggle('is-dirty', !!ui.edits[id]);
   // refresh button counters without re-rendering (keeps focus in the table)
   (scr.buttons || []).forEach(b => { const n = b.act === 'save' ? dirtyCount(scr) : effectiveCount(scr, b.count); const s = $(`[data-count="${b.act}"]`); if (s) { s.textContent = n; s.hidden = !n; } });
@@ -1347,13 +1379,13 @@ function bind() {
   });
   content.addEventListener('input', ev => {
     const el = ev.target;
-    if (el.dataset.row && el.type !== 'checkbox') return onEdit(el);
+    if (el.dataset.row && el.type !== 'checkbox' && !el.classList.contains('dt')) return onEdit(el);   // a typed date is read when it is committed (change)
     if (el.dataset.filter) U(route()).filters[el.dataset.filter] = el.value;
   });
   content.addEventListener('submit', ev => {
     ev.preventDefault(); const scr = currentScr(); if (!scr) return; const ui = U(scr.id), form = ev.target.dataset.form;
     if (form === 'filter') { content.querySelectorAll('[data-filter]').forEach(i => { ui.filters[i.dataset.filter] = i.value; }); ui.applied = Object.assign({}, ui.filters); ui.page = 1; render(); }
-    if (form === 'query') { ui.asOf = $('#q-asof').value || TODAY; ui.page = 1; render(); toast(`Liability generated as of ${fmtDate(ui.asOf)}.`); }
+    if (form === 'query') { ui.asOf = parseDateInput($('#q-asof').value, TODAY) || TODAY; ui.page = 1; render(); toast(`Liability generated as of ${fmtDate(ui.asOf)}.`); }
     if (form === 'find') entryFind(scr);
     if (form === 'cancel') entryCancel(scr);
   });
@@ -1372,6 +1404,19 @@ function bind() {
     const was = custRoute((ev.oldURL || '').split('#')[1]?.replace(/^\/?/, '')), now = custRoute(route());
     if (!(was && now && was.cid === now.cid)) window.scrollTo(0, 0);
   });
+  // Typed dates everywhere (lists, forms, dialogs): Enter commits; the calendar button fills the box from the browser's picker
+  const picker = document.createElement('input'); picker.type = 'date'; picker.id = 'dt-picker'; picker.tabIndex = -1; picker.setAttribute('aria-hidden', 'true'); document.body.appendChild(picker);
+  let pickFor = null;
+  document.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.classList?.contains('dt')) ev.target.dispatchEvent(new Event('change', { bubbles: true })); });
+  document.addEventListener('change', ev => { const el = ev.target; if (el.classList?.contains('dt') && !el.dataset.row) { el.classList.toggle('is-invalid', parseDateInput(el.value, TODAY) === null); commitDate(el); } });
+  document.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-pick]'); if (!b) return;
+    pickFor = b.parentElement.querySelector('.dt'); if (!pickFor || pickFor.disabled) return;
+    const r = b.getBoundingClientRect(); picker.style.left = `${r.left}px`; picker.style.top = `${r.bottom}px`;
+    picker.value = parseDateInput(pickFor.value, TODAY) || '';
+    try { picker.showPicker(); } catch { picker.focus(); }
+  });
+  picker.addEventListener('change', () => { if (!pickFor) return; pickFor.value = dateText(picker.value); pickFor.dispatchEvent(new Event('change', { bubbles: true })); });
 }
 
 // ─── Cancellation Entry behaviour ─────────────────────────────────────
@@ -1389,10 +1434,12 @@ function entryFind(scr) {
 }
 function entryCancel(scr) {
   const e = U(scr.id).entry, v = e.found;
-  e.form = { status: $('#ce-status').value, date: $('#ce-date').value, waived: $('#ce-waived').checked, just: $('#ce-just').value.trim() };
+  const dr = $('#ce-date').value.trim(), dd = parseDateInput(dr, TODAY);
+  e.form = { status: $('#ce-status').value, date: dd === null ? dr : dd, waived: $('#ce-waived').checked, just: $('#ce-just').value.trim() };
   e.errors = {};
   if (e.form.status !== 'Cancelled') e.errors.status = 'Change Status to Cancelled.';
   if (!e.form.date) e.errors.date = 'Date Cancelled is required.';
+  else if (!ISO_RE.test(e.form.date)) e.errors.date = 'Type the date as mm/dd/yyyy, or t for today.';
   else if (e.form.date > TODAY) e.errors.date = 'Cannot be after today.';
   else if (v.awarding && e.form.date < v.awarding) e.errors.date = `Cannot be before the Awarding Date (${fmtDate(v.awarding)}).`;
   if (!e.form.just) e.errors.just = e.form.waived ? 'Justification is required when the fee is waived.' : 'Enter the reason for cancellation.';
