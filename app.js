@@ -148,10 +148,9 @@ function sellerMoney(v) {
   const vat = com * VAT_RATE, net = s.net !== false, wtax = net ? com * WTAX_RATE : 0, toJbap = net ? com + vat - wtax : 0;
   return { com: r2(com), cvat: r2(r2(com + vat) - r2(com)), ctotal: r2(com + vat), wtax: r2(wtax), to_jbap: r2(toJbap), payable: r2(price + (v.transfer_fee || 0) + bondOf(v) - toJbap) };
 }
-// [BEHAVIOR] Inventory status (user decision of 16 Oct 2026, JBAP to confirm in Q57): CDMS suggests it from the lot, VWD can change it while the unit
-// is in the yard (lot field inv_status); once the unit has left the yard it follows the release record.
-const INV_STATUSES = ['Released', 'Returned', 'Listed', 'Awarded', 'For Return'];
-const invStatusOf = v => v.release ? (v.release_type === 'Return to Seller' ? 'Returned' : 'Released') : v.rts_cleared ? 'For Return' : v.status === 'Sold' ? 'Awarded' : 'Listed';
+// [BEHAVIOR] Inventory status (JBAP feedback 16 Oct 2026, #20 and #23): calculated from the lot, view only. For Release = dispatched to VWD, waiting for the buyer's pull-out (Q71).
+const INV_STATUSES = ['Listed', 'Awarded', 'For Release', 'For Return', 'Released', 'Returned'];
+const invStatusOf = v => v.release ? (v.release_type === 'Return to Seller' ? 'Returned' : 'Released') : v.rts_cleared ? 'For Return' : v.dispatch ? 'For Release' : v.status === 'Sold' ? 'Awarded' : 'Listed';
 // [BEHAVIOR] Rebate figures shared by the Rebate Monitoring screen and its download (JBAP's Rebate Monitoring file): Minimum Bid = Awarded Price,
 // Highest Offer = Awarded Price − Rebate, Revenue = Commission − Rebate; blank when there is no price / commission.
 const rebateMoney = (price, rebate, com) => { const has = n => n !== null && n !== undefined && n !== '';
@@ -175,7 +174,7 @@ function enrichV(v) {
     days_in_yard: v.entry_date ? daysBetween(v.entry_date, v.release || TODAY) : null,
     released_buyer: v.release && v.release_type !== 'Return to Seller' ? v.release : null, returned_seller: v.release_type === 'Return to Seller' ? v.release : null,
     yard: v.release ? 'Out' : 'In yard', latest: String(v.auction) === LATEST_AUCTION ? 'In latest auction' : 'Not in latest auction',
-    inv_status: v.release ? invStatusOf(v) : v.inv_status || invStatusOf(v),
+    inv_status: invStatusOf(v),
     buyer_deadline, pay_deadline, dispatch_deadline,
     penalty: overdue && PENALTY_LOCATIONS.includes(v.location || 'Pasay City') ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
     penalty_paid: (v.penalty_payments || []).reduce((a, p) => a + p.amount, 0) || null,
@@ -330,16 +329,17 @@ const UNREL_FILTERS = [AUCTION_FILTER, { key: 'customer', label: 'Customer Name'
 const REBMON_COLS = [   // SMD Rebate Monitoring (Access snapshot); FAD has its own columns from JBAP's Rebate Monitoring file
   C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 320 }), C('Plate', 'plate', 'code'),
   C('Rebate', 'rebate', 'money'), C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date')];
-// Wish 5: Inventory report (VWD, also viewable by SMD). Replaces VWD's Excel file; check the columns against it when JBAP sends it.
+// Wish 5 + JBAP feedback (16 Oct 2026, #2, #20, #23): Inventory Monitoring in the columns of JBAP's parking inventory file; view only, status calculated
 const INVENTORY = { slug: 'inventory', title: 'Inventory', actions: VFS, tag: 'Wish',
-  rule: `One row per vehicle: Date of Entry (CDMS Cars > Car List; sample dates inferred), status, and the date it left the yard. Inventory Status (Released, Returned, Listed, Awarded, For Return) starts from the lot: released, returned, cleared for return, sold, otherwise listed; VWD can change it while the unit is in the yard. Days in Yard runs to the release or return date, or to today while the unit is in the yard. "Not in latest auction" (auction ${LATEST_AUCTION}) helps SMD spot units to return.`,
+  rule: `One row per vehicle, in the columns of JBAP's parking inventory file (Logistics, Originating Warehouse, Parking Location, Transfer Date, Returned to Seller WH and Date of Entry come from that file, as of 12 Oct 2026; Date of Entry is inferred when the plate is not in it). Inventory Status is calculated: Listed, Awarded (sold), For Release (dispatched, waiting for the buyer's pull-out), For Return (cleared by SMD), Released or Returned. View only. Days in Yard runs to the release or return date, or to today while the unit is in the yard. "Not in latest auction" (auction ${LATEST_AUCTION}) helps SMD spot units to return.`,
   rows: V, sort: ['entry_date', 'asc'], initial: { yard: 'In yard' },
-  cols: [C('Date of Entry', 'entry_date', 'date'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Seller', 'seller', 'code'), C('Location', 'location', 'code'),
-    C('Auction Status', 'status', 'status'), C('Inventory Status', 'inv_status', 'text', { edit: 'select', options: INV_STATUSES, lockWhen: r => !!r.release }),
-    C('Released to Buyer', 'released_buyer', 'date'), C('Returned to Seller', 'returned_seller', 'date'), C('Days in Yard', 'days_in_yard', 'int')],
+  cols: [C('Date of Entry', 'entry_date', 'date'), C('VCN', 'vcn', 'code'), C('Plate Number', 'plate', 'code'), C('CS No.', 'cs_no', 'code'), C('Make/Model', 'model', 'text', { w: 200 }),
+    C('Color', 'color', 'text', { w: 110 }), C('Year', 'year', 'code'), C('Seller', 'seller', 'code'), C('Logistics', 'logistics', 'text', { w: 130 }), C('Originating Warehouse', 'origin_wh', 'text', { w: 150 }),
+    C('Parking Location', 'parking', 'text', { w: 130 }), C('Transfer Date', 'transfer_date', 'date'), C('Auction Status', 'status', 'status'), C('Inventory Status', 'inv_status', 'text'),
+    C('Released to Buyer', 'released_buyer', 'date'), C('Returned to Seller', 'returned_seller', 'date'), C('Returned to Seller WH', 'rts_wh', 'text', { w: 130 }), C('Days in Yard', 'days_in_yard', 'int')],
   filters: [{ key: 'yard', label: 'In yard / Out', type: 'select', w: 'w1', options: () => ['In yard', 'Out'] }, { key: 'status', label: 'Auction Status', type: 'select', w: 'w1', options: () => ['Sold', 'Not Sold', 'Cancelled'] },
     { key: 'inv_status', label: 'Inventory Status', type: 'select', options: () => INV_STATUSES },
-    { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'location', label: 'Location', type: 'select', options: () => [...new Set(S.veh.map(v => v.location || 'Pasay City'))].sort() },
+    { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'parking', label: 'Parking Location', type: 'select', options: () => [...new Set(S.veh.map(v => v.parking).filter(Boolean))].sort() },
     { key: 'latest', label: 'Latest auction', type: 'select', options: () => ['In latest auction', 'Not in latest auction'] }, { key: 'plate', label: 'Plate Number' }],
   totals: rows => ({ plate: `${rows.length} units`, model: ['Sold', 'Not Sold', 'Cancelled'].map(s => `${s} ${rows.filter(r => r.status === s).length}`).join(' · ') }) };
 
@@ -588,7 +588,7 @@ const SCREENS = [
     cols: [C('Seller', 'seller_full', 'text', { w: 280 }), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 240 }), C('Location', 'location', 'code'),
       C('Cleared by SMD', 'rts_cleared', 'date'), C('Return', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }] },
-  { dept: 'VWD', ...INVENTORY, actions: VFSU, buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },   // VWD updates the Inventory Status; SMD only views
+  { dept: 'VWD', ...INVENTORY, title: 'Inventory Monitoring' },   // JBAP feedback (16 Oct 2026, #2): replaces VWD Auction Monitoring; view only
 
   // ===================== Report (JBAP feedback 16 Oct 2026, #1: moved from FAD and SMD) =====================
   // [MOCK] Snapshot of the Access Result Summary (10/08/2026): the sample has only some lots per auction, so totals are not recalculated

@@ -5,7 +5,7 @@ window.MOCK_DATA = {
  "meta": {
   "demoToday": "2026-10-08",
   "generated": "2026-10-09",
-  "note": "Mock data. FAD lots merged with the MS Access FAD Maintenance screenshots of 10/08/2026 (see README > Seeded test data); FAD and VWD share one live dataset; SMD shows the legacy SMD sample (read-only snapshot). Document Monitoring dates of the lots that match on plate and auction come from JBAP's \"2026 Documents Monitoring (updated)\" sheet, received 15 Oct 2026.",
+  "note": "Mock data. FAD lots merged with the MS Access FAD Maintenance screenshots of 10/08/2026 (see README > Seeded test data); FAD and VWD share one live dataset; SMD shows the legacy SMD sample (read-only snapshot). Document Monitoring dates of the lots that match on plate and auction come from JBAP's \"2026 Documents Monitoring (updated)\" sheet, received 15 Oct 2026. Inventory fields (logistics, originating warehouse, parking location, transfer date, returned-to-seller warehouse, date of entry) come from JBAP's 2026 Open & IMET Parking Inventory (as of 12 Oct 2026), matched by plate.",
   "company": {
    "name": "JBA Philippines Inc.",
    "bank": "Metrobank, account no. 000-0-000-000-000 (placeholder)",
@@ -299,7 +299,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "IMET PARKING",
+   "transfer_date": "2025-11-14",
+   "rts_wh": null,
+   "entry_date": "2025-10-21"
   },
   {
    "id": "V158",
@@ -342,7 +348,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "PROMENADE",
+   "parking": "IMET PARKING",
+   "transfer_date": "2025-12-20",
+   "rts_wh": null,
+   "entry_date": "2025-12-10"
   },
   {
    "id": "V159",
@@ -385,7 +397,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "IMET PARKING",
+   "transfer_date": "2025-12-20",
+   "rts_wh": null,
+   "entry_date": "2025-12-02"
   },
   {
    "id": "V160",
@@ -428,7 +446,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-12-18"
   },
   {
    "id": "V161",
@@ -471,7 +495,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-12-17"
   },
   {
    "id": "V162",
@@ -514,7 +544,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-12-18"
   },
   {
    "id": "V163",
@@ -557,7 +593,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "PROMENADE",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-12-16"
   },
   {
    "id": "V164",
@@ -600,7 +642,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MARCELO GREEN",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-12-10"
   },
   {
    "id": "V165",
@@ -643,7 +691,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "PROMENADE",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-12-16"
   },
   {
    "id": "V166",
@@ -686,7 +740,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": null,
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-12-02"
   },
   {
    "id": "V167",
@@ -729,7 +789,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "FUJITRANS",
+   "origin_wh": "ASIATEX",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-12-01"
   },
   {
    "id": "V168",
@@ -772,7 +838,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "FUJITRANS",
+   "origin_wh": "CABUYAO",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-12-17"
   },
   {
    "id": "V169",
@@ -815,7 +887,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "TF LOGISTICS",
+   "origin_wh": "ASIATEX",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-12-04"
   },
   {
    "id": "V170",
@@ -858,7 +936,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-05-13"
   },
   {
    "id": "V171",
@@ -904,7 +988,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-06-30",
    "ewb_signed": "2026-07-07",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-05-21"
   },
   {
    "id": "V172",
@@ -950,7 +1040,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-06-30",
    "ewb_signed": "2026-08-27",
-   "ewb_place": "STORE - TAYTAY-ORTIGAS EXT."
+   "ewb_place": "STORE - TAYTAY-ORTIGAS EXT.",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-05-19"
   },
   {
    "id": "V173",
@@ -993,7 +1089,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-05-21"
   },
   {
    "id": "V174",
@@ -1036,7 +1138,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "PROMENADE",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-05-12"
   },
   {
    "id": "V175",
@@ -1082,7 +1190,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-06-30",
    "ewb_signed": "2026-08-27",
-   "ewb_place": "STORE - TAYTAY-ORTIGAS EXT."
+   "ewb_place": "STORE - TAYTAY-ORTIGAS EXT.",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-05-21"
   },
   {
    "id": "V176",
@@ -1125,7 +1239,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "PROMENADE",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-05-12"
   },
   {
    "id": "V177",
@@ -1171,7 +1291,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-08-24",
    "ewb_signed": "2026-08-28",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-09"
   },
   {
    "id": "V178",
@@ -1217,7 +1343,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-08-24",
    "ewb_signed": "2026-08-28",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-09"
   },
   {
    "id": "V179",
@@ -1260,7 +1392,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-02"
   },
   {
    "id": "V180",
@@ -1306,7 +1444,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-08-24",
    "ewb_signed": "2026-09-04",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-06-24"
   },
   {
    "id": "V181",
@@ -1351,7 +1495,13 @@ window.MOCK_DATA = {
    "for_dispatch_email": false,
    "print_doc_trans": false,
    "ewb_callout": "2026-08-24",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-09"
   },
   {
    "id": "V209",
@@ -1393,7 +1543,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-01"
   },
   {
    "id": "V019",
@@ -1436,7 +1592,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "SUCAT ZENTRUM",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-18"
   },
   {
    "id": "V020",
@@ -1479,7 +1641,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "BULACAN WH",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-16"
   },
   {
    "id": "V182",
@@ -1525,7 +1693,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-08-24",
    "ewb_signed": "2026-08-28",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-14"
   },
   {
    "id": "V183",
@@ -1570,7 +1744,13 @@ window.MOCK_DATA = {
    "for_dispatch_email": false,
    "print_doc_trans": false,
    "ewb_callout": "2026-08-24",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-16"
   },
   {
    "id": "V184",
@@ -1613,7 +1793,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-09"
   },
   {
    "id": "V185",
@@ -1659,7 +1845,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-08-24",
    "ewb_signed": "2026-08-28",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-16"
   },
   {
    "id": "V155",
@@ -1702,7 +1894,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "M6-1",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-23"
   },
   {
    "id": "V186",
@@ -1748,7 +1946,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-09-04",
    "ewb_signed": "2026-09-14",
-   "ewb_place": "STORE - TAGAYTAY"
+   "ewb_place": "STORE - TAGAYTAY",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-28"
   },
   {
    "id": "V187",
@@ -1794,7 +1998,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-09-04",
    "ewb_signed": "2026-09-14",
-   "ewb_place": "STORE - TAGAYTAY"
+   "ewb_place": "STORE - TAGAYTAY",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-30"
   },
   {
    "id": "V188",
@@ -1840,7 +2050,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-09-04",
    "ewb_signed": "2026-09-14",
-   "ewb_place": "STORE - TAGAYTAY"
+   "ewb_place": "STORE - TAGAYTAY",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-29"
   },
   {
    "id": "V189",
@@ -1883,7 +2099,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-16"
   },
   {
    "id": "V190",
@@ -1929,7 +2151,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-09-04",
    "ewb_signed": "2026-09-14",
-   "ewb_place": "STORE - TAGAYTAY"
+   "ewb_place": "STORE - TAGAYTAY",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-22"
   },
   {
    "id": "V191",
@@ -1975,7 +2203,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-09-04",
    "ewb_signed": "2026-09-14",
-   "ewb_place": "STORE - TAGAYTAY"
+   "ewb_place": "STORE - TAGAYTAY",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-16"
   },
   {
    "id": "V192",
@@ -2021,7 +2255,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-09-04",
    "ewb_signed": "2026-09-14",
-   "ewb_place": "STORE - TAGAYTAY"
+   "ewb_place": "STORE - TAGAYTAY",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-29"
   },
   {
    "id": "V193",
@@ -2106,7 +2346,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-06"
   },
   {
    "id": "V156",
@@ -2149,7 +2395,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-08"
   },
   {
    "id": "V206",
@@ -2191,7 +2443,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-29"
   },
   {
    "id": "V102",
@@ -2234,7 +2492,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-11"
   },
   {
    "id": "V207",
@@ -2276,7 +2540,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-12"
   },
   {
    "id": "V200",
@@ -2318,7 +2588,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-13"
   },
   {
    "id": "V018",
@@ -2361,7 +2637,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "BULACAN WH",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-13"
   },
   {
    "id": "V204",
@@ -2403,7 +2685,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-20"
   },
   {
    "id": "V012",
@@ -2446,7 +2734,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-19"
   },
   {
    "id": "V103",
@@ -2489,7 +2783,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-18"
   },
   {
    "id": "V201",
@@ -2532,7 +2832,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "ONELOT"
+   "doc_remarks": "ONELOT",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-18"
   },
   {
    "id": "V205",
@@ -2574,7 +2880,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-20"
   },
   {
    "id": "V203",
@@ -2616,7 +2928,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-11"
   },
   {
    "id": "V147",
@@ -2658,7 +2976,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "LAGUNA (TAU)",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-21"
   },
   {
    "id": "V149",
@@ -2700,7 +3024,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "LAGUNA (TAU)",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-21"
   },
   {
    "id": "V150",
@@ -2743,7 +3073,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "SBC - NAGA"
+   "doc_remarks": "SBC - NAGA",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "LAGUNA (TAU)",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-21"
   },
   {
    "id": "V195",
@@ -2785,7 +3121,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-26"
   },
   {
    "id": "V123",
@@ -2829,7 +3171,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT."
+   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT.",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-12"
   },
   {
    "id": "V092",
@@ -2872,7 +3220,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-26"
   },
   {
    "id": "V109",
@@ -2916,7 +3270,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "SBC - BACOLOD"
+   "doc_remarks": "SBC - BACOLOD",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-10"
   },
   {
    "id": "V126",
@@ -2960,7 +3320,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT."
+   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT.",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-11"
   },
   {
    "id": "V108",
@@ -3004,7 +3370,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "SBC - BACOLOD"
+   "doc_remarks": "SBC - BACOLOD",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-28"
   },
   {
    "id": "V124",
@@ -3048,7 +3420,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT."
+   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT.",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "TAGAYTAY",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-14"
   },
   {
    "id": "V202",
@@ -3090,7 +3468,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-26"
   },
   {
    "id": "V001",
@@ -3132,7 +3516,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-16"
   },
   {
    "id": "V122",
@@ -3176,7 +3566,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT."
+   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT.",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-12"
   },
   {
    "id": "V014",
@@ -3219,7 +3615,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "CALAMBA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-28"
   },
   {
    "id": "V197",
@@ -3261,7 +3663,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-26"
   },
   {
    "id": "V196",
@@ -3303,7 +3711,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-26"
   },
   {
    "id": "V194",
@@ -3345,7 +3759,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-20"
   },
   {
    "id": "V125",
@@ -3389,7 +3809,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT."
+   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT.",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-14"
   },
   {
    "id": "V110",
@@ -3433,7 +3859,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "SBC - BACOLOD"
+   "doc_remarks": "SBC - BACOLOD",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-28"
   },
   {
    "id": "V127",
@@ -3477,7 +3909,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT."
+   "doc_remarks": "SBC - TAYTAY - ORTIGAS EXT.",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-28"
   },
   {
    "id": "V015",
@@ -3520,7 +3958,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "TF LOGISTICS",
+   "origin_wh": "N.LUZON",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-29"
   },
   {
    "id": "V002",
@@ -3564,7 +4008,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "SBC - GEORGETOWN, CDO"
+   "doc_remarks": "SBC - GEORGETOWN, CDO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-21"
   },
   {
    "id": "V003",
@@ -3607,7 +4057,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-12"
   },
   {
    "id": "V004",
@@ -3651,7 +4107,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "doc_remarks": "SBC - GEORGETOWN, CDO"
+   "doc_remarks": "SBC - GEORGETOWN, CDO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-28"
   },
   {
    "id": "V005",
@@ -3694,7 +4156,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "SUCAT ZENTRUM",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-08"
   },
   {
    "id": "V006",
@@ -3737,7 +4205,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-12"
   },
   {
    "id": "V007",
@@ -3780,7 +4254,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "LAGUNA (TAU)",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-28"
   },
   {
    "id": "V008",
@@ -3823,7 +4303,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-28"
   },
   {
    "id": "V128",
@@ -3866,7 +4352,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-20"
   },
   {
    "id": "V129",
@@ -3909,7 +4401,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "TAGAYTAY",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-17"
   },
   {
    "id": "V130",
@@ -3952,7 +4450,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-10"
   },
   {
    "id": "V131",
@@ -3995,7 +4499,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-23"
   },
   {
    "id": "V132",
@@ -4038,7 +4548,12 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": null,
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": null,
+   "transfer_date": null,
+   "rts_wh": null
   },
   {
    "id": "V133",
@@ -4081,7 +4596,12 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": null,
+   "origin_wh": "TAGAYTAY",
+   "parking": null,
+   "transfer_date": null,
+   "rts_wh": null
   },
   {
    "id": "V148",
@@ -4123,7 +4643,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "TAGAYTAY",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-10"
   },
   {
    "id": "V151",
@@ -4165,7 +4691,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "LAGUNA (TAU)",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-22"
   },
   {
    "id": "V152",
@@ -4207,7 +4739,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-14"
   },
   {
    "id": "V153",
@@ -4249,7 +4787,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "TAGAYTAY",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-14"
   },
   {
    "id": "V154",
@@ -4291,7 +4835,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-10"
   },
   {
    "id": "V198",
@@ -4333,7 +4883,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-03"
   },
   {
    "id": "V135",
@@ -4379,7 +4935,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-10-02",
    "ewb_signed": "2026-10-02",
-   "ewb_place": "STORE - ILOILO JARA"
+   "ewb_place": "STORE - ILOILO JARA",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-27"
   },
   {
    "id": "V199",
@@ -4421,7 +4983,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-27"
   },
   {
    "id": "V021",
@@ -4464,7 +5032,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": null,
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": "Axis",
+   "entry_date": "2024-07-18"
   },
   {
    "id": "V022",
@@ -4507,7 +5081,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MARILAO",
+   "parking": "IMET PARKING",
+   "transfer_date": "2025-06-21",
+   "rts_wh": null,
+   "entry_date": "2024-12-06"
   },
   {
    "id": "V111",
@@ -4553,7 +5133,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-10-01",
    "ewb_signed": "2026-10-06",
-   "ewb_place": "STORE - TAYTAY ORTIGAS EXT."
+   "ewb_place": "STORE - TAYTAY ORTIGAS EXT.",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-02"
   },
   {
    "id": "V136",
@@ -4599,7 +5185,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-09-25",
    "ewb_signed": "2026-09-28",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-03"
   },
   {
    "id": "V096",
@@ -4642,7 +5234,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-24"
   },
   {
    "id": "V023",
@@ -4685,7 +5283,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": null,
+   "origin_wh": null,
+   "parking": "OPEN PARKING",
+   "transfer_date": "2025-04-01",
+   "rts_wh": "SOLD BY ORICO",
+   "entry_date": "2024-04-20"
   },
   {
    "id": "V134",
@@ -4731,7 +5335,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-10-05",
    "ewb_signed": "2026-10-05",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-02"
   },
   {
    "id": "V121",
@@ -4777,7 +5387,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-10-05",
    "ewb_signed": "2026-10-07",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-02"
   },
   {
    "id": "V024",
@@ -4820,7 +5436,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "RETURN UNIT OF B. ROTOR",
+   "origin_wh": "MARILAO",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": "MARILAO",
+   "entry_date": "2025-11-11"
   },
   {
    "id": "V087",
@@ -4863,7 +5485,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "TAGAYTAY",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-22"
   },
   {
    "id": "V016",
@@ -4906,7 +5534,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "TAGAYTAY",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-21"
   },
   {
    "id": "V025",
@@ -4949,7 +5583,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": "AXIS",
+   "entry_date": "2025-11-13"
   },
   {
    "id": "V026",
@@ -4992,7 +5632,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MARCELO GREEN",
+   "parking": "IMET PARKING",
+   "transfer_date": "2025-08-29",
+   "rts_wh": null,
+   "entry_date": "2025-07-09"
   },
   {
    "id": "V027",
@@ -5035,7 +5681,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-06-28"
   },
   {
    "id": "V028",
@@ -5078,7 +5730,12 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": null,
+   "origin_wh": "ZEN GARDEN",
+   "parking": null,
+   "transfer_date": null,
+   "rts_wh": null
   },
   {
    "id": "V097",
@@ -5121,7 +5778,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "SUCAT ZENTRUM",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-08"
   },
   {
    "id": "V029",
@@ -5164,7 +5827,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MARCELO GREEN",
+   "parking": "IMET PARKING",
+   "transfer_date": "2025-08-08",
+   "rts_wh": "AXIS",
+   "entry_date": "2025-07-30"
   },
   {
    "id": "V030",
@@ -5207,7 +5876,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "TAGAYTAY",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": "RETURNED BY SBC",
+   "entry_date": "2025-06-26"
   },
   {
    "id": "V031",
@@ -5250,7 +5925,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "CAVITE WH",
+   "parking": "IMET PARKING",
+   "transfer_date": "2025-09-05",
+   "rts_wh": null,
+   "entry_date": "2025-08-16"
   },
   {
    "id": "V141",
@@ -5296,7 +5977,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-09-30",
    "ewb_signed": "2026-10-02",
-   "ewb_place": "STORE - NAGA"
+   "ewb_place": "STORE - NAGA",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-09"
   },
   {
    "id": "V017",
@@ -5339,7 +6026,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "TAGAYTAY",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-17"
   },
   {
    "id": "V107",
@@ -5385,7 +6078,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-09-30",
    "ewb_signed": "2026-10-01",
-   "ewb_place": "STORE - BACOLOD"
+   "ewb_place": "STORE - BACOLOD",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-08"
   },
   {
    "id": "V139",
@@ -5431,7 +6130,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-10-01",
    "ewb_signed": "2026-10-02",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-10"
   },
   {
    "id": "V093",
@@ -5474,7 +6179,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-10"
   },
   {
    "id": "V098",
@@ -5517,7 +6228,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "TAGAYTAY",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-10"
   },
   {
    "id": "V032",
@@ -5560,7 +6277,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "Las Pinas Ever Gotesco",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": "Las Pinas Ever Gotesco",
+   "entry_date": "2025-08-20"
   },
   {
    "id": "V086",
@@ -5603,7 +6326,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-10"
   },
   {
    "id": "V033",
@@ -5646,7 +6375,12 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": null,
+   "origin_wh": "LAS PIÑAS",
+   "parking": null,
+   "transfer_date": null,
+   "rts_wh": null
   },
   {
    "id": "V138",
@@ -5692,7 +6426,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-10-01",
    "ewb_signed": "2026-10-02",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-10"
   },
   {
    "id": "V034",
@@ -5735,7 +6475,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MARCELO GREEN",
+   "parking": "IMET PARKING",
+   "transfer_date": "2025-09-12",
+   "rts_wh": null,
+   "entry_date": "2025-09-03"
   },
   {
    "id": "V099",
@@ -5778,7 +6524,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-12"
   },
   {
    "id": "V088",
@@ -5821,7 +6573,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-11"
   },
   {
    "id": "V010",
@@ -5864,7 +6622,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "CALAMBA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-11"
   },
   {
    "id": "V036",
@@ -5907,7 +6671,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "IMET PARKING",
+   "transfer_date": "2025-09-12",
+   "rts_wh": "AXIS",
+   "entry_date": "2025-08-27"
   },
   {
    "id": "V140",
@@ -5953,7 +6723,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-10-05",
    "ewb_signed": "2026-10-05",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-02"
   },
   {
    "id": "V100",
@@ -5996,7 +6772,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-11"
   },
   {
    "id": "V094",
@@ -6039,7 +6821,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-11"
   },
   {
    "id": "V037",
@@ -6082,7 +6870,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "LAS PIÑAS",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": "LAS PIÑAS",
+   "entry_date": "2025-08-01"
   },
   {
    "id": "V011",
@@ -6125,7 +6919,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "BULACAN WH",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-11"
   },
   {
    "id": "V038",
@@ -6168,7 +6968,12 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": null,
+   "origin_wh": "LAS PIÑAS",
+   "parking": null,
+   "transfer_date": null,
+   "rts_wh": null
   },
   {
    "id": "V039",
@@ -6211,7 +7016,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "NYK MAKILING",
+   "parking": "IMET PARKING",
+   "transfer_date": "2025-10-25",
+   "rts_wh": null,
+   "entry_date": "2025-09-26"
   },
   {
    "id": "V040",
@@ -6254,7 +7065,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "NYK MAKILING",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-09-12"
   },
   {
    "id": "V041",
@@ -6297,7 +7114,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "PASAY CITY",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-09-12"
   },
   {
    "id": "V042",
@@ -6340,7 +7163,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "FUJITRANS",
+   "origin_wh": "ASIATEX",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-09-08"
   },
   {
    "id": "V043",
@@ -6383,7 +7212,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "FUJITRANS",
+   "origin_wh": "ASIATEX",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2025-09-08"
   },
   {
    "id": "V044",
@@ -6469,7 +7304,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "PROMENADE",
+   "parking": "STEEL PARKING",
+   "transfer_date": "2024-08-16",
+   "rts_wh": "AXIS",
+   "entry_date": "2024-08-08"
   },
   {
    "id": "V137",
@@ -6515,7 +7356,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-09-30",
    "ewb_signed": "2026-09-30",
-   "ewb_place": "STORE - TUGUEGARAO"
+   "ewb_place": "STORE - TUGUEGARAO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-09"
   },
   {
    "id": "V142",
@@ -6561,7 +7408,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-10-06",
    "ewb_signed": "2026-10-07",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-10"
   },
   {
    "id": "V143",
@@ -6607,7 +7460,13 @@ window.MOCK_DATA = {
    "print_doc_trans": false,
    "ewb_callout": "2026-09-28",
    "ewb_signed": "2026-09-28",
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-10"
   },
   {
    "id": "V146",
@@ -6650,7 +7509,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "CALAMBA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-11"
   },
   {
    "id": "V035",
@@ -6693,7 +7558,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "LAS PIÑAS",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": "LAS PIÑAS",
+   "entry_date": "2025-08-02"
   },
   {
    "id": "V046",
@@ -6736,7 +7607,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": null,
+   "parking": "STEEL PARKING",
+   "transfer_date": "2024-10-31",
+   "rts_wh": null,
+   "entry_date": "2024-10-02"
   },
   {
    "id": "V112",
@@ -6779,7 +7656,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MARILAO",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-18"
   },
   {
    "id": "V047",
@@ -6865,7 +7748,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "SUCAT ZENTRUM",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-18"
   },
   {
    "id": "V144",
@@ -6908,7 +7797,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "N.LUZON",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-16"
   },
   {
    "id": "V114",
@@ -6951,7 +7846,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "CAVITE WH",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-18"
   },
   {
    "id": "V116",
@@ -6994,7 +7895,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "N.LUZON",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-16"
   },
   {
    "id": "V120",
@@ -7037,7 +7944,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "N.LUZON",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-16"
   },
   {
    "id": "V145",
@@ -7080,7 +7993,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "N.LUZON",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-16"
   },
   {
    "id": "V117",
@@ -7123,7 +8042,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "N.LUZON",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-16"
   },
   {
    "id": "V013",
@@ -7166,7 +8091,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "TF LOGISTICS",
+   "origin_wh": "CABUYAO",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-22"
   },
   {
    "id": "V050",
@@ -7295,7 +8226,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ENTRATA",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-16"
   },
   {
    "id": "V091",
@@ -7339,7 +8276,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-16"
   },
   {
    "id": "V105",
@@ -7383,7 +8326,13 @@ window.MOCK_DATA = {
    "atf_no": null,
    "for_dispatch_email": false,
    "print_doc_trans": false,
-   "ewb_place": "HO"
+   "ewb_place": "HO",
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MEGA LAND",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-17"
   },
   {
    "id": "V052",
@@ -7469,7 +8418,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "TAGAYTAY",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-08-21"
   },
   {
    "id": "V118",
@@ -7512,7 +8467,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "N.LUZON",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-16"
   },
   {
    "id": "V115",
@@ -7555,7 +8516,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "CAVITE WH",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-18"
   },
   {
    "id": "V053",
@@ -7641,7 +8608,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-19"
   },
   {
    "id": "V054",
@@ -7727,7 +8700,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-07-20"
   },
   {
    "id": "V055",
@@ -7899,7 +8878,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "MARILAO",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-18"
   },
   {
    "id": "V090",
@@ -7942,7 +8927,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "ZEN GARDEN-LOT 109",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-19"
   },
   {
    "id": "V009",
@@ -7985,7 +8976,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "JBAP - MANUAL PULL-OUT",
+   "origin_wh": "AXIS TOWER",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": "AXIS",
+   "entry_date": "2026-09-02"
   },
   {
    "id": "V058",
@@ -8114,7 +9111,13 @@ window.MOCK_DATA = {
    "docs_others": "",
    "atf_no": null,
    "for_dispatch_email": false,
-   "print_doc_trans": false
+   "print_doc_trans": false,
+   "logistics": "TF LOGISTICS",
+   "origin_wh": "N.LUZON",
+   "parking": "OPEN PARKING",
+   "transfer_date": null,
+   "rts_wh": null,
+   "entry_date": "2026-09-16"
   },
   {
    "id": "V060",
