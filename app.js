@@ -628,7 +628,7 @@ const SCREENS = [
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
       { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel'] },
       { key: 'record', label: 'Record / Plate' }],
-    emptyNote: () => { const m = U(LOG_ID).applied.module; return m === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller or, with the proposed improvements on, sends a SAAF.' : m === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : null; } },
+    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller or, with the proposed improvements on, sends a SAAF.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -639,6 +639,9 @@ function U(id) {
 }
 
 // ─── Filtering, sorting, paging ───────────────────────────────────────
+// [BEHAVIOR] JBAP, 19 Oct 2026: a dropdown filter holds a list of picked values (a plain string still counts as one value; none = All)
+const filterVals = v => Array.isArray(v) ? v.filter(x => x !== '') : (v === undefined || v === null || v === '' ? [] : [v]);
+const filterLabel = picked => !picked.length ? 'All' : picked.length <= 2 ? picked.join(', ') : `${picked.length} selected`;
 function applyFilters(scr, rows) {
   const f = U(scr.id).applied;
   return rows.filter(r => (scr.filters || []).every(fd => {
@@ -649,9 +652,12 @@ function applyFilters(scr, rows) {
       if (fd.key === 'dispatch_deadline' && x && x.includes('/')) x = x;  // already ISO in data
       if (from && (!x || x < from)) return false; if (to && (!x || x > to)) return false; return true;
     }
+    if (fd.type === 'select') {   // [BEHAVIOR] a row passes when it matches any picked value; a filter with its own rule (fd.match), e.g. Status "Open" = not Complete or Cancelled, runs it per picked value
+      const vals = filterVals(v); if (!vals.length) return true;
+      return vals.some(x => fd.match ? fd.match(r, x) : String(r[fd.key]) === String(x));
+    }
     if (v === undefined || v === '') return true;
-    if (fd.match) return fd.match(r, v);   // [BEHAVIOR] a filter with its own rule, e.g. Status "Open" = not Complete or Cancelled
-    if (fd.type === 'select') return String(r[fd.key]) === String(v);
+    if (fd.match) return fd.match(r, v);
     const keys = fd.keys || [fd.key];
     if (fd.exact) return keys.some(k => String(r[k] ?? '').toLowerCase() === v.trim().toLowerCase());
     return keys.some(k => String(r[k] ?? '').toLowerCase().includes(v.trim().toLowerCase()));
@@ -727,8 +733,9 @@ function filterCard(scr) {
   const fields = scr.filters.map(fd => {
     const id = `f-${fd.key}`;
     if (fd.type === 'select') {
-      const opts = fd.options().map(o => `<option ${String(f[fd.key]) === String(o) ? 'selected' : ''}>${esc(o)}</option>`).join('');
-      return `<div class="fld ${fd.w || ''}"><label for="${id}">${esc(fd.label)}</label><select class="ctl" id="${id}" data-filter="${fd.key}"><option value="">All</option>${opts}</select></div>`;
+      const picked = filterVals(f[fd.key]).map(String), opts = fd.options().map(String);
+      return `<div class="fld ${fd.w || ''}"><span class="lbl" id="${id}-l">${esc(fd.label)}</span><details class="msel" data-msel="${fd.key}"><summary class="ctl" aria-labelledby="${id}-l">${esc(filterLabel(picked))}</summary>
+        <div class="msel-p" role="group" aria-labelledby="${id}-l">${opts.map(o => `<label class="chkline"><input type="checkbox" class="chk" data-mfilter="${fd.key}" value="${esc(o)}"${picked.includes(o) ? ' checked' : ''}>${esc(o)}</label>`).join('')}</div></details></div>`;
     }
     if (fd.type === 'daterange') {
       return `<div class="fld ${fd.w || 'w2'}"><span class="lbl" id="${id}-l">${esc(fd.label)}</span><div class="range" role="group" aria-labelledby="${id}-l">
@@ -737,8 +744,9 @@ function filterCard(scr) {
     }
     return `<div class="fld ${fd.w || ''}"><label for="${id}">${esc(fd.label)}</label><input class="ctl" id="${id}" data-filter="${fd.key}" placeholder="Type to search" value="${esc(f[fd.key] || '')}"></div>`;
   }).join('');
-  return `<section class="card filter" aria-label="Filter"><div class="card-h"><div class="ico">${IC.filter}</div>Filter</div>
-    <form class="fb" data-form="filter">${fields}<div class="btns"><button type="button" class="btn gh" data-act="resetFilter">${IC.reset}Reset</button>
+  const hasSel = scr.filters.some(fd => fd.type === 'select');
+  return `<section class="card filter" aria-label="Filter"><div class="card-h"><div class="ico">${IC.filter}</div>Filter${newMini({ isNew: hasSel })}</div>
+    ${hasSel ? '<p class="note msel-hint">Tick one or more values in a dropdown.</p>' : ''}<form class="fb" data-form="filter">${fields}<div class="btns"><button type="button" class="btn gh" data-act="resetFilter">${IC.reset}Reset</button>
     <button type="submit" class="btn pr">${IC.search}Apply filter</button></div></form></section>`;
 }
 
@@ -825,7 +833,7 @@ function dataCard(scr, title) {
     ${msg}<div class="tw"><table class="${scr.compact ? 'cmp' : ''}"><thead><tr>${th}</tr></thead><tbody>${body}</tbody>${foot}</table></div>
     <div class="pg"><span>Showing ${from} to ${from ? from + rows.length - 1 : 0} of ${all.length.toLocaleString()} entries</span><div class="pgr">${pg.join('')}</div></div></section>`;
 }
-const hasFilter = scr => Object.values(U(scr.id).applied).some(v => v);
+const hasFilter = scr => Object.values(U(scr.id).applied).some(v => Array.isArray(v) ? v.length : v);
 function effectiveCount(scr, key) {   // ticks: unsaved edit, else saved value or the P4 default
   if (!key) return 0;
   return tickRows(scr, key).filter(r => tickValue(scr, r, key)).length;
@@ -1386,6 +1394,7 @@ function onEdit(el) {
   // refresh button counters without re-rendering (keeps focus in the table)
   (scr.buttons || []).forEach(b => { const n = b.act === 'save' ? dirtyCount(scr) : effectiveCount(scr, b.count); const s = $(`[data-count="${b.act}"]`); if (s) { s.textContent = n; s.hidden = !n; } });
 }
+const tickedOf = (root, k) => [...root.querySelectorAll(`[data-mfilter="${k}"]:checked`)].map(i => i.value);
 function bind() {
   const content = $('#content'), menu = $('#menu');
   menu.addEventListener('click', ev => {
@@ -1396,6 +1405,11 @@ function bind() {
   content.addEventListener('change', ev => {
     const el = ev.target;
     if (el.dataset.row) return onEdit(el);
+    if (el.dataset.mfilter) {   // a ticked dropdown value is kept as a draft until Apply filter; the dropdown's button shows what is ticked
+      const k = el.dataset.mfilter, picked = tickedOf(content, k); U(route()).filters[k] = picked;
+      const sum = el.closest('details')?.querySelector('summary'); if (sum) sum.textContent = filterLabel(picked);
+      return;
+    }
     if (el.matches('[data-size]')) { const ui = U(route()); ui.size = +el.value; ui.page = 1; render(); }
   });
   content.addEventListener('input', ev => {
@@ -1405,7 +1419,11 @@ function bind() {
   });
   content.addEventListener('submit', ev => {
     ev.preventDefault(); const scr = currentScr(); if (!scr) return; const ui = U(scr.id), form = ev.target.dataset.form;
-    if (form === 'filter') { content.querySelectorAll('[data-filter]').forEach(i => { ui.filters[i.dataset.filter] = i.value; }); ui.applied = Object.assign({}, ui.filters); ui.page = 1; render(); }
+    if (form === 'filter') {
+      content.querySelectorAll('[data-filter]').forEach(i => { ui.filters[i.dataset.filter] = i.value; });
+      content.querySelectorAll('[data-msel]').forEach(d => { ui.filters[d.dataset.msel] = tickedOf(d, d.dataset.msel); });
+      ui.applied = JSON.parse(JSON.stringify(ui.filters)); ui.page = 1; render();
+    }
     if (form === 'query') {
       // [BEHAVIOR] text that is not a date stays in the box, marked invalid, and no query is run; a blank box still means today
       const iso = parseDateInput($('#q-asof').value, TODAY), box = $('#q-asof'), err = $('#q-asof-err');
@@ -1431,6 +1449,15 @@ function bind() {
     const was = custRoute((ev.oldURL || '').split('#')[1]?.replace(/^\/?/, '')), now = custRoute(route());
     if (!(was && now && was.cid === now.cid)) window.scrollTo(0, 0);
   });
+  // Filter dropdowns (multi-select): Escape, a click elsewhere, or tabbing away closes the open one; Enter / Space on the button opens it (native details).
+  // Tabbing away is read after the Tab key has moved focus. Do not close on focusin: a mouse press on a tick box's label moves focus to <main> before the click completes.
+  const closeMsel = except => document.querySelectorAll('details.msel[open]').forEach(d => { if (!except || !d.contains(except)) d.open = false; });
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Tab') { setTimeout(() => closeMsel(document.activeElement)); return; }
+    if (ev.key !== 'Escape') return; const d = document.querySelector('details.msel[open]'); if (!d) return;
+    const inside = d.contains(ev.target); d.open = false; if (inside) d.querySelector('summary').focus();
+  });
+  document.addEventListener('click', ev => closeMsel(ev.target));
   // Typed dates everywhere (lists, forms, dialogs): Enter commits; the calendar button fills the box from the browser's picker
   const picker = document.createElement('input'); picker.type = 'date'; picker.id = 'dt-picker'; picker.tabIndex = -1; picker.setAttribute('aria-hidden', 'true'); document.body.appendChild(picker);
   let pickFor = null;
