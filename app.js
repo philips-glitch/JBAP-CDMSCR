@@ -1047,9 +1047,11 @@ function recordBillingTransmittal(scr, rows) {
 // [BEHAVIOR] JBAP feedback (19 Oct 2026, FAD #1): printing the payment to seller records the payment date on every printed lot
 function recordSellerPayment(scr, rows, iso) {
   rows.forEach(r => {
+    clearTick(scr, r.id, 'print_seller'); clearTick(scr, r.id, 'pay_seller');   // a date typed on the row is replaced by the recorded one
+    applyEdits(scr, [r.id]);   // other unsaved edits on the row (Payment Voucher No.) are saved now, while the row is still on this list: it leaves the list below
+    delete U(scr.id).edits[r.id];   // nothing stays pending for a lot that has left the list
     logChange(scr, 'Update', r, [['Payment to Seller Date', 'date', r._raw.pay_seller, iso], ['Print Payment to Seller', 'check', r._raw.print_seller, false]]);
     r._raw.pay_seller = iso; r._raw.print_seller = false;
-    clearTick(scr, r.id, 'print_seller'); clearTick(scr, r.id, 'pay_seller');   // a date typed on the row is replaced by the recorded one
   });
 }
 // [BEHAVIOR] Sending the dispatch notice sets the Dispatch Date (date entered on the row, else today); pull-out deadline = 3 working days later
@@ -1214,7 +1216,7 @@ const ACTIONS = {
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Print Payment to Seller</b> on at least one vehicle first.'); render(); return; }
     setMsg(scr, null); render();
     const groups = {}; rows.forEach(r => (groups[r.seller] ||= []).push(r));
-    const reports = Object.entries(groups).map(([code, list]) => REPORTS.payableToSeller(code, list, TODAY)).join('');
+    const reportsDated = date => Object.entries(groups).map(([code, list]) => REPORTS.payableToSeller(code, list, date)).join(''), reports = reportsDated(TODAY);
     const body = `<div class="fgrid two no-print" style="padding:0 0 12px"><div class="fld"><label for="ps-date">Payment date</label>${dateField('ps-date', TODAY)}<span class="err" id="ps-date-err"></span></div></div>${reports}`;
     openModal({ title: 'Print payment to seller', icon: 'print', wide: true, body, note: 'Records the payment date on every printed lot.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record payment date & print', kind: 'pr', icon: 'print', onClick: () => {
@@ -1224,7 +1226,8 @@ const ACTIONS = {
         $('#ps-date-err').textContent = err; $('#ps-date').classList.toggle('is-invalid', !!err);
         if (err) { $('#ps-date').focus(); return; }
         recordSellerPayment(scr, rows, iso); render();
-        openModal({ title: 'Print payment to seller', icon: 'print', wide: true, body: reports, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
+        // the printed report carries the recorded payment date
+        openModal({ title: 'Print payment to seller', icon: 'print', wide: true, body: reportsDated(iso), footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
         printModal(); toast(`Payment to Seller date ${fmtDate(iso)} recorded on ${rows.length} lot(s). They moved to Seller Acknowledgement and Commission Billing.`);
       } }] });
   },

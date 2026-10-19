@@ -24,10 +24,21 @@ test('Commission Billing shows Auction No. and Auction Date', () => {
   assert.ok(keys.indexOf('auction') > -1 && keys.indexOf('auction') + 1 === keys.indexOf('adate'));
   assert.ok(cb.cols.find(c => c.key === 'auction').isNew && cb.isNew);
 });
-test('Payment Seller: recording drops the print tick and a typed payment date on the row; other edits stay', () => {
-  const P = load(), scr = P.byId['FAD/payment-seller'], r = scr.rows()[0];
-  P.U(scr.id).edits[r.id] = { print_seller: true, pay_seller: '2026-10-01', voucher_no: 'PV-1' };
-  P.recordSellerPayment(scr, [r], P.TODAY);
-  assert.deepStrictEqual(P.U(scr.id).edits[r.id], { voucher_no: 'PV-1' });
-  assert.strictEqual(r._raw.pay_seller, P.TODAY);
+test('Payment Seller: recording saves a typed Payment Voucher No., logs it, and leaves no edit behind for printed lots', () => {
+  const P = load(); P.setProposed(true);   // Payment Voucher No. is a proposed column
+  const scr = P.byId['FAD/payment-seller'], [a, b, c] = scr.rows(), ed = P.U(scr.id).edits, before = P.S.log.length;
+  ed[a.id] = { print_seller: true, pay_seller: '2026-10-01', voucher_no: 'PV-1' }; ed[b.id] = { print_seller: true }; ed[c.id] = { voucher_no: 'PV-9' };
+  P.recordSellerPayment(scr, [a, b], P.TODAY);
+  assert.strictEqual(a._raw.voucher_no, 'PV-1', 'the typed voucher number is saved on the lot');
+  assert.ok([a, b].every(r => r._raw.pay_seller === P.TODAY && !r._raw.print_seller), 'the recorded date replaces the typed one');
+  assert.ok(!ed[a.id] && !ed[b.id], 'no edit stays pending for a printed lot');
+  assert.deepStrictEqual(ed[c.id], { voucher_no: 'PV-9' }, 'an unprinted row keeps its edit');
+  assert.strictEqual(P.dirtyCount(scr), 1, 'no phantom unsaved count');
+  const log = P.S.log.slice(before);
+  assert.ok(log.some(e => e.field === 'Payment Voucher No.' && e.new === 'PV-1'));
+  assert.strictEqual(log.filter(e => e.field === 'Payment to Seller Date' && e.new === P.fmtDate(P.TODAY)).length, 2);
+});
+test('Payment Seller: the printed report carries the date it is given', () => {
+  const P = load(), rows = P.byId['FAD/payment-seller'].rows().slice(0, 1);
+  assert.match(P.REPORTS.payableToSeller(rows[0].seller, rows, '2025-12-30'), /30 December 2025/);
 });
