@@ -260,6 +260,7 @@ function buyerRows() {
   });
 }
 // [BEHAVIOR] JBAP feedback (16 Oct 2026): DOAS waiting for the buyer's signature = Receipt of DOAS filled, signed DOAS not back by any route (JBAP, seller, or EWB branch: the same test as Document Status and the release check); documents for release = JBAP has them, the buyer not yet (Q82)
+// Proposal Q82 (19 Oct 2026): an EWB branch lot also waits once EWB has been called out (EWB Call Out filled), before any Receipt of DOAS; the working days count from Receipt of DOAS, else from EWB Call Out
 function buyerOf(cid) {
   const b = buyerIndex().get(cid); if (!b) return null;
   const sold = V().filter(v => v.cid === cid && v.status === 'Sold')
@@ -270,7 +271,7 @@ function buyerOf(cid) {
     return { id: code, seller: code, seller_full: SELLER[code]?.name || code, units: mine.length, amount: r2(sumBy(mine, 'price')), unpaid: mine.filter(isUnpaidLot).length, last: Math.max(...mine.map(v => +v.auction)) };
   }).sort((x, y) => y.units - x.units || y.amount - x.amount);
   return Object.assign({}, b, { sold, pending: sold.filter(isPendingAward), unpaid: sold.filter(isUnpaidLot),
-    pending_doas: sold.filter(v => v.rcv_doas && !v.buyer_doas && !v.seller_doas && !(v.doas === 'branch' && v.ewb_signed)).map(v => Object.assign(v, { doas_days: workdaysBetween(v.rcv_doas, TODAY) })), docs_release: sold.filter(v => v.orig_docs && !v.to_buyer), cancels: CX().filter(c => c.cid === cid).sort((x, y) => y.auction - x.auction), sellers });
+    pending_doas: sold.filter(v => !v.buyer_doas && !v.seller_doas && !(v.doas === 'branch' && v.ewb_signed) && (v.rcv_doas || (v.doas === 'branch' && v.ewb_callout))).map(v => Object.assign(v, { doas_days: workdaysBetween(v.rcv_doas || v.ewb_callout, TODAY) })), docs_release: sold.filter(v => v.orig_docs && !v.to_buyer), cancels: CX().filter(c => c.cid === cid).sort((x, y) => y.auction - x.auction), sellers });
 }
 const CUST_TABS = [['sold', 'Sold'], ['pending-awarding', 'Pending Awarding'], ['unpaid', 'Unpaid'], ['pending-doas', 'Pending DOAS signature'], ['docs-release', 'Documents for release'], ['cancellation', 'Cancellation']];
 const custHref = (cid, tab) => `#/customer/${encodeURIComponent(cid)}${tab && tab !== 'sold' ? '/' + tab : ''}`;
@@ -962,7 +963,7 @@ const CUST_LOT_COLS = [C('Auction Month', 'amonth', 'code'), C('Auction No.', 'a
 const CUST_CX_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 200 }),
   C('Date Cancelled', 'dcancel', 'date'), C('Waived?', 'waived', 'rocheck'), C('Justification', 'just', 'text', { w: 240 }), C('Penalty', 'penalty', 'money'), C('Billing Date', 'bill_date', 'date'), C('Paid Date', 'paid_date', 'date')];
 const CUST_DOAS_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
-  C('Seller Payment', 'pay_seller', 'date'), C('Receipt of DOAS', 'rcv_doas', 'date'), C('Working Days Since Receipt', 'doas_days', 'int')];
+  C('Seller Payment', 'pay_seller', 'date'), C('Receipt of DOAS', 'rcv_doas', 'date'), C('EWB Call Out', 'ewb_callout', 'date', { isNew: true }), C('Working Days Since Receipt', 'doas_days', 'int')];
 const CUST_DOCS_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
   C('JBAP Receipt of Documents', 'orig_docs', 'date'), C('ATF No.', 'atf_no', 'code')];
 // Customer page: Customer Information (not built) and Customer Transaction History (cards, purchases by seller, lot lists as tabs with their own URL)
@@ -976,7 +977,7 @@ function customerPage(cid, tab) {
   const sellers = `<section class="card" aria-label="Purchases by seller"><div class="card-h"><div class="ico">${IC.table}</div>Purchases by seller<span class="bdg">${b.sellers.length}</span></div>
     ${plainTable(CUST_SELLER_COLS, b.sellers, { seller: `Total (${b.sellers.length})`, units: intf(sumBy(b.sellers, 'units')), amount: money(sumBy(b.sellers, 'amount')), unpaid: intf(sumBy(b.sellers, 'unpaid')) }, 'No lots bought yet')}</section>`;
   const lists = { sold: b.sold, 'pending-awarding': b.pending, unpaid: b.unpaid, 'pending-doas': b.pending_doas, 'docs-release': b.docs_release, cancellation: b.cancels }, rows = lists[tab] || b.sold, t = lists[tab] ? tab : 'sold';
-  const tabs = `<nav class="tabs in-card" aria-label="Lot lists">${CUST_TABS.map(([slug, label]) => `<a href="${custHref(cid, slug)}" class="tab${slug === t ? ' is-active' : ''}"${slug === t ? ' aria-current="page"' : ''}>${label}<span class="cnt">${lists[slug].length}</span></a>`).join('')}</nav>`;
+  const tabs = `<nav class="tabs in-card" aria-label="Lot lists">${CUST_TABS.map(([slug, label]) => `<a href="${custHref(cid, slug)}" class="tab${slug === t ? ' is-active' : ''}"${slug === t ? ' aria-current="page"' : ''}>${label}${slug === 'pending-doas' ? newMini({ isNew: true }) : ''}<span class="cnt">${lists[slug].length}</span></a>`).join('')}</nav>`;
   const count = { auction: `Total (${rows.length})` };
   const table = t === 'cancellation' ? plainTable(CUST_CX_COLS, rows, { auction: `Total (${rows.length})`, penalty: money(sumBy(rows, 'penalty')) }, 'No cancellations')
     : t === 'pending-doas' ? plainTable(CUST_DOAS_COLS, rows, count, 'No DOAS waiting for the buyer\'s signature')
@@ -984,7 +985,7 @@ function customerPage(cid, tab) {
     : plainTable(CUST_LOT_COLS, rows, { amonth: `Total (${rows.length})`, price: money(sumBy(rows, 'price')), transfer_fee: money(sumBy(rows, 'transfer_fee')), com: money(sumBy(rows, 'com')), total: money(sumBy(rows, 'total')) }, 'No lots in this list');
   return `${crumb(cid)}<div class="hrow"><h1>Customer Detail</h1><div class="acts">Allowed actions&nbsp;<span class="pill">View</span></div></div>
     <nav class="tabs" aria-label="Customer detail"><span class="tab is-disabled" aria-disabled="true" title="Not part of this prototype">Customer Information</span><a href="${custHref(cid)}" class="tab is-active" aria-current="page">Customer Transaction History${b.unpaid.length ? `<span class="cnt warn">${b.unpaid.length} unpaid</span>` : ''}</a></nav>
-    <p class="rule">${IC.info}<span>Everything this buyer has bought at auction, from the same lot data as the FAD lists (read-only). Notarial = transfer fee; Total = Result Price + Notarial + Security Bond. Step = how far the lot has got: Pending award → Unpaid → Paid → Seller Ack. → For Dispatch → Unreleased → Released or Returned. Customer Information is not part of this prototype. Pending DOAS signature = Receipt of DOAS filled, signed DOAS not back yet; Documents for release = JBAP has the documents, the buyer does not yet.</span></p>
+    <p class="rule">${IC.info}<span>Everything this buyer has bought at auction, from the same lot data as the FAD lists (read-only). Notarial = transfer fee; Total = Result Price + Notarial + Security Bond. Step = how far the lot has got: Pending award → Unpaid → Paid → Seller Ack. → For Dispatch → Unreleased → Released or Returned. Customer Information is not part of this prototype. Pending DOAS signature = Receipt of DOAS filled, signed DOAS not back yet, or, for EWB, called out and not yet signed (proposal, Q82); working days count from Receipt of DOAS, else from EWB Call Out; Documents for release = JBAP has the documents, the buyer does not yet.</span></p>
     <h2 class="cust-h">${esc(cid)} · ${esc(b.name)}</h2>${b.email ? `<p class="cust-sub">${esc(b.email)}</p>` : ''}
     ${cards}${sellers}<section class="card" aria-label="Lots"><div class="card-h"><div class="ico">${IC.table}</div>Lots</div>${tabs}${table}</section>`;
 }
