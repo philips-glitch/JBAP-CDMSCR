@@ -527,10 +527,10 @@ const SCREENS = [
     queue: true, ready: { key: 'for_print', when: r => !r.bill_date },
     ruleP: ['P4', 'Lots not billed yet arrive pre-ticked for billing.'] },
 
-  // ===================== SMD (legacy SMD sample data, read-only; Return to Seller, Inventory and SAAF use live data) =====================
-  // P5 (switch on): SMD's update screen for the SAAF; live data, unlike the legacy SMD snapshot screens
+  // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch and Rebate Monitoring; live data on Unreleased Unit, Return to Seller, Inventory and SAAF) =====================
+  // P5 (switch on): SMD's update screen for the SAAF; live data, unlike SMD's five legacy-sample screens
   { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU, proposed: true, tag: 'P5',
-    rule: 'Sold lots with no Awarding Date (live data; the other SMD screens show the legacy snapshot). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; approved lots arrive pre-ticked in FAD Pending Awarding.',
+    rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch and Rebate Monitoring in SMD still show the legacy sample). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; approved lots arrive pre-ticked in FAD Pending Awarding.',
     rows: () => sold().filter(v => !v.awarding), sort: ['seller', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
       C('Awarded Price', 'price', 'money'), C('For SAAF', 'for_saaf', 'check', { edit: 'check', disabledWhen: r => !!r.saaf_approved }), C('SAAF Sent', 'saaf_sent', 'date'), C('Seller Approved', 'saaf_approved', 'date', { edit: 'date' })],
@@ -567,7 +567,7 @@ const SCREENS = [
   { dept: 'SMD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS, isNew: true,
     rule: 'Dispatched vehicles not yet released to the buyer (live data, the same list as FAD; JBAP, 19 Oct 2026). Storage penalty after the dispatch deadline. View, filter and sort only.',
     rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'],
-    cols: [...UNREL_COLS, C('Penalty Paid', 'penalty_paid', 'money', { isNew: true })], filters: UNREL_FILTERS,
+    cols: [...UNREL_COLS.map(c => c.key === 'location' ? Object.assign({}, c, { isNew: true }) : c), C('Penalty Paid', 'penalty_paid', 'money', { isNew: true })], filters: UNREL_FILTERS,   // Location is new to SMD only: an SMD copy carries the mark, FAD and VWD share the unmarked column
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), penalty_paid: money(sumBy(rows, 'penalty_paid')) }) },
   { dept: 'SMD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', actions: VS, rule: 'Result price records with status SOLD and a rebate.',
     rows: () => SMD('rebates'), cols: REBMON_COLS, sort: ['buyer_paid', 'desc'] },
@@ -941,7 +941,7 @@ function proposedPanels() {
 function homeLayout() {
   const card = d => {
     const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
-    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Monitoring (legacy SMD sample data); Return to Seller and Inventory use live data', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Result Summary and Auction Monitoring, for FAD and SMD' }[d];
+    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch, Rebate Monitoring. Live data: Unreleased Unit, Return to Seller, Inventory', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Result Summary and Auction Monitoring, for FAD and SMD' }[d];
     const icon = d === 'Report' ? '<img src="assets/ic-report.png" alt="" width="20" height="20">' : deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox');
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };

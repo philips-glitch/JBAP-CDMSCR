@@ -5,6 +5,9 @@ test('SMD Unreleased Unit = FAD list, live, view only', () => {
   assert.deepStrictEqual(s.rows().map(r => r.id).sort(), f.rows().map(r => r.id).sort());
   assert.deepStrictEqual(s.cols.map(c => c.key), ['customer', 'auction', 'model', 'plate', 'location', 'dispatch_deadline', 'penalty', 'penalty_paid']);
   assert.deepStrictEqual(s.actions, ['View', 'Filter', 'Sort']); assert.ok(!(s.buttons || []).length && s.isNew);
+  const loc = x => x.cols.find(c => c.key === 'location');
+  assert.ok(loc(s).isNew, 'Location is new to SMD'); assert.ok(!loc(f).isNew, 'FAD already had Location'); assert.ok(!loc(P.byId['VWD/unreleased-unit']).isNew);
+  assert.strictEqual(s.cols.filter(c => c.isNew).map(c => c.key).join(), 'location,penalty_paid');
 });
 test('Return to Seller: Number of Listing', () => {
   const P = load(), rts = P.byId['SMD/return-to-seller'], col = rts.cols.find(c => c.key === 'listings');
