@@ -115,7 +115,7 @@ const releaseOf = v => SELLER[v.seller]?.release || 'ack';
 // others after Seller Acknowledgement. DOAS sellers still need the signed DOAS before VWD releases.
 const dispatchReady = v => releaseOf(v) === 'ack' ? !!v.seller_ack : !!v.buyer_paid;
 // [BEHAVIOR] JBAP feedback (15 Oct 2026): how the seller's DOAS is signed, separate from the release condition. 'jbap' = at JBAP (default),
-// 'branch' = at the seller's HO or store (EWB), 'none' = no DOAS (sellers released on Buyer Payment: TFS, TFSPH). In JBAP's sheet JACCS and SAFC sign a DOAS too.
+// 'branch' = at the seller's HO or store (EWB), 'none' = no DOAS (sellers released on Buyer Payment: TFS). In JBAP's sheet JACCS and SAFC sign a DOAS too.
 const doasOf = v => SELLER[v.seller]?.doas_signing || (releaseOf(v) === 'payment' ? 'none' : 'jbap');
 const DOC_STATUSES = ['Pending Payment', 'Pending DOAS', 'DOAS for Signing', 'Pending Documents', 'For Releasing', 'Complete', 'Cancelled'];
 // [BEHAVIOR] Document status = the furthest step reached (JBAP's 2026 Documents Monitoring sheet: same as the typed status on 1,644 of 1,674 lots)
@@ -210,11 +210,15 @@ function recordCancellationBilling(scr, rows) {
 }
 // [MOCK] legacy billed cancellations without an amount default to the penalty, so Save on Cancellation Billing & Payment works
 if (S) S.cancels.forEach(c => { if (c.bill_date && (c.amount === null || c.amount === undefined)) c.amount = cancelSplit(Object.assign({}, c, { seller: cancelSeller(c) })).penalty; });
+// [BEHAVIOR] Seller names as Access and JBAP's files write them → seller code (upper-case, spaces collapsed); JBAP Q79: Toyota is TFS
+const normName = s => String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();
+const SELLER_ALIASES = { 'TOYOTA FINANCIAL SERVICES CORP': 'TFS', 'SOUTH ASIALINK FINANCE CORP.': 'ASIALINK', 'JACCS FINANCE PHILIPPINES CORP': 'JACCS', 'SECURITY BANK CORPORATION': 'SBC' };
+const SELLER_BY_NAME = D ? Object.assign(Object.fromEntries(D.sellers.map(s => [normName(s.name), s.code])), SELLER_ALIASES) : {};
+const sellerCode = name => SELLER_BY_NAME[normName(name)] || null;
 // [BEHAVIOR] JBAP feedback (16 Oct 2026): SMD lists show the seller code and the Auction No.; the legacy snapshot has only the seller's name and the auction dates
-const SELLER_BY_NAME = D ? Object.fromEntries(D.sellers.map(s => [String(s.name).toUpperCase().trim(), s.code])) : {};
 const AUCTION_BY_DATES = D ? Object.fromEntries(Object.entries(D.auctions).map(([k, [s, e]]) => [`${fmtDate(s)} - ${fmtDate(e)}`, Number(k)])) : {};
 const SMD = k => D.smd[k].map((r, i) => Object.assign({ id: `${k}-${i}` }, r,
-  r.seller === undefined && r.seller_full ? { seller: SELLER_BY_NAME[String(r.seller_full).toUpperCase().trim()] || r.seller_full } : {},
+  r.seller === undefined && r.seller_full ? { seller: sellerCode(r.seller_full) || r.seller_full } : {},
   r.auction === undefined && r.adate ? { auction: AUCTION_BY_DATES[r.adate] ?? null } : {}));
 // ─── Customers (Customer › Customer Inquiry and the customer page; user request of 16 Oct 2026) ──
 // [BEHAVIOR] A customer is a buyer with a Buyer ID (cid), found on the lots and the cancellations. The name is the one on the buyer's latest auction.
@@ -406,7 +410,7 @@ const SCREENS = [
     queue: true, ready: { key: 'for_dispatch_email', when: () => true },
     ruleP: ['P4', 'Every lot arrives pre-ticked for the dispatch email; untick a lot to hold it back. The email is copied to Finance only (P5): VWD sees the lot in its own list.'] },
   { dept: 'FAD', slug: 'document-monitoring', title: 'Document Monitoring', actions: VFSU,
-    rule: `Every sold or cancelled lot, in the columns of JBAP's Documents Monitoring sheet. Status is the furthest step reached: Pending Payment (seller not paid yet), Pending DOAS, DOAS for Signing, Pending Documents (signed DOAS back), For Releasing (documents at JBAP), Complete (documents with the buyer) or Cancelled. EWB buyers sign the DOAS at EWB's HO or store; TFS and TFSPH have no DOAS (n/a). Aging counts working days while a step waits. The Open view hides Complete and Cancelled lots.`,
+    rule: `Every sold or cancelled lot, in the columns of JBAP's Documents Monitoring sheet. Status is the furthest step reached: Pending Payment (seller not paid yet), Pending DOAS, DOAS for Signing, Pending Documents (signed DOAS back), For Releasing (documents at JBAP), Complete (documents with the buyer) or Cancelled. EWB buyers sign the DOAS at EWB's HO or store; TFS has no DOAS (n/a). Aging counts working days while a step waits. The Open view hides Complete and Cancelled lots.`,
     rows: () => V().filter(v => v.status === 'Sold' || v.status === 'Cancelled'), sort: ['auction_lot', 'asc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 190 }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
       C('Seller Payment', 'pay_seller', 'date'),

@@ -3,7 +3,7 @@ const { load } = require('./harness');
 const P = load(), scr = () => P.byId['FAD/document-monitoring'];
 const lot = (seller, f = {}) => Object.assign({ status: 'Sold', seller, buyer_paid: '2026-09-01' }, f);
 test('doasOf: seller setting, sellers released on Buyer Payment, default', () => {
-  assert.deepStrictEqual(['EWB', 'TFS', 'TFSPH', 'JACCS', 'SBC', undefined].map(s => P.doasOf(lot(s))), ['branch', 'none', 'none', 'jbap', 'jbap', 'jbap']);
+  assert.deepStrictEqual(['EWB', 'TFS', 'JACCS', 'SBC', undefined].map(s => P.doasOf(lot(s))), ['branch', 'none', 'jbap', 'jbap', 'jbap']);
 });
 test('docStatus: the furthest step reached, per DOAS signing type', () => {
   const s = (seller, f) => P.docStatus(lot(seller, f));

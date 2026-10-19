@@ -36,3 +36,13 @@ test('Commission Billing shows the seller code and the auction date; Cancellatio
   const h = P.entryLayout(scr);
   assert.match(h, new RegExp(`<label>Auction No\\.</label><input class="ctl" value="${v.auction}" readonly>`)); assert.doesNotMatch(h, /<label>Auction Date<\/label>/);
 });
+// JBAP Q79 (19 Oct 2026): TFSPH is TFS; seller names as Access and JBAP's files write them map to the seller code
+test('TFSPH merged into TFS; seller names map through aliases', () => {
+  const P = load();
+  assert.strictEqual(P.SELLER.TFSPH, undefined); assert.ok(!P.V().some(v => v.seller === 'TFSPH'));
+  assert.ok(!P.S.cancels.some(c => c.seller === 'TFSPH'), 'cancellations that named TFSPH are TFS too');
+  assert.strictEqual(P.SELLER.TFS.name, 'TOYOTA FINANCIAL SERVICES PHILIPPINES');
+  assert.ok(P.V().filter(v => v.seller === 'TFS').length >= 23, 'the 12 former TFSPH lots are TFS');
+  for (const [n, c] of [['TOYOTA FINANCIAL SERVICES CORP', 'TFS'], ['South Asialink Finance Corp.', 'ASIALINK'], ['JACCS FINANCE PHILIPPINES CORP', 'JACCS'],
+    ['SECURITY BANK  CORPORATION', 'SBC'], ['EAST WEST BANKING CORPORATION', 'EWB'], ['NOBODY', null]]) assert.strictEqual(P.sellerCode(n), c, n);
+});
