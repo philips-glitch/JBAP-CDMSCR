@@ -17,7 +17,7 @@ const EXPORTS = ['D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enric
   // Customer Inquiry and customer page (16 Oct 2026)
   'CUST_ID', 'buyerRows', 'buyerOf', 'stepOf', 'custRoute', 'customerPage',
   // JBAP feedback round 2 (16 Oct 2026)
-  'routeOf', 'route', 'location', 'MOVED', 'validateEdits', 'entryLayout', 'recordPenaltyPayment', 'parseDateInput', 'dateField', 'queryCard', 'listedAhead', 'newHtml', 'newMini', 'sellerCode', 'filterCard', 'recordSellerPayment'];
+  'routeOf', 'route', 'location', 'MOVED', 'validateEdits', 'entryLayout', 'recordPenaltyPayment', 'parseDateInput', 'dateField', 'queryCard', 'listedAhead', 'newHtml', 'newMini', 'sellerCode', 'filterCard', 'recordSellerPayment', 'recordDeadlineExtension', 'extendError'];
 function load() {
   const window = { addEventListener() {} };
   new Function('window', fs.readFileSync(path.join(ROOT, 'data.js'), 'utf8'))(window);

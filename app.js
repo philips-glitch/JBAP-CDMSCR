@@ -445,10 +445,11 @@ const SCREENS = [
     totals: rows => ({ plate: `${rows.length} lots`, security_bond: money(sumBy(rows, 'security_bond')) }),
     validate: bondValidate,
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Complete and forfeited bonds leave the Open view.' },
-  { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFSU,
-    rule: `Dispatched vehicles not yet released to the buyer. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15). Record payment records the penalty paid today and moves the dispatch deadline to today (JBAP, 16 Oct 2026); the penalty starts again the next day if the unit is still in the yard.`,
+  { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFSU, isNew: true,
+    rule: `Dispatched vehicles not yet released to the buyer. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15). Record payment records the penalty paid today and moves the dispatch deadline to today (JBAP, 16 Oct 2026); the penalty starts again the next day if the unit is still in the yard. Extend sets a new deadline with a reason and the approving FAD Manager (proposal, Q74).`,
     rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'],
-    cols: [...UNREL_COLS, C('Penalty Paid', 'penalty_paid', 'money'), C('Penalty Payment', 'id', 'rowbtn', { act: 'payPenalty', btn: 'Record payment', showWhen: r => r.penalty > 0 })], filters: UNREL_FILTERS,
+    cols: [...UNREL_COLS, C('Penalty Paid', 'penalty_paid', 'money'), C('Penalty Payment', 'id', 'rowbtn', { act: 'payPenalty', btn: 'Record payment', showWhen: r => r.penalty > 0 }),
+      C('Extend Deadline', 'extend', 'rowbtn', { act: 'extendDeadline', btn: 'Extend', isNew: true })], filters: UNREL_FILTERS,
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), penalty_paid: money(sumBy(rows, 'penalty_paid')) }) },
   { dept: 'FAD', slug: 'liability-to-seller', title: 'Liability to Seller', actions: VS, layout: 'query',
     rule: 'Units the buyer has paid for where Payment to Seller is still blank, or happened after the date entered.',
@@ -1094,6 +1095,21 @@ function recordPenaltyPayment(scr, v, ref) {
   v._raw.deadline_reset = TODAY;
   return amount;
 }
+// [BEHAVIOR] Proposal Q74 (spec 2026-10-19 §4): FAD extends a unit's dispatch deadline with a new date, a reason and the approving FAD Manager. The new date becomes deadline_reset (so the storage penalty is recalculated)
+// and each extension is kept in deadline_changes. Returns the first problem as text, or null when the entry can be saved (f.date: ISO date, '' = blank, null = not a date).
+function extendError(v, f) {
+  if (f.date === null) return 'Type the new deadline as mm/dd/yyyy, or t for today.';
+  if (!f.date) return 'New deadline is required.';
+  if (f.date <= v.dispatch_deadline) return `Must be after the current deadline (${fmtDate(v.dispatch_deadline)}).`;
+  if (!f.reason) return 'Reason is required.';
+  if (!f.by) return 'Approved by (FAD Manager) is required.';
+  return null;
+}
+function recordDeadlineExtension(scr, v, f) {
+  logChange(scr, 'Update', v, [['Dispatch Deadline', 'date', v.dispatch_deadline, f.date], ['Extension Reason', 'text', '', f.reason], ['Extension Approved By', 'text', '', f.by]]);
+  (v._raw.deadline_changes ||= []).push({ date: TODAY, from: v.dispatch_deadline, to: f.date, reason: f.reason, by: f.by });
+  v._raw.deadline_reset = f.date;
+}
 const RELEASE_ITEMS = ['No. of Keys', 'Copy of OR/CR', "Owner's Manual", 'Warranty booklet', 'Spare Tire', 'Tools', 'Jack', 'Radio', 'A/C', 'Accessories'];
 // [BEHAVIOR] One cancellation billing letter per buyer name, the name printed on the letter (cid is missing on some lots).
 const cancelLetterGroups = rows => { const g = {}; rows.forEach(r => (g[r.customer] ||= []).push(r)); return Object.values(g); };
@@ -1394,6 +1410,27 @@ const ACTIONS = {
         toast(`Penalty of PHP ${money(amount)} recorded for ${esc(v.plate)}. The dispatch deadline is now ${fmtDate(TODAY)}; the penalty no longer blocks the release.`);
       } }] });
     $('#pp-ref')?.focus();   // openModal focuses the first input (the read-only Customer)
+  },
+  extendDeadline(scr, el) {
+    const v = scr.rows().find(r => r.id === el.dataset.rid); if (!v) return;
+    const ro = (label, val) => `<div class="fld"><label>${label}</label><input class="ctl" value="${esc(val)}" readonly></div>`;
+    openModal({ title: `Extend dispatch deadline: ${v.plate}`, icon: 'save',
+      body: `<div class="fgrid two">${ro('Customer', v.customer)}${ro('Current deadline', fmtDate(v.dispatch_deadline))}${ro('Penalty due (PHP)', money(v.penalty || 0))}
+        <div class="fld"><label for="xd-date">New deadline</label>${dateField('xd-date', '')}</div>
+        <div class="fld full"><label for="xd-reason">Reason</label><textarea class="ctl" id="xd-reason" placeholder="Why the deadline is extended"></textarea></div>
+        <div class="fld full"><label for="xd-by">Approved by (FAD Manager)</label><input class="ctl" id="xd-by" placeholder="Name of the FAD Manager" autocomplete="off"></div>
+        <div class="fld full"><span class="err" id="xd-err" role="alert"></span></div></div>
+        <p class="note">The storage penalty is recalculated from the new deadline (proposal, Q74).</p>`,
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Extend deadline', kind: 'pr', icon: 'save', onClick: () => {
+        const f = { date: parseDateInput($('#xd-date').value, TODAY), reason: $('#xd-reason').value.trim(), by: $('#xd-by').value.trim() }, err = extendError(v, f);
+        const bad = !f.date || f.date <= v.dispatch_deadline ? 'date' : !f.reason ? 'reason' : 'by';
+        ['date', 'reason', 'by'].forEach(k => $(`#xd-${k}`).classList.toggle('is-invalid', !!err && k === bad));
+        $('#xd-err').textContent = err || '';
+        if (err) { $(`#xd-${bad}`).focus(); return; }
+        recordDeadlineExtension(scr, v, f); closeModal(); render();
+        toast(`Dispatch deadline of ${esc(v.plate)} extended to ${fmtDate(f.date)}.`);
+      } }] });
+    $('#xd-date')?.focus();   // openModal focuses the first input (the read-only Customer)
   },
   resetFilter(scr) { const ui = U(scr.id); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); },
   entryClear(scr) { U(scr.id).entry = null; render(); },
