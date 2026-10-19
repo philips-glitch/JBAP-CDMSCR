@@ -635,7 +635,8 @@ const SCREENS = [
       C('Auction Status', 'status', 'status'), C('Inventory Status', 'inv_status', 'text'), C('Released to Buyer', 'released_buyer', 'date'), C('Returned to Seller', 'returned_seller', 'date'),
       C('Returned to Seller WH', 'rts_wh', 'text', { w: 130 }), C('Days in Yard', 'days_in_yard', 'int')],
     filters: [{ key: 'yard', label: 'In yard / Out', type: 'select', w: 'w1', options: () => ['In yard', 'Out'] }, { key: 'status', label: 'Auction Status', type: 'select', w: 'w1', options: () => ['Sold', 'Not Sold', 'Cancelled'] },
-      { key: 'inv_status', label: 'Inventory Status', type: 'select', options: () => INV_STATUSES }, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts },
+      { key: 'inv_status', label: 'Inventory Status', type: 'select', options: () => INV_STATUSES },
+      { key: 'seller', label: 'Seller', type: 'select', options: () => [...sellerOpts(), 'Not recorded'], match: (r, v) => (r.seller || 'Not recorded') === v },   // 25 lots have no seller; Inventory Summary groups them the same way
       { key: 'parking', label: 'Parking Location', type: 'select', options: () => ['OPEN PARKING', 'STEEL PARKING', 'IMET PARKING', 'Not recorded'], match: (r, v) => (r.parking || 'Not recorded') === v },
       { key: 'plate', label: 'Plate Number' }],
     totals: rows => ({ plate: `${rows.length} units`, model: INV_STATUSES.map(t => `${t} ${rows.filter(r => r.inv_status === t).length}`).filter(t => !t.endsWith(' 0')).join(' · ') }) },
@@ -741,7 +742,7 @@ const TOP_MENUS = { customer: { dept: 'Customer', disabled: ['Sales Actions'], o
 function topMenu(key, route) {
   const m = TOP_MENUS[key], open = OPEN[m.dept];
   const items = SCREENS.filter(s => s.dept === m.dept && shown(s)).map(s => { const on = m.on(s, route);
-    return `<a class="mis ${on ? 'is-active' : ''}" href="#/${s.id}" ${on ? 'aria-current="page"' : ''}>${esc(s.title)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`; }).join('');
+    return `<a class="mis ${on ? 'is-active' : ''}" href="#/${s.id}" ${on ? 'aria-current="page"' : ''}>${esc(s.title)}${tagMini(s)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`; }).join('');
   const off = m.disabled.map(t => `<button type="button" class="mis is-disabled" aria-disabled="true" data-disabled="${esc(t)}" title="Not part of this prototype">${esc(t)}</button>`).join('');
   return `<button type="button" class="mi" data-group="${m.dept}" aria-expanded="${open}" aria-controls="grp-${m.dept}"><img src="assets/ic-${key}.png" alt="">${m.dept}<span class="caret"></span></button>
     <div class="lvs" id="grp-${m.dept}" ${open ? '' : 'hidden'}>${items}${off}</div>`;

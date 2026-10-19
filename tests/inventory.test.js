@@ -73,3 +73,31 @@ test('Inventory Monitoring: New marks only on the two new columns; blank Auction
   assert.match(P.cellHtml(scr, lot, col, false), /<span class="st /);
   assert.strictEqual(P.D.yardUnits.length, 57); assert.ok(P.D.yardUnits.every(u => u.plate && u.entry_date && ['LISTED', 'FOR RETURN'].includes(u.file_status)));
 });
+test('Inventory status boundary: an auction that ends today is still Listed; a Sold lot is Awarded even in an auction not yet ended', () => {
+  const P = load(), s = f => P.invStatusOf(Object.assign({ status: 'Not Sold' }, f)), day = n => new Date(Date.parse(P.TODAY) + n * 864e5).toISOString().slice(0, 10);
+  P.D.auctions['990'] = [day(-3), P.TODAY]; P.D.auctions['991'] = [day(-4), day(-1)]; P.D.auctions['992'] = [day(0), day(2)];
+  assert.deepStrictEqual([s({ auction: 990 }), s({ auction: 991 }), s({ auction: 992 }), s({ auction: 991, next_auction: 990 }), s({ auction: 991, next_auction: 991 })],
+    ['Listed', 'Not Listed', 'Listed', 'Listed', 'Not Listed'], 'end date == today is Listed, the day before is not');
+  assert.strictEqual(s({ status: 'Sold', auction: 992 }), 'Awarded'); assert.strictEqual(s({ status: 'Sold', auction: 992, next_auction: 990 }), 'Awarded');
+});
+test('Report sidebar and Home list Inventory Monitoring with its Wish tag; VWD and SMD no longer list an Inventory screen', () => {
+  const P = load(), grp = (html, d) => html.split(`id="grp-${d}"`)[1].split('</div>')[0];
+  for (const on of [false, true]) {
+    P.setProposed(on);
+    const side = P.sideHtml(''), home = P.homeLayout(), card = d => home.split('<section class="hcard">').find(c => c.includes(`<b>${d}</b>`));
+    assert.match(grp(side, 'Report'), /href="#\/report\/inventory-monitoring"[^>]*>Inventory Monitoring<span class="ptag mini wish">Wish<\/span><span class="ptag mini new"[^>]*>New<\/span><span class="cnt">\d+<\/span>/, `sidebar, switch ${on}`);
+    assert.match(card('Report'), /href="#\/report\/inventory-monitoring">Inventory Monitoring<span class="ptag mini wish">Wish<\/span><span class="ptag mini new"/, `Home, switch ${on}`);
+    for (const d of ['VWD', 'SMD']) { assert.doesNotMatch(grp(side, d), /Inventory/, `${d} sidebar`); assert.doesNotMatch(card(d), /Inventory/, `${d} Home card`); }
+  }
+});
+test('Inventory Monitoring Seller filter: seller codes first, Not recorded last, returns exactly the seller-less rows', () => {
+  const P = load(), scr = P.byId['report/inventory-monitoring'], rows = scr.rows(), opts = scr.filters.find(x => x.key === 'seller').options();
+  assert.deepStrictEqual(opts, [...Object.keys(P.SELLER).sort(), 'Not recorded']);
+  const none = rows.filter(r => !r.seller);
+  assert.ok(none.length >= 25 && none.every(r => r.id.startsWith('V')), 'the lots without a seller; yard and inspection units all have one');
+  const pick = vals => { P.U(scr.id).applied = { seller: vals }; return P.applyFilters(scr, rows).map(r => r.id); };
+  assert.deepStrictEqual(pick(['Not recorded']), none.map(r => r.id));
+  assert.deepStrictEqual(pick(['EWB']), rows.filter(r => r.seller === 'EWB').map(r => r.id));
+  assert.strictEqual(pick(['EWB', 'Not recorded']).length, rows.filter(r => !r.seller || r.seller === 'EWB').length);
+  assert.strictEqual(pick([]).length, rows.length);
+});
