@@ -15,7 +15,7 @@ test('seller code and Auction No. where JBAP asked', () => {
 test('SMD snapshot rows get the seller code and the Auction No.', () => {
   const P = load();
   for (const id of ['SMD/pending-awarding', 'SMD/seller-acknowledgement', 'SMD/for-dispatch']) for (const r of P.byId[id].rows()) assert.ok(P.SELLER[r.seller], `${id}: ${r.seller}`);
-  for (const id of ['SMD/for-dispatch', 'SMD/unreleased-unit']) for (const r of P.byId[id].rows()) {
+  for (const id of ['SMD/for-dispatch']) for (const r of P.byId[id].rows()) {
     const a = P.D.auctions[String(r.auction)]; assert.ok(a, `${id}: ${r.adate}`); assert.strictEqual(r.adate, `${P.fmtDate(a[0])} - ${P.fmtDate(a[1])}`);
   }
   assert.strictEqual(P.byId['SMD/pending-awarding'].filters.find(f => f.label === 'Seller').key, 'seller');

@@ -564,18 +564,18 @@ const SCREENS = [
     cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }), C('Auction No.', 'auction', 'code'),
       C('Make/Model', 'model', 'text', { w: 210 }), C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Dispatch Date', 'dispatch', 'date')],
     filters: [{ key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }], totals: rows => ({ customer: `${rows.length} units` }) },
-  { dept: 'SMD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
-    rule: 'Dispatched vehicles that have not been released to the buyer yet. Penalty shows once the dispatch deadline has passed.',
-    rows: () => SMD('unreleased'), sort: ['customer', 'asc'], cols: UNREL_COLS.filter(c => c.key !== 'location'),
-    filters: [{ key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }, { key: 'dispatch_deadline', label: 'Dispatch Deadline', type: 'daterange', w: 'w2' }],
-    totals: rows => ({ auction: `${rows.length} units`, penalty: money(sumBy(rows, 'penalty')) }) },
+  { dept: 'SMD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS, isNew: true,
+    rule: 'Dispatched vehicles not yet released to the buyer (live data, the same list as FAD; JBAP, 19 Oct 2026). Storage penalty after the dispatch deadline. View, filter and sort only.',
+    rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'],
+    cols: [...UNREL_COLS, C('Penalty Paid', 'penalty_paid', 'money', { isNew: true })], filters: UNREL_FILTERS,
+    totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), penalty_paid: money(sumBy(rows, 'penalty_paid')) }) },
   { dept: 'SMD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', actions: VS, rule: 'Result price records with status SOLD and a rebate.',
     rows: () => SMD('rebates'), cols: REBMON_COLS, sort: ['buyer_paid', 'desc'] },
-  { dept: 'SMD', slug: 'return-to-seller', title: 'Return to Seller', actions: VFSU, tag: 'Wish',
+  { dept: 'SMD', slug: 'return-to-seller', title: 'Return to Seller', actions: VFSU, tag: 'Wish', isNew: true,
     rule: `Units with status Not Sold or Cancelled that are not listed in an ongoing or future auction (JBAP, 16 Oct 2026), with no clearance yet. Tick For Return, then Print & email clearance form: one form per seller, emailed to FAD and VWD; the SMD Manager signs and the FAD Manager notes on paper (approval in CDMS: Q76).`,
-    rows: () => V().filter(rtsEligible), sort: ['seller', 'asc'],
+    rows: () => V().filter(rtsEligible).map(v => Object.assign(v, { listings: listingsOf(v) })), sort: ['seller', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Status', 'status', 'status'), C('Last Auction', 'auction', 'code'),
-      C('Date of Entry', 'entry_date', 'date'), C('Days in Yard', 'days_in_yard', 'int'), C('For Return', 'for_return', 'check', { edit: 'check' })],
+      C('Number of Listing', 'listings', 'int', { isNew: true }), C('Date of Entry', 'entry_date', 'date'), C('Days in Yard', 'days_in_yard', 'int'), C('For Return', 'for_return', 'check', { edit: 'check' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'status', label: 'Status', type: 'select', w: 'w1', options: () => ['Not Sold', 'Cancelled'] }, { key: 'plate', label: 'Plate Number' }],
     buttons: [{ label: 'Print & email clearance form', kind: 'ol', icon: 'print', act: 'printReturn', count: 'for_return' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },
   { dept: 'SMD', ...INVENTORY },
@@ -1156,6 +1156,8 @@ const dispatchCc = () => { const e = D.meta.company.emails; return PROPOSED ? e.
 const listedAhead = v => [v.auction, v.next_auction].some(a => a && (D.auctions[String(a)] || [])[1] >= TODAY);
 // [BEHAVIOR] Return to Seller: status Not Sold or Cancelled, not listed in an ongoing or future auction, no clearance and no release yet
 const rtsEligible = v => ['Not Sold', 'Cancelled'].includes(v.status) && !listedAhead(v) && !v.rts_cleared && !v.release;
+// [BEHAVIOR] JBAP feedback (19 Oct 2026, SMD #2): Number of Listing = auctions the unit was listed in (its lots, earlier listings, a relisting)
+const listingsOf = v => S.veh.filter(x => x.plate === v.plate).length + (Number(v.prior_listings) || 0) + (v.next_auction ? 1 : 0);
 // [BEHAVIOR] Wish 4: sending the clearance form records the clearance date (logged under SMD); the units then wait in VWD For Return to Seller
 function recordReturnClearance(scr, rows) {
   rows.forEach(r => { logChange(scr, 'Update', r, [['Return Clearance Date', 'date', r._raw.rts_cleared, TODAY], ['For Return', 'check', r._raw.for_return, false]]);

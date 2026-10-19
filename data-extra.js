@@ -31,4 +31,6 @@
   // [MOCK] JBAP feedback (16 Oct 2026, #19): auction 222 (JBAP's parking file shows A222 lots by 12 Oct) with three unsold units relisted, so Return to Seller leaves them out
   D.auctions['222'] = ['2026-10-12', '2026-10-14'];
   D.vehicles.forEach(v => { if (['V066', 'V070', 'V077'].includes(v.id)) v.next_auction = 222; });
+  // [MOCK] JBAP feedback (19 Oct 2026, SMD #2): earlier listings of units now waiting in Return to Seller, so Number of Listing shows more than 1 (JBAP's earlier-auction history is not in CDMS data yet)
+  D.vehicles.forEach(v => { const p = { V031: 2, V037: 1, V055: 3, V014: 1 }[v.id]; if (p) v.prior_listings = p; });
 })(window.MOCK_DATA);
