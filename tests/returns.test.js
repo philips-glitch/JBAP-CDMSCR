@@ -13,7 +13,7 @@ test('listedAhead: the own auction or the relisting auction has not ended', () =
   const P = load();
   assert.deepStrictEqual([P.listedAhead({ auction: 221 }), P.listedAhead({ auction: 221, next_auction: 222 }), P.listedAhead({ auction: 222 })], [false, true, true]);
 });
-test('clearance: recorded under SMD, units move to VWD For Return to Seller, one form per seller', () => {
+test('clearance: recorded under SMD, units move to SMD Manager Approval (then VWD after both approvals), one form per seller', () => {
   const P = load(), scr = P.byId['SMD/return-to-seller'], units = scr.rows().filter(r => r.seller === 'ORICO'), before = P.S.log.length;
   assert.strictEqual(units.length, 4);
   P.recordReturnClearance(scr, units);

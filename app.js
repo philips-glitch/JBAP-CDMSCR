@@ -649,7 +649,7 @@ const SCREENS = [
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
       { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel'] },
       { key: 'record', label: 'Record / Plate' }],
-    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller or, with the proposed improvements on, sends a SAAF.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : null; } },
+    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them or, with the proposed improvements on, sends a SAAF.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -745,7 +745,7 @@ function pageHead(scr) {
   const g = groupOf(scr);   // [BEHAVIOR] a grouped screen: the menu entry names the page, each screen is a tab (a link with its own URL)
   const tabs = g ? `<nav class="tabs" aria-label="${esc(scr.group)} tabs">${g.map(s => `<a href="#/${s.id}" class="tab${s === scr ? ' is-active' : ''}"${s === scr ? ' aria-current="page"' : ''}>${esc(s.title)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`).join('')}</nav>` : '';
   return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›${scr.top ? '' : `<span>${scr.dept}</span>›`}${g && scr.group !== scr.title ? `<span>${esc(scr.group)}</span>›` : ''}<b>${esc(scr.title)}</b></nav>
-    <div class="hrow"><h1>${esc(g ? scr.group : scr.title)}${tagHtml(scr)}${newHtml(g ? { isNew: g.some(x => x.isNew) } : scr)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>${tabs}
+    <div class="hrow"><h1>${esc(g ? scr.group : scr.title)}${tagHtml(g && !scr.tag ? g.find(x => x.tag) || scr : scr)}${newHtml(g ? { isNew: g.some(x => x.isNew) } : scr)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>${tabs}
     <p class="rule">${IC.info}<span>${esc(scr.rule)}${extra}</span></p>`;
 }
 
@@ -1176,11 +1176,14 @@ const listedAhead = v => [v.auction, v.next_auction].some(a => a && (D.auctions[
 const rtsEligible = v => ['Not Sold', 'Cancelled'].includes(v.status) && !listedAhead(v) && !v.rts_cleared && !v.release;
 // [BEHAVIOR] JBAP feedback (19 Oct 2026, SMD #2): Number of Listing = auctions the unit was listed in (its lots, earlier listings, a relisting)
 const listingsOf = v => S.veh.filter(x => x.plate === v.plate).length + (Number(v.prior_listings) || 0) + (v.next_auction ? 1 : 0);
-// [BEHAVIOR] Wish 4: sending the clearance form records the clearance date (logged under SMD); the units then wait in VWD For Return to Seller
+// [BEHAVIOR] Wish 4: sending the clearance form records the clearance date (logged under SMD); the units then wait for the SMD Manager (SMD › Return to Seller › SMD Manager Approval), then the FAD Manager; VWD sees them only after both approve
 function recordReturnClearance(scr, rows) {
   rows.forEach(r => { logChange(scr, 'Update', r, [['Return Clearance Date', 'date', r._raw.rts_cleared, TODAY], ['For Return', 'check', r._raw.for_return, false]]);
     r._raw.rts_cleared = TODAY; r._raw.for_return = false; clearTick(scr, r.id, 'for_return'); });
 }
+// [BEHAVIOR] Return to Seller approval: the date a unit leaves the yard cannot be before the Dispatch Date, the clearance or the FAD Manager approval (the later of the last two is named)
+const returnFloor = v => [[v.rts_cleared, 'the Return to Seller clearance'], [v.rts_fad_ok, 'the FAD Manager approval']].filter(x => x[0]).reduce((a, b) => (!a || b[0] >= a[0] ? b : a), null) || [];
+const releaseDateError = (v, date) => notFuture(date) || notBefore(date, v.dispatch, 'the Dispatch Date') || notBefore(date, ...returnFloor(v));
 const ACTIONS = {
   save(scr) {
     const ui = U(scr.id);
@@ -1386,7 +1389,7 @@ const ACTIONS = {
     const forms = () => Object.entries(groups).map(([code, list]) => REPORTS.returnClearance(code, list, TODAY)).join('');
     const mails = Object.entries(groups).map(([code, list]) => REPORTS.email({ from: co.emails.sales, to: `${co.emails.finance}; ${co.emails.vwd}`, cc: '', subject: `RETURN TO SELLER - ${name(code)}`,
       atts: [{ key: code, name: 'RETURN TO SELLER CLEARANCE.pdf' }],
-      body: `Please see the attached Vehicle Dispatch Clearance Form (Return to Seller) for ${list.length} unit(s) of ${esc(name(code))}. VWD records the return when each unit leaves the yard.` })).join('');
+      body: `Please see the attached Vehicle Dispatch Clearance Form (Return to Seller) for ${list.length} unit(s) of ${esc(name(code))}. The units go to VWD after the SMD and FAD Managers approve them in CDMS; VWD then records the return when each unit leaves the yard.` })).join('');
     openModal({ title: `Return to seller: ${n} seller(s), ${rows.length} unit(s)`, icon: 'mail', wide: true, body: mails,
       note: 'Simulated: no email is actually sent. Click the attachment to preview the form.', onAtt: code => openReport('RETURN TO SELLER CLEARANCE.pdf', REPORTS.returnClearance(code, groups[code], TODAY), () => ACTIONS.printReturn(scr)),
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Send & print', kind: 'pr', icon: 'print', onClick: () => {
@@ -1409,7 +1412,7 @@ const ACTIONS = {
         <div class="fld full"><span class="lbl">Checklist</span><div class="cols2">${items}</div></div></div>`,
       note: 'Records the release date and the next VRF No., then prints the release form and gate pass.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Release & print', kind: 'pr', icon: 'print', onClick: () => {
-        const date = parseDateInput($('#rl-date').value, TODAY), err = date === null ? 'Type the date as mm/dd/yyyy, or t for today.' : !date ? 'Release date is required.' : notFuture(date) || notBefore(date, v.dispatch, 'the Dispatch Date') || notBefore(date, v.rts_cleared, 'the Return to Seller clearance');
+        const date = parseDateInput($('#rl-date').value, TODAY), err = date === null ? 'Type the date as mm/dd/yyyy, or t for today.' : !date ? 'Release date is required.' : releaseDateError(v, date);
         if (err) { $('#rl-date-err').textContent = err; $('#rl-date').classList.add('is-invalid'); return; }
         const f = { date, to: $('#rl-to').value.trim() || toDefault, type: $('#rl-type').value, items: RELEASE_ITEMS.filter((_, i) => $(`#rl-i${i}`).checked) };
         const vrf = recordRelease(scr, v, f); render();
