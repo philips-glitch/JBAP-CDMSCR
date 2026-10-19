@@ -103,6 +103,10 @@ const shown = x => !x.proposed || PROPOSED;
 const colsOf = scr => scr.cols.filter(shown);
 const tagHtml = x => !x.tag ? '' : x.tag === 'Wish' ? '<span class="ptag wish">Wish list</span>' : PROPOSED ? `<span class="ptag">Proposed ${esc(x.tag)}</span>` : '';
 const tagMini = x => !x.tag ? '' : x.tag === 'Wish' ? '<span class="ptag mini wish">Wish</span>' : PROPOSED ? `<span class="ptag mini">${esc(x.tag)}</span>` : '';
+// [BEHAVIOR] User, 19 Oct 2026: "New" marks everything added or changed after JBAP's feedback of 19 Oct (rounds 2b + 3); always shown
+const NEW_TIP = "Added or changed after JBAP's feedback of 19 Oct 2026";
+const newHtml = x => x && x.isNew ? `<span class="ptag new" title="${NEW_TIP}">New</span>` : '';
+const newMini = x => x && x.isNew ? `<span class="ptag mini new" title="${NEW_TIP}">New</span>` : '';
 
 // ─── Derived fields (business rules from the Access guideline) ────────
 const RELEASE_LABEL = { payment: 'Buyer Payment', ack: 'Seller Acknowledgement', doas: 'Required DOAS / Legal Documents signing' };
@@ -681,7 +685,7 @@ function sideHtml(route) {
       const label = q ? ` aria-label="${esc(title)}: ${q.ready} waiting, ${q.late} overdue"` : '';
       // [BEHAVIOR] JBAP feedback (16 Oct 2026, #3): the record count of each list; a group shows its counts on its tabs, a P6 queue (switch on) its badges
       const cnt = g || q ? '' : `<span class="cnt">${s.rows().length.toLocaleString()}</span>`;
-      return `<a class="mis ${on ? 'is-active' : ''}" href="#/${list[0].id}" ${on ? 'aria-current="page"' : ''}${label}>${esc(title)}${g ? '' : tagMini(s)}${b}${cnt}</a>`;
+      return `<a class="mis ${on ? 'is-active' : ''}" href="#/${list[0].id}" ${on ? 'aria-current="page"' : ''}${label}>${esc(title)}${g ? '' : tagMini(s)}${newMini(g ? { isNew: g.some(x => x.isNew) } : s)}${b}${cnt}</a>`;
     }).join('');
     return `<button type="button" class="mi" data-group="${d}" aria-expanded="${open}" aria-controls="grp-${d}">${deptSvg(d)}${d}<span class="caret"></span></button>
       <div class="lvs" id="grp-${d}" ${open ? '' : 'hidden'}>${items}</div>`;
@@ -697,7 +701,7 @@ const TOP_MENUS = { customer: { dept: 'Customer', disabled: ['Sales Actions'], o
 function topMenu(key, route) {
   const m = TOP_MENUS[key], open = OPEN[m.dept];
   const items = SCREENS.filter(s => s.dept === m.dept && shown(s)).map(s => { const on = m.on(s, route);
-    return `<a class="mis ${on ? 'is-active' : ''}" href="#/${s.id}" ${on ? 'aria-current="page"' : ''}>${esc(s.title)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`; }).join('');
+    return `<a class="mis ${on ? 'is-active' : ''}" href="#/${s.id}" ${on ? 'aria-current="page"' : ''}>${esc(s.title)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`; }).join('');
   const off = m.disabled.map(t => `<button type="button" class="mis is-disabled" aria-disabled="true" data-disabled="${esc(t)}" title="Not part of this prototype">${esc(t)}</button>`).join('');
   return `<button type="button" class="mi" data-group="${m.dept}" aria-expanded="${open}" aria-controls="grp-${m.dept}"><img src="assets/ic-${key}.png" alt="">${m.dept}<span class="caret"></span></button>
     <div class="lvs" id="grp-${m.dept}" ${open ? '' : 'hidden'}>${items}${off}</div>`;
@@ -708,9 +712,9 @@ function pageHead(scr) {
   const pills = scr.actions.map(a => `<span class="pill ${a === 'Update' ? 'u' : ''}">${a}</span>`).join('');
   const extra = PROPOSED && scr.ruleP ? ` ${tagHtml({ tag: scr.ruleP[0] })} ${esc(scr.ruleP[1])}` : '';   // [BEHAVIOR] what the switch changes on this screen
   const g = groupOf(scr);   // [BEHAVIOR] a grouped screen: the menu entry names the page, each screen is a tab (a link with its own URL)
-  const tabs = g ? `<nav class="tabs" aria-label="${esc(scr.group)} tabs">${g.map(s => `<a href="#/${s.id}" class="tab${s === scr ? ' is-active' : ''}"${s === scr ? ' aria-current="page"' : ''}>${esc(s.title)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`).join('')}</nav>` : '';
+  const tabs = g ? `<nav class="tabs" aria-label="${esc(scr.group)} tabs">${g.map(s => `<a href="#/${s.id}" class="tab${s === scr ? ' is-active' : ''}"${s === scr ? ' aria-current="page"' : ''}>${esc(s.title)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`).join('')}</nav>` : '';
   return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›${scr.top ? '' : `<span>${scr.dept}</span>›`}${g ? `<span>${esc(scr.group)}</span>›` : ''}<b>${esc(scr.title)}</b></nav>
-    <div class="hrow"><h1>${esc(g ? scr.group : scr.title)}${tagHtml(scr)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>${tabs}
+    <div class="hrow"><h1>${esc(g ? scr.group : scr.title)}${tagHtml(scr)}${newHtml(g ? { isNew: g.some(x => x.isNew) } : scr)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>${tabs}
     <p class="rule">${IC.info}<span>${esc(scr.rule)}${extra}</span></p>`;
 }
 
@@ -793,12 +797,12 @@ function dataCard(scr, title) {
   const dirty = dirtyCount(scr);
   const btns = (scr.buttons || []).filter(b => shown(b) && (upd || b.view)).map(b => {
     const n = b.act === 'save' ? dirty : effectiveCount(scr, b.count);
-    return `<button type="button" class="btn ${b.kind}" data-act="${b.act}">${IC[b.icon]}${esc(b.label)}${tagHtml(b)}${n ? `<span class="n" data-count="${b.act}">${n}</span>` : `<span class="n" data-count="${b.act}" hidden></span>`}</button>`;
+    return `<button type="button" class="btn ${b.kind}" data-act="${b.act}">${IC[b.icon]}${esc(b.label)}${tagHtml(b)}${newHtml(b)}${n ? `<span class="n" data-count="${b.act}">${n}</span>` : `<span class="n" data-count="${b.act}" hidden></span>`}</button>`;
   }).join('');
   const legend = anyEdit ? '<div class="lg"><span><i class="sw l"></i>Locked</span><span><i class="sw e"></i>Editable</span><span><i class="sw d"></i>Unsaved change</span></div>' : '';
   const th = cols.map(c => {
     const ed = c.edit && upd, srt = ui.sort && ui.sort[0] === c.key ? (ui.sort[1] === 'asc' ? 'ascending' : 'descending') : 'none';
-    return `<th class="${ed ? 'ed' : ''}" aria-sort="${srt}" scope="col"><button type="button" class="hb" data-sort="${c.key}">${anyEdit ? (ed ? IC.pen : `<span class="lk">${IC.lock}</span>`) : ''}<span>${esc(c.label)}</span>${tagHtml(c)}<span class="si" aria-hidden="true"></span></button></th>`;
+    return `<th class="${ed ? 'ed' : ''}" aria-sort="${srt}" scope="col"><button type="button" class="hb" data-sort="${c.key}">${anyEdit ? (ed ? IC.pen : `<span class="lk">${IC.lock}</span>`) : ''}<span>${esc(c.label)}</span>${tagHtml(c)}${newHtml(c)}<span class="si" aria-hidden="true"></span></button></th>`;
   }).join('');
   const body = rows.length ? rows.map(r => `<tr class="${ui.edits[r.id] ? 'is-dirty' : ''}" data-tr="${esc(r.id)}">${cols.map(c => cellHtml(scr, r, c, upd)).join('')}</tr>`).join('')
     : `<tr><td colspan="${cols.length}"><div class="empty">${IC.inbox}<b>No records to show</b>${esc(scr.emptyNote?.() || '') || (hasFilter(scr) ? 'No records match the filter. Try Reset.' : 'Nothing is waiting in this list right now.')}</div></td></tr>`;
@@ -872,7 +876,7 @@ function entryLayout(scr) {
 // Read-only table for the customer page (no sorting, paging or editing)
 function plainTable(cols, rows, totals, empty) {
   const stub = { id: 'customer-page' };
-  const th = cols.map(c => `<th scope="col"><span class="hb">${esc(c.label)}</span></th>`).join('');
+  const th = cols.map(c => `<th scope="col"><span class="hb">${esc(c.label)}${newHtml(c)}</span></th>`).join('');
   const body = rows.length ? rows.map(r => `<tr data-lot="${esc(r.id)}">${cols.map(c => cellHtml(stub, r, c, false)).join('')}</tr>`).join('')
     : `<tr><td colspan="${cols.length}"><div class="empty">${IC.inbox}<b>${esc(empty)}</b></div></td></tr>`;
   const foot = rows.length && totals ? `<tfoot><tr>${cols.map(c => `<td class="${RIGHT.has(c.type) ? 'r' : CEN.has(c.type) ? 'c' : ''}">${esc(totals[c.key] ?? '')}</td>`).join('')}</tr></tfoot>` : '';
@@ -921,7 +925,7 @@ function proposedPanels() {
 }
 function homeLayout() {
   const card = d => {
-    const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
+    const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
     const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Monitoring (legacy SMD sample data); Return to Seller and Inventory use live data', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Result Summary and Auction Monitoring, for FAD and SMD' }[d];
     const icon = d === 'Report' ? '<img src="assets/ic-report.png" alt="" width="20" height="20">' : deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox');
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;

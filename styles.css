@@ -268,6 +268,7 @@ table.cmp th{font-size:11.5px}table.cmp th .hb{padding:5px 4px}table.cmp td{padd
 .ptag{display:inline-block;margin-left:6px;padding:0 7px;border-radius:9px;font-family:var(--font-ui);font-size:10.5px;font-weight:700;letter-spacing:0;line-height:17px;vertical-align:middle;white-space:nowrap;background:#fff4cc;color:#7a5a00;border:1px solid #f0d27a}
 .ptag.wish{background:#e2f3e9;color:#1d6b3c;border-color:#a9d8bb}
 .ptag.mini{font-size:9.5px;line-height:15px;padding:0 5px}
+.ptag.new{background:#fff1d6;color:#8a5300;border-color:#f0c87a}
 @media (max-width:768px){.prop-switch{font-size:0;gap:0}}
 @media print{.ptag{display:none}}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
