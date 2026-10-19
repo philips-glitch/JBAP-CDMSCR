@@ -734,7 +734,7 @@ function filterCard(scr) {
     const id = `f-${fd.key}`;
     if (fd.type === 'select') {
       const picked = filterVals(f[fd.key]).map(String), opts = fd.options().map(String);
-      return `<div class="fld ${fd.w || ''}"><span class="lbl" id="${id}-l">${esc(fd.label)}</span><details class="msel" data-msel="${fd.key}"><summary class="ctl" aria-labelledby="${id}-l">${esc(filterLabel(picked))}</summary>
+      return `<div class="fld ${fd.w || ''}"><span class="lbl" id="${id}-l">${esc(fd.label)}</span><details class="msel" data-msel="${fd.key}"><summary class="ctl" aria-labelledby="${id}-l ${id}-s" title="${esc(filterLabel(picked))}"><span class="msel-t" id="${id}-s">${esc(filterLabel(picked))}</span></summary>
         <div class="msel-p" role="group" aria-labelledby="${id}-l">${opts.map(o => `<label class="chkline"><input type="checkbox" class="chk" data-mfilter="${fd.key}" value="${esc(o)}"${picked.includes(o) ? ' checked' : ''}>${esc(o)}</label>`).join('')}</div></details></div>`;
     }
     if (fd.type === 'daterange') {
@@ -1407,7 +1407,7 @@ function bind() {
     if (el.dataset.row) return onEdit(el);
     if (el.dataset.mfilter) {   // a ticked dropdown value is kept as a draft until Apply filter; the dropdown's button shows what is ticked
       const k = el.dataset.mfilter, picked = tickedOf(content, k); U(route()).filters[k] = picked;
-      const sum = el.closest('details')?.querySelector('summary'); if (sum) sum.textContent = filterLabel(picked);
+      const sum = el.closest('details')?.querySelector('summary'), t = sum?.querySelector('.msel-t'); if (t) { t.textContent = filterLabel(picked); sum.title = t.textContent; }
       return;
     }
     if (el.matches('[data-size]')) { const ui = U(route()); ui.size = +el.value; ui.page = 1; render(); }

@@ -19,7 +19,8 @@ test('the filter card renders tick boxes for dropdown filters, with the picked v
   const P = load(), scr = P.byId['FAD/unpaid']; P.U(scr.id).filters = { seller: ['EWB'] };
   const h = P.filterCard(scr);
   assert.match(h, /<details class="msel"/); assert.match(h, /data-mfilter="seller" value="EWB" checked/);
-  assert.match(h, /<summary class="ctl"[^>]*>EWB</); assert.match(h, /ptag mini new/, 'the filter card is marked New');
+  assert.match(h, /<summary class="ctl"[^>]*title="EWB"[^>]*><span class="msel-t" id="f-seller-s">EWB<\/span><\/summary>/);
+  assert.match(h, /<summary[^>]*aria-labelledby="f-seller-l f-seller-s"/, 'the button is announced as its label plus the picks'); assert.match(h, /ptag mini new/, 'the filter card is marked New');
 });
 test('a rule filter with 2 picks gives the rows of both picks, and an empty tick list is not treated as a filter', () => {
   const P = load(), scr = P.byId['FAD/document-monitoring'], rows = scr.rows(), all = r => P.applyFilters(scr, rows).map(x => x.id).sort();

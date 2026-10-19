@@ -82,11 +82,12 @@ h1{font-family:var(--font-head);font-weight:600;font-size:30px;color:#141414;mar
 /* multi-select filter dropdown (JBAP, 19 Oct 2026): a button that opens a list of tick boxes */
 .card.filter{overflow:visible}.card.filter .card-h{border-radius:var(--radius) var(--radius) 0 0}
 .msel{position:relative}.msel>summary{list-style:none;cursor:pointer;display:flex;align-items:center}.msel>summary::-webkit-details-marker{display:none}
-.msel>summary::after{content:"";margin-left:auto;border:5px solid transparent;border-top-color:#3b4466;border-bottom:0}
+.msel>summary::after{content:"";flex:none;margin-left:auto;padding:0;border:5px solid transparent;border-top-color:#3b4466;border-bottom:0}
+.msel-t{min-width:0;margin-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msel>summary:focus-visible{outline:none;border-color:var(--navy);box-shadow:0 0 0 2px rgba(41,58,142,.18)}
 .msel-p{position:absolute;z-index:20;top:100%;left:0;min-width:100%;max-height:260px;overflow:auto;background:#fff;border:1px solid var(--line-2);border-radius:4px;box-shadow:0 6px 18px rgba(23,37,101,.15);padding:6px 10px}
 .fld .msel-p .chkline{height:30px;white-space:nowrap;font-size:13px;font-weight:400;color:var(--text)}
-.msel-hint{margin:0;padding:10px 18px 0}
+.note.msel-hint{margin:0;padding:10px 18px 0}
 .ctl{height:34px;border:1px solid var(--line-2);border-radius:3px;background:#fff;padding:0 10px;font-size:13px;width:100%}
 .ctl:focus,.cell-in:focus,textarea.ctl:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 2px rgba(41,58,142,.18)}
 textarea.ctl{height:76px;padding:8px 10px;resize:vertical}
