@@ -526,8 +526,17 @@ const SCREENS = [
     savedNote: 'Paid cancellations removed from the list.',
     queue: true, ready: { key: 'for_print', when: r => !r.bill_date },
     ruleP: ['P4', 'Lots not billed yet arrive pre-ticked for billing.'] },
+  // JBAP feedback (19 Oct 2026) / proposal Q76: the FAD Manager approves what the SMD Manager approved; VWD then records the return
+  { dept: 'FAD', slug: 'return-approval', title: 'Return to Seller Approval', actions: VFSU, isNew: true, queue: true,
+    rule: 'Units the SMD Manager approved for return to the seller. The FAD Manager enters the approval date and saves; VWD then records the return (proposal, Q76).',
+    rows: () => V().filter(v => v.rts_cleared && v.rts_smd_ok && !v.rts_fad_ok && !v.release).map(v => Object.assign(v, { listings: listingsOf(v) })), sort: ['rts_smd_ok', 'asc'],
+    cols: [C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Status', 'status', 'status'), C('Last Auction', 'auction', 'code'),
+      C('Number of Listing', 'listings', 'int'), C('Cleared by SMD', 'rts_cleared', 'date'), C('SMD Manager Approved', 'rts_smd_ok', 'date'), C('FAD Manager Approved', 'rts_fad_ok', 'date', { edit: 'date' })],
+    filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }],
+    validate: (r, e) => ({ rts_fad_ok: notFuture(e.rts_fad_ok) || notBefore(e.rts_fad_ok, r.rts_smd_ok, 'the SMD Manager approval') }),
+    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Approved units moved to VWD › For Return to Seller.' },
 
-  // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch and Rebate Monitoring; live data on Unreleased Unit, Return to Seller, Inventory and SAAF) =====================
+  // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch and Rebate Monitoring; live data on Unreleased Unit, Return to Seller, SMD Manager Approval, Inventory and SAAF) =====================
   // P5 (switch on): SMD's update screen for the SAAF; live data, unlike SMD's five legacy-sample screens
   { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU, proposed: true, tag: 'P5',
     rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch and Rebate Monitoring in SMD still show the legacy sample). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; approved lots arrive pre-ticked in FAD Pending Awarding.',
@@ -571,13 +580,22 @@ const SCREENS = [
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), penalty_paid: money(sumBy(rows, 'penalty_paid')) }) },
   { dept: 'SMD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', actions: VS, rule: 'Result price records with status SOLD and a rebate.',
     rows: () => SMD('rebates'), cols: REBMON_COLS, sort: ['buyer_paid', 'desc'] },
-  { dept: 'SMD', slug: 'return-to-seller', title: 'Return to Seller', actions: VFSU, tag: 'Wish', isNew: true,
-    rule: `Units with status Not Sold or Cancelled that are not listed in an ongoing or future auction (JBAP, 16 Oct 2026), with no clearance yet. Tick For Return, then Print & email clearance form: one form per seller, emailed to FAD and VWD; the SMD Manager signs and the FAD Manager notes on paper (approval in CDMS: Q76).`,
+  { dept: 'SMD', slug: 'return-to-seller', title: 'Return to Seller', group: 'Return to Seller', actions: VFSU, tag: 'Wish', isNew: true,
+    rule: `Units with status Not Sold or Cancelled that are not listed in an ongoing or future auction (JBAP, 16 Oct 2026), with no clearance yet. Tick For Return, then Print & email clearance form: one form per seller, emailed to FAD and VWD. Then the SMD Manager and the FAD Manager approve in CDMS (proposal, Q76); VWD sees the unit after the FAD approval.`,
     rows: () => V().filter(rtsEligible).map(v => Object.assign(v, { listings: listingsOf(v) })), sort: ['seller', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Status', 'status', 'status'), C('Last Auction', 'auction', 'code'),
       C('Number of Listing', 'listings', 'int', { isNew: true }), C('Date of Entry', 'entry_date', 'date'), C('Days in Yard', 'days_in_yard', 'int'), C('For Return', 'for_return', 'check', { edit: 'check' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'status', label: 'Status', type: 'select', w: 'w1', options: () => ['Not Sold', 'Cancelled'] }, { key: 'plate', label: 'Plate Number' }],
     buttons: [{ label: 'Print & email clearance form', kind: 'ol', icon: 'print', act: 'printReturn', count: 'for_return' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },
+  // JBAP feedback (19 Oct 2026) / proposal Q76: the SMD Manager approves a cleared unit in CDMS; FAD then approves, and VWD sees the unit only after that
+  { dept: 'SMD', slug: 'return-approval', title: 'SMD Manager Approval', group: 'Return to Seller', actions: VFSU, isNew: true, queue: true,
+    rule: 'Units cleared for return, waiting for the SMD Manager. Enter the approval date and save; the unit then waits for the FAD Manager (proposal, Q76).',
+    rows: () => V().filter(v => v.rts_cleared && !v.release && !v.rts_smd_ok).map(v => Object.assign(v, { listings: listingsOf(v) })), sort: ['rts_cleared', 'asc'],
+    cols: [C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Status', 'status', 'status'), C('Last Auction', 'auction', 'code'),
+      C('Number of Listing', 'listings', 'int'), C('Cleared by SMD', 'rts_cleared', 'date'), C('SMD Manager Approved', 'rts_smd_ok', 'date', { edit: 'date' })],
+    filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }],
+    validate: (r, e) => ({ rts_smd_ok: notFuture(e.rts_smd_ok) || notBefore(e.rts_smd_ok, r.rts_cleared, 'the clearance date') }),
+    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Approved units moved to FAD › Return to Seller Approval.' },
   { dept: 'SMD', ...INVENTORY },
 
   // ===================== VWD (live data shared with FAD; the Unreleased screens release vehicles) =====================
@@ -595,11 +613,11 @@ const SCREENS = [
     rule: `Dispatched vehicles past the dispatch deadline. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15). VWD releases a vehicle with Release vehicle (JBAP Q9) once the penalty is paid.`,
     rows: () => sold().filter(v => v.dispatch && !v.release && v.dispatch_deadline < TODAY), sort: ['dispatch_deadline', 'asc'], cols: [...UNREL_COLS, C('Release', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })], filters: UNREL_FILTERS,
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')) }) },
-  { dept: 'VWD', slug: 'for-return-to-seller', title: 'For Return to Seller', actions: VFSU, tag: 'Wish', queue: true, releaseType: 'Return to Seller',
-    rule: 'Units SMD cleared for return to the seller that have not left the yard. VWD records the return with Release vehicle (type Return to Seller), like a release to a buyer (Q18): same running VRF No. and release form.',
-    rows: () => V().filter(v => v.rts_cleared && !v.release), sort: ['rts_cleared', 'asc'],
+  { dept: 'VWD', slug: 'for-return-to-seller', title: 'For Return to Seller', actions: VFSU, tag: 'Wish', isNew: true, queue: true, releaseType: 'Return to Seller',
+    rule: 'Units cleared by SMD and approved by the SMD and FAD Managers that have not left the yard. VWD records the return with Release vehicle (type Return to Seller), like a release to a buyer (Q18): same running VRF No. and release form.',
+    rows: () => V().filter(v => v.rts_cleared && v.rts_fad_ok && !v.release), sort: ['rts_cleared', 'asc'],
     cols: [C('Seller', 'seller_full', 'text', { w: 280 }), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 240 }), C('Location', 'location', 'code'),
-      C('Cleared by SMD', 'rts_cleared', 'date'), C('Return', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })],
+      C('Cleared by SMD', 'rts_cleared', 'date'), C('Approved by FAD Manager', 'rts_fad_ok', 'date', { isNew: true }), C('Return', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }] },
   { dept: 'VWD', ...INVENTORY, title: 'Inventory Monitoring' },   // JBAP feedback (16 Oct 2026, #2): replaces VWD Auction Monitoring; view only
 
@@ -624,7 +642,7 @@ const SCREENS = [
 
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
-    rule: 'Every data change made in FAD, SMD and VWD, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and, with the proposed improvements on, the SAAF.',
+    rule: 'Every data change made in FAD, SMD and VWD, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals and, with the proposed improvements on, the SAAF.',
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
@@ -686,7 +704,7 @@ const disabledItem = ([label, key, caret]) => `<button type="button" class="mi i
   <img src="assets/ic-${key}.png" alt="">${esc(label)}${caret ? '<span class="caret"></span>' : ''}</button>`;
 // [BEHAVIOR] Screens of one department that share a group show as one menu entry with a tab per screen (FAD › Billing: Billing Monitoring, Unpaid Billing)
 const groupOf = scr => scr.group ? SCREENS.filter(s => s.dept === scr.dept && s.group === scr.group && shown(s)) : null;
-const menuTitle = s => s.group ? `${s.group} › ${s.title}` : s.title;
+const menuTitle = s => s.group && s.group !== s.title ? `${s.group} › ${s.title}` : s.title;
 function sideHtml(route) {
   const groups = ['FAD', 'SMD', 'VWD'].map(d => {
     const open = OPEN[d];
@@ -726,7 +744,7 @@ function pageHead(scr) {
   const extra = PROPOSED && scr.ruleP ? ` ${tagHtml({ tag: scr.ruleP[0] })} ${esc(scr.ruleP[1])}` : '';   // [BEHAVIOR] what the switch changes on this screen
   const g = groupOf(scr);   // [BEHAVIOR] a grouped screen: the menu entry names the page, each screen is a tab (a link with its own URL)
   const tabs = g ? `<nav class="tabs" aria-label="${esc(scr.group)} tabs">${g.map(s => `<a href="#/${s.id}" class="tab${s === scr ? ' is-active' : ''}"${s === scr ? ' aria-current="page"' : ''}>${esc(s.title)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`).join('')}</nav>` : '';
-  return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›${scr.top ? '' : `<span>${scr.dept}</span>›`}${g ? `<span>${esc(scr.group)}</span>›` : ''}<b>${esc(scr.title)}</b></nav>
+  return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›${scr.top ? '' : `<span>${scr.dept}</span>›`}${g && scr.group !== scr.title ? `<span>${esc(scr.group)}</span>›` : ''}<b>${esc(scr.title)}</b></nav>
     <div class="hrow"><h1>${esc(g ? scr.group : scr.title)}${tagHtml(scr)}${newHtml(g ? { isNew: g.some(x => x.isNew) } : scr)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>${tabs}
     <p class="rule">${IC.info}<span>${esc(scr.rule)}${extra}</span></p>`;
 }
@@ -941,7 +959,7 @@ function proposedPanels() {
 function homeLayout() {
   const card = d => {
     const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
-    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch, Rebate Monitoring. Live data: Unreleased Unit, Return to Seller, Inventory', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Result Summary and Auction Monitoring, for FAD and SMD' }[d];
+    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch, Rebate Monitoring. Live data: Unreleased Unit, Return to Seller, SMD Manager Approval, Inventory', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Result Summary and Auction Monitoring, for FAD and SMD' }[d];
     const icon = d === 'Report' ? '<img src="assets/ic-report.png" alt="" width="20" height="20">' : deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox');
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
@@ -1374,7 +1392,7 @@ const ACTIONS = {
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Send & print', kind: 'pr', icon: 'print', onClick: () => {
         recordReturnClearance(scr, rows); render();
         openModal({ title: 'Return to seller clearance', icon: 'print', wide: true, body: forms(), footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
-        printModal(); toast(`${rows.length} unit(s) cleared for return. They wait in VWD For Return to Seller.`);
+        printModal(); toast(`${rows.length} unit(s) cleared for return. They wait for the SMD Manager in Return to Seller › SMD Manager Approval.`);
       } }] });
   },
   releaseVehicle(scr, el) {

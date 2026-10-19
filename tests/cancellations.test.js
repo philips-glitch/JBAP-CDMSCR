@@ -45,6 +45,6 @@ test('Cancellation Entry lists every cancellation with filters; Cancellation Mon
   P.U(scr.id).applied = { waived: 'No' }; const n = P.applyFilters(scr, scr.rows()); assert.ok(n.length && n.every(r => !r.waived));
   P.U(scr.id).applied = {}; const h = P.entryLayout(scr); assert.match(h, /data-form="filter"/); assert.match(h, /aria-label="Cancellations"/);
 });
-test('34 screens after JBAP round 2 (33 with the Proposed improvements switch off)', () => {
-  const P = load(); assert.strictEqual(P.SCREENS.length, 34); assert.strictEqual(P.SCREENS.filter(P.shown).length, 33);
+test('36 screens (35 with the Proposed improvements switch off)', () => {
+  const P = load(); assert.strictEqual(P.SCREENS.length, 36); assert.strictEqual(P.SCREENS.filter(P.shown).length, 35);
 });

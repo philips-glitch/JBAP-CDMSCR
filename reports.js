@@ -143,14 +143,14 @@ const REPORTS = {
       <p>We acknowledge the award of the vehicles listed above at the awarded prices and authorize JBAP to send the notice of awarding to the winning buyers.</p>
       ${rptSign([`Prepared by: ${CO().roles.smdStaff}`, "Seller's authorized representative"])}`);
   },
-  // Wish 4: Vehicle Dispatch Clearance Form (Return to Seller), one per seller; signatures stay on paper until JBAP answers Q76
+  // Wish 4: Vehicle Dispatch Clearance Form (Return to Seller), one per seller; the SMD and FAD Managers approve in CDMS (proposal, Q76)
   returnClearance(code, units, issued) {
     const rows = units.map(r => `<tr><td class="c">${esc(r.auction)}</td><td>${esc(r.model)}</td><td class="c">${esc(r.plate)}</td><td>${esc(r.location || '')}</td><td>${esc(r.status)}</td></tr>`).join('');
     return rptPage('portrait', `<h1>Vehicle Dispatch Clearance Form (Return to Seller)</h1>
       <div class="kv"><b>Date issued</b><span>${shortDate(issued)}</span><b>Seller</b><span>${esc(SELLER[code]?.name || code)}</span><b>Units</b><span>${units.length}</span></div>
       <table><thead><tr><th>Last Auction #</th><th>Make / Model</th><th>Plate</th><th>Location</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
       <p>The units listed above are cleared for return to the seller. VWD records the date each unit leaves the yard.</p>
-      ${rptSign([`Prepared by: ${CO().roles.smdStaff}`, `Signed: ${CO().roles.smdManager}`, `Noted: ${CO().roles.fadManager}`])}<p class="fn">Signatures on the printed form until JBAP confirms Q76.</p>`);
+      ${rptSign([`Prepared by: ${CO().roles.smdStaff}`, `Approved in CDMS: ${CO().roles.smdManager}`, `Approved in CDMS: ${CO().roles.fadManager}`])}<p class="fn">Approvals are recorded in CDMS (proposal, Q76).</p>`);
   },
   // Rebate Monitoring download: one sheet, one row per lot with a rebate in the auction range, money totals as SUM formulas (with cached values)
   rebateWorkbook(lots, from, to) {

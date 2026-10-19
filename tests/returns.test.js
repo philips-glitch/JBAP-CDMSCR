@@ -18,6 +18,8 @@ test('clearance: recorded under SMD, units move to VWD For Return to Seller, one
   assert.strictEqual(units.length, 4);
   P.recordReturnClearance(scr, units);
   assert.ok(units.every(u => u._raw.rts_cleared === P.TODAY)); assert.ok(P.S.log.slice(before).every(e => e.module === 'SMD'));
+  assert.strictEqual(P.byId['VWD/for-return-to-seller'].rows().length, 0, 'VWD sees a unit only after the SMD and FAD Managers approved');
+  units.forEach(u => { u._raw.rts_smd_ok = P.TODAY; u._raw.rts_fad_ok = P.TODAY; });
   assert.deepStrictEqual(P.byId['VWD/for-return-to-seller'].rows().map(r => r.id).sort(), units.map(u => u.id).sort());
   assert.ok(!scr.rows().some(r => r.seller === 'ORICO'));
   const h = P.REPORTS.returnClearance('ORICO', units, P.TODAY);
@@ -27,7 +29,7 @@ test('clearance: recorded under SMD, units move to VWD For Return to Seller, one
 test('a return is recorded like a release and is never blocked by DOAS or penalty', () => {
   const P = load(), smd = P.byId['SMD/return-to-seller'], u = smd.rows().find(r => P.releaseOf(r) === 'doas');
   assert.ok(u, 'need a unit of a DOAS seller');
-  P.recordReturnClearance(smd, [u]);
+  P.recordReturnClearance(smd, [u]); u._raw.rts_smd_ok = P.TODAY; u._raw.rts_fad_ok = P.TODAY;
   const vwd = P.byId['VWD/for-return-to-seller'], v = vwd.rows().find(r => r.id === u.id);
   assert.strictEqual(P.releaseBlock(v), null);
   assert.strictEqual(vwd.releaseType, 'Return to Seller');
