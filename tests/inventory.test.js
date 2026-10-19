@@ -17,32 +17,59 @@ test('Date of Entry: JBAP\'s parking inventory file where the plate matches, els
   assert.ok(P.D.vehicles.filter(v => v.parking).length >= 150 && P.D.vehicles.filter(v => v.logistics).length >= 150);
 });
 test('inventory: in yard by default, days in yard, released vs returned', () => {
-  const P = load(), scr = P.byId['VWD/inventory'], all = scr.rows();
+  const P = load(), scr = P.byId['report/inventory-monitoring'], all = scr.rows(), lots = all.filter(r => r.id.startsWith('V'));
   assert.strictEqual(scr.tag, 'Wish'); assert.strictEqual(P.U(scr.id).applied.yard, 'In yard');
-  assert.strictEqual(all.length, P.D.vehicles.length);
-  const out = all.find(r => r.release), inYard = all.find(r => !r.release);
+  assert.strictEqual(lots.length, P.D.vehicles.length);
+  const out = lots.find(r => r.release), inYard = lots.find(r => !r.release);
   assert.strictEqual(inYard.days_in_yard, days(inYard.entry_date, P.TODAY)); assert.strictEqual(inYard.yard, 'In yard');
   assert.strictEqual(out.days_in_yard, days(out.entry_date, out.release)); assert.strictEqual(out.released_buyer, out.release); assert.strictEqual(out.returned_seller, null);
-  const ns = all.find(r => r.status === 'Not Sold'); P.recordRelease(scr, ns, { date: P.TODAY, to: 'SELLER', type: 'Return to Seller', items: [] });
+  const ns = lots.find(r => r.status === 'Not Sold'); P.recordRelease(P.byId['VWD/for-return-to-seller'], ns, { date: P.TODAY, to: 'SELLER', type: 'Return to Seller', items: [] });
   const back = scr.rows().find(r => r.id === ns.id); assert.deepStrictEqual([back.returned_seller, back.released_buyer, back.yard], [P.TODAY, null, 'Out']);
 });
-test('inventory status is calculated, view only; For Release = dispatched, not released', () => {
-  const P = load(), scr = P.byId['VWD/inventory'], smd = P.byId['SMD/inventory'];
-  assert.deepStrictEqual(P.INV_STATUSES, ['Listed', 'Awarded', 'For Release', 'For Return', 'Released', 'Returned']);
-  const s = f => P.invStatusOf(Object.assign({ status: 'Not Sold' }, f));
-  assert.deepStrictEqual([s({ release: '2026-10-01' }), s({ release: '2026-10-01', release_type: 'Return to Seller' }), s({ rts_cleared: '2026-10-01' }), s({ status: 'Sold', dispatch: '2026-10-01' }), s({ status: 'Sold' }), s({})],
-    ['Released', 'Returned', 'For Return', 'For Release', 'Awarded', 'Listed']);
-  for (const x of [scr, smd]) { assert.deepStrictEqual(x.actions, ['View', 'Filter', 'Sort'], x.id); assert.ok(!x.cols.some(c => c.edit), x.id); assert.ok(!(x.buttons || []).length, x.id); }
-  assert.ok(scr.rows().every(r => r.inv_status === P.invStatusOf(r))); assert.ok(scr.rows().some(r => r.inv_status === 'For Release'));
-  const v = P.S.veh.find(x => x.status === 'Sold' && !x.dispatch && !x.release); v.inv_status = 'For Return';
-  assert.strictEqual(P.enrichV(v).inv_status, 'Awarded', 'a stored manual status no longer counts');
+test('statuses: Listed (auction not ended) and Not Listed replace the old set; yard and inspection units', () => {
+  const P = load(), scr = P.byId['report/inventory-monitoring'], rows = scr.rows();
+  assert.deepStrictEqual(P.INV_STATUSES, ['Listed', 'Not Listed', 'Awarded', 'For Release', 'For Return', 'Released', 'Returned']);
+  const s = f => P.invStatusOf(Object.assign({ status: 'Not Sold', auction: 221 }, f));
+  assert.deepStrictEqual([s({}), s({ next_auction: 222 }), s({ auction: 222 }), s({ status: 'Sold' }), s({ status: 'Sold', dispatch: '2026-10-01' }), s({ rts_cleared: '2026-10-01' })],
+    ['Not Listed', 'Listed', 'Listed', 'Awarded', 'For Release', 'For Return']);
+  assert.strictEqual(rows.length, P.V().length + 57 + 3);
+  const y = rows.filter(r => r.id.startsWith('Y')), n = rows.filter(r => r.id.startsWith('N'));
+  assert.deepStrictEqual([y.filter(r => r.inv_status === 'Listed').length, y.filter(r => r.inv_status === 'For Return').length], [43, 14]);
+  assert.ok(n.every(r => r.inv_status === 'Not Listed' && r.yard === 'In yard'));
+  assert.ok(y.every(r => r.yard === 'In yard' && r.status === '' && P.SELLER[r.seller]), 'yard units: no auction status, seller code resolved');
+  assert.strictEqual(new Set(rows.map(r => r.id)).size, rows.length);
 });
-test('VWD Inventory Monitoring and SMD Inventory: the parking inventory file\'s columns and filters', () => {
-  const P = load(), v = P.byId['VWD/inventory'], s = P.byId['SMD/inventory'];
-  assert.strictEqual(v.title, 'Inventory Monitoring'); assert.strictEqual(s.title, 'Inventory');
-  assert.deepStrictEqual(v.cols.map(c => c.key), ['entry_date', 'vcn', 'plate', 'cs_no', 'model', 'color', 'year', 'seller', 'logistics', 'origin_wh', 'parking', 'transfer_date', 'status', 'inv_status', 'released_buyer', 'returned_seller', 'rts_wh', 'days_in_yard']);
-  assert.deepStrictEqual(s.cols.map(c => c.key), v.cols.map(c => c.key)); assert.strictEqual(s.rows().length, v.rows().length);
-  assert.deepStrictEqual(v.filters.map(f => f.key), ['yard', 'status', 'inv_status', 'seller', 'parking', 'latest', 'plate']);
-  assert.ok(v.filters.find(f => f.key === 'parking').options().length >= 2);
-  assert.ok(v.rows().some(r => r.latest === 'In latest auction') && v.rows().some(r => r.latest === 'Not in latest auction'));
+test('Report › Inventory Monitoring: view only, New, filters without Latest auction; SMD and VWD inventory gone', () => {
+  const P = load(), scr = P.byId['report/inventory-monitoring'];
+  assert.ok(scr.isNew); assert.deepStrictEqual(scr.actions, ['View', 'Filter', 'Sort']); assert.ok(!scr.cols.some(c => c.edit));
+  assert.deepStrictEqual(scr.filters.map(f => f.key), ['yard', 'status', 'inv_status', 'seller', 'parking', 'plate']);
+  assert.deepStrictEqual(scr.filters.find(f => f.key === 'parking').options(), ['OPEN PARKING', 'STEEL PARKING', 'IMET PARKING', 'Not recorded']);
+  assert.ok(scr.cols.some(c => c.key === 'first_auction') && scr.cols.some(c => c.key === 'listing_end'));
+  assert.strictEqual(P.byId['VWD/inventory'], undefined); assert.strictEqual(P.byId['SMD/inventory'], undefined);
+  for (const id of ['VWD/inventory', 'SMD/inventory', 'VWD/auction-monitoring']) assert.strictEqual(P.routeOf(id), 'report/inventory-monitoring', id);
+});
+test('Inventory Monitoring rows: listing columns, parking filter (multi-select, Not recorded), totals, no negative days', () => {
+  const P = load(), scr = P.byId['report/inventory-monitoring'], rows = scr.rows(), end = a => P.D.auctions[String(a)][1];
+  const relisted = rows.find(r => r.id === 'V066'), plain = rows.find(r => r.id.startsWith('V') && !r.next_auction);
+  assert.deepStrictEqual([relisted.first_auction, relisted.listing_end], [relisted.auction, end(222)], 'a relisted unit ends with the relisting');
+  assert.deepStrictEqual([plain.first_auction, plain.listing_end], [plain.auction, end(plain.auction)]);
+  assert.ok(rows.filter(r => !r.id.startsWith('V')).every(r => r.first_auction === null && r.listing_end === null), 'units that are not lots have no auction columns');
+  assert.ok(rows.every(r => r.days_in_yard === null || r.days_in_yard >= 0), 'a unit that entered after the demo date shows 0 days, not a negative number');
+  assert.ok(rows.some(r => r.id.startsWith('Y') && r.entry_date > P.TODAY));
+  const ui = P.U(scr.id), pick = vals => { ui.applied = { parking: vals }; return P.applyFilters(scr, rows); };
+  assert.ok(rows.some(r => !r.parking), 'some lots have no parking location');
+  assert.deepStrictEqual(pick(['Not recorded']).map(r => r.id), rows.filter(r => !r.parking).map(r => r.id));
+  assert.strictEqual(pick(['OPEN PARKING', 'IMET PARKING']).length, rows.filter(r => ['OPEN PARKING', 'IMET PARKING'].includes(r.parking)).length);
+  assert.strictEqual(pick([]).length, rows.length, 'no pick = all');
+  const t = scr.totals(rows), counts = P.INV_STATUSES.map(s => rows.filter(r => r.inv_status === s).length);
+  assert.strictEqual(t.plate, rows.length + ' units'); assert.strictEqual(counts.reduce((a, b) => a + b, 0), rows.length);
+  assert.strictEqual(t.model, P.INV_STATUSES.map((s, i) => s + ' ' + counts[i]).filter(x => !x.endsWith(' 0')).join(' \u00b7 '));
+});
+test('Inventory Monitoring: New marks only on the two new columns; blank Auction Status is an empty cell', () => {
+  const P = load(), scr = P.byId['report/inventory-monitoring'], rows = scr.rows();
+  assert.deepStrictEqual(scr.cols.filter(c => c.isNew).map(c => c.key), ['first_auction', 'listing_end']);
+  const col = scr.cols.find(c => c.key === 'status'), yard = rows.find(r => r.id.startsWith('Y')), lot = rows.find(r => r.id.startsWith('V'));
+  assert.strictEqual(P.cellHtml(scr, yard, col, false), '<td class="c"></td>');
+  assert.match(P.cellHtml(scr, lot, col, false), /<span class="st /);
+  assert.strictEqual(P.D.yardUnits.length, 57); assert.ok(P.D.yardUnits.every(u => u.plate && u.entry_date && ['LISTED', 'FOR RETURN'].includes(u.file_status)));
 });

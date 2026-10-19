@@ -17,7 +17,7 @@ test('Report menu: Result Summary and Auction Monitoring moved out of FAD and SM
 test('old links of moved or merged screens open their new place', () => {
   const P = load();
   const want = { 'FAD/result-summary': 'report/result-summary', 'SMD/result-summary': 'report/result-summary', 'FAD/auction-monitoring': 'report/auction-monitoring',
-    'SMD/auction-monitoring': 'report/auction-monitoring', 'VWD/auction-monitoring': 'VWD/inventory', 'FAD/cancellation-monitoring': 'FAD/cancellation-entry',
+    'SMD/auction-monitoring': 'report/auction-monitoring', 'VWD/auction-monitoring': 'report/inventory-monitoring', 'FAD/cancellation-monitoring': 'FAD/cancellation-entry',
     'SMD/cancellation-monitoring': 'FAD/cancellation-entry', 'FAD/cancellation-payment': 'FAD/cancellation-billing' };
   for (const [from, to] of Object.entries(want)) assert.strictEqual(P.routeOf(from), to, from);
   assert.strictEqual(P.routeOf('FAD/unpaid'), 'FAD/unpaid'); assert.strictEqual(P.routeOf('nope'), ''); assert.strictEqual(P.routeOf('customer/B0313'), 'customer/B0313');

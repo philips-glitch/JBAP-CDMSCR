@@ -36,7 +36,7 @@ test('a return is recorded like a release and is never blocked by DOAS or penalt
   const vrf = P.recordRelease(vwd, v, { date: P.TODAY, to: v.seller_full, type: 'Return to Seller', items: [] });
   assert.strictEqual(vrf, '04583'); assert.strictEqual(v._raw.release_type, 'Return to Seller');
   assert.ok(!vwd.rows().some(r => r.id === u.id));
-  assert.strictEqual(P.byId['VWD/inventory'].rows().find(r => r.id === u.id).returned_seller, P.TODAY);
+  assert.strictEqual(P.byId['report/inventory-monitoring'].rows().find(r => r.id === u.id).returned_seller, P.TODAY);
 });
 test('a sold lot is still blocked even if another release type is picked', () => {
   const P = load(), v = P.byId['VWD/unreleased-unit-overdue'].rows().find(x => x.penalty > 0);

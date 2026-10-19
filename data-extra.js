@@ -33,4 +33,10 @@
   D.vehicles.forEach(v => { if (['V066', 'V070', 'V077'].includes(v.id)) v.next_auction = 222; });
   // [MOCK] JBAP feedback (19 Oct 2026, SMD #2): earlier listings of units now waiting in Return to Seller, so Number of Listing shows more than 1 (JBAP's earlier-auction history is not in CDMS data yet)
   D.vehicles.forEach(v => { const p = { V031: 2, V037: 1, V055: 3, V014: 1 }[v.id]; if (p) v.prior_listings = p; });
+  // [MOCK] JBAP feedback (19 Oct 2026, VWD #4b): vehicles captured at inspection, not yet in an auction (the real CDMS takes them from Inspection)
+  D.inspectionUnits = [
+    { id: 'N001', plate: 'NEW1001', model: 'TOYOTA VIOS 1.3 XLE', color: 'WHITE', year: 2021, seller: 'TFS', parking: 'OPEN PARKING', entry_date: '2026-10-05', source: 'inspection' },
+    { id: 'N002', plate: 'NEW1002', model: 'MITSUBISHI MIRAGE G4 GLX', color: 'RED', year: 2020, seller: 'EWB', parking: 'OPEN PARKING', entry_date: '2026-10-06', source: 'inspection' },
+    { id: 'N003', plate: 'NEW1003', model: 'NISSAN NAVARA 2.5 EL', color: 'GRAY', year: 2019, seller: 'ORIX', parking: 'OPEN PARKING', entry_date: '2026-10-07', source: 'inspection' },
+  ];
 })(window.MOCK_DATA);
