@@ -86,6 +86,7 @@ h1{font-family:var(--font-head);font-weight:600;font-size:30px;color:#141414;mar
 .msel-t{min-width:0;margin-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msel>summary:focus-visible{outline:none;border-color:var(--navy);box-shadow:0 0 0 2px rgba(41,58,142,.18)}
 .msel-p{position:absolute;z-index:20;top:100%;left:0;min-width:100%;max-height:260px;overflow:auto;background:#fff;border:1px solid var(--line-2);border-radius:4px;box-shadow:0 6px 18px rgba(23,37,101,.15);padding:6px 10px}
+.msel-f{position:sticky;bottom:-6px;margin:6px -10px -6px;padding:8px 10px;background:#fff;border-top:1px solid var(--line-2);text-align:right}.msel-f .btn{height:30px}
 .fld .msel-p .chkline{height:30px;white-space:nowrap;font-size:13px;font-weight:400;color:var(--text)}
 .note.msel-hint{margin:0;padding:10px 18px 0}
 .ctl{height:34px;border:1px solid var(--line-2);border-radius:3px;background:#fff;padding:0 10px;font-size:13px;width:100%}

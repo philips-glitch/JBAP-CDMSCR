@@ -643,8 +643,9 @@ const SCREENS = [
   // JBAP feedback (19 Oct 2026, Q70): one row per seller, like the REPORT sheet of JBAP's parking inventory file; the Parking Location filter chooses which units are counted
   { id: 'report/inventory-summary', dept: 'Report', title: 'Inventory Summary', actions: VFS, isNew: true,
     rule: `Units in the yard per seller and inventory status, like the REPORT sheet of JBAP's parking inventory file (proposal, Q70). Units without a seller are grouped as Not recorded. The Parking Location filter narrows the units counted.`,
-    rows: () => {
-      const pk = filterVals(U('report/inventory-summary').applied.parking), by = {};
+    count() { return this.rows(true).length; },   // menu counts ignore the Parking pick
+    rows: all => {   // all = true: every unit in the yard, whatever the Parking pick
+      const pk = all ? [] : filterVals(U('report/inventory-summary').applied.parking), by = {};
       inventoryRows().filter(r => r.yard === 'In yard' && (!pk.length || pk.includes(r.parking || 'Not recorded'))).forEach(u => {
         const k = u.seller || 'Not recorded', o = by[k] ||= { id: k, seller: k, in_yard: 0, listed: 0, not_listed: 0, awarded: 0, for_release: 0, for_return: 0 };
         o.in_yard++; const f = { Listed: 'listed', 'Not Listed': 'not_listed', Awarded: 'awarded', 'For Release': 'for_release', 'For Return': 'for_return' }[u.inv_status]; if (f) o[f]++;
@@ -739,6 +740,8 @@ const TOP_AFTER = [['Sales Summary', 'sales-summary', 0], ['Cashier Closing', 'c
 const disabledItem = ([label, key, caret]) => `<button type="button" class="mi is-disabled" aria-disabled="true" data-disabled="${esc(label)}" title="Not part of this prototype">
   <img src="assets/ic-${key}.png" alt="">${esc(label)}${caret ? '<span class="caret"></span>' : ''}</button>`;
 // [BEHAVIOR] Screens of one department that share a group show as one menu entry with a tab per screen (FAD › Billing: Billing Monitoring, Unpaid Billing)
+// [BEHAVIOR] The record count of a menu entry, Home and tab: the rows of the list, unless the screen counts differently (Inventory Summary counts its sellers, not the ones the Parking pick leaves)
+const countOf = s => s.count ? s.count() : s.rows().length;
 const groupOf = scr => scr.group ? SCREENS.filter(s => s.dept === scr.dept && s.group === scr.group && shown(s)) : null;
 const menuTitle = s => s.group && s.group !== s.title ? `${s.group} › ${s.title}` : s.title;
 function sideHtml(route) {
@@ -751,7 +754,7 @@ function sideHtml(route) {
       const b = q && (q.ready || q.late) ? `<span class="qbs" aria-hidden="true">${q.late ? `<span class="qb late">${q.late}</span>` : ''}${q.ready ? `<span class="qb">${q.ready}</span>` : ''}</span>` : '';
       const label = q ? ` aria-label="${esc(title)}: ${q.ready} waiting, ${q.late} overdue"` : '';
       // [BEHAVIOR] JBAP feedback (16 Oct 2026, #3): the record count of each list; a group shows its counts on its tabs, a P6 queue (switch on) its badges
-      const cnt = g || q ? '' : `<span class="cnt">${s.rows().length.toLocaleString()}</span>`;
+      const cnt = g || q ? '' : `<span class="cnt">${countOf(s).toLocaleString()}</span>`;
       return `<a class="mis ${on ? 'is-active' : ''}" href="#/${list[0].id}" ${on ? 'aria-current="page"' : ''}${label}>${esc(title)}${g ? '' : tagMini(s)}${newMini(g ? { isNew: g.some(x => x.isNew) } : s)}${b}${cnt}</a>`;
     }).join('');
     return `<button type="button" class="mi" data-group="${d}" aria-expanded="${open}" aria-controls="grp-${d}">${deptSvg(d)}${d}<span class="caret"></span></button>
@@ -768,7 +771,7 @@ const TOP_MENUS = { customer: { dept: 'Customer', disabled: ['Sales Actions'], o
 function topMenu(key, route) {
   const m = TOP_MENUS[key], open = OPEN[m.dept];
   const items = SCREENS.filter(s => s.dept === m.dept && shown(s)).map(s => { const on = m.on(s, route);
-    return `<a class="mis ${on ? 'is-active' : ''}" href="#/${s.id}" ${on ? 'aria-current="page"' : ''}>${esc(s.title)}${tagMini(s)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`; }).join('');
+    return `<a class="mis ${on ? 'is-active' : ''}" href="#/${s.id}" ${on ? 'aria-current="page"' : ''}>${esc(s.title)}${tagMini(s)}${newMini(s)}<span class="cnt">${countOf(s).toLocaleString()}</span></a>`; }).join('');
   const off = m.disabled.map(t => `<button type="button" class="mis is-disabled" aria-disabled="true" data-disabled="${esc(t)}" title="Not part of this prototype">${esc(t)}</button>`).join('');
   return `<button type="button" class="mi" data-group="${m.dept}" aria-expanded="${open}" aria-controls="grp-${m.dept}"><img src="assets/ic-${key}.png" alt="">${m.dept}<span class="caret"></span></button>
     <div class="lvs" id="grp-${m.dept}" ${open ? '' : 'hidden'}>${items}${off}</div>`;
@@ -779,7 +782,7 @@ function pageHead(scr) {
   const pills = scr.actions.map(a => `<span class="pill ${a === 'Update' ? 'u' : ''}">${a}</span>`).join('');
   const extra = PROPOSED && scr.ruleP ? ` ${tagHtml({ tag: scr.ruleP[0] })} ${esc(scr.ruleP[1])}` : '';   // [BEHAVIOR] what the switch changes on this screen
   const g = groupOf(scr);   // [BEHAVIOR] a grouped screen: the menu entry names the page, each screen is a tab (a link with its own URL)
-  const tabs = g ? `<nav class="tabs" aria-label="${esc(scr.group)} tabs">${g.map(s => `<a href="#/${s.id}" class="tab${s === scr ? ' is-active' : ''}"${s === scr ? ' aria-current="page"' : ''}>${esc(s.title)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`).join('')}</nav>` : '';
+  const tabs = g ? `<nav class="tabs" aria-label="${esc(scr.group)} tabs">${g.map(s => `<a href="#/${s.id}" class="tab${s === scr ? ' is-active' : ''}"${s === scr ? ' aria-current="page"' : ''}>${esc(s.title)}${newMini(s)}<span class="cnt">${countOf(s).toLocaleString()}</span></a>`).join('')}</nav>` : '';
   return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›${scr.top ? '' : `<span>${scr.dept}</span>›`}${g && scr.group !== scr.title ? `<span>${esc(scr.group)}</span>›` : ''}<b>${esc(scr.title)}</b></nav>
     <div class="hrow"><h1>${esc(g ? scr.group : scr.title)}${tagHtml(g && !scr.tag ? g.find(x => x.tag) || scr : scr)}${newHtml(g ? { isNew: g.some(x => x.isNew) } : scr)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>${tabs}
     <p class="rule">${IC.info}<span>${esc(scr.rule)}${extra}</span></p>`;
@@ -792,7 +795,7 @@ function filterCard(scr) {
     if (fd.type === 'select') {
       const picked = filterVals(f[fd.key]).map(String), opts = fd.options().map(String);
       return `<div class="fld ${fd.w || ''}"><span class="lbl" id="${id}-l">${esc(fd.label)}</span><details class="msel" data-msel="${fd.key}"><summary class="ctl" aria-labelledby="${id}-l ${id}-s" title="${esc(filterLabel(picked))}"><span class="msel-t" id="${id}-s">${esc(filterLabel(picked))}</span></summary>
-        <div class="msel-p" role="group" aria-labelledby="${id}-l">${opts.map(o => `<label class="chkline"><input type="checkbox" class="chk" data-mfilter="${fd.key}" value="${esc(o)}"${picked.includes(o) ? ' checked' : ''}>${esc(o)}</label>`).join('')}</div></details></div>`;
+        <div class="msel-p" role="group" aria-labelledby="${id}-l">${opts.map(o => `<label class="chkline"><input type="checkbox" class="chk" data-mfilter="${fd.key}" value="${esc(o)}"${picked.includes(o) ? ' checked' : ''}>${esc(o)}</label>`).join('')}<div class="msel-f"><button type="submit" class="btn pr">${IC.search}Apply filter</button></div></div></details></div>`;   // [BEHAVIOR] an open panel can cover Reset and Apply when the filter row wraps, so it carries its own Apply (a submit inside the form: applies every filter and closes the panel)
     }
     if (fd.type === 'daterange') {
       return `<div class="fld ${fd.w || 'w2'}"><span class="lbl" id="${id}-l">${esc(fd.label)}</span><div class="range" role="group" aria-labelledby="${id}-l">
@@ -995,7 +998,7 @@ function proposedPanels() {
 }
 function homeLayout() {
   const card = d => {
-    const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
+    const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}${newMini(s)}<span class="cnt">${countOf(s).toLocaleString()}</span></a></li>`).join('');
     const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch, Rebate Monitoring. Live data: Unreleased Unit, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Monitoring and summary reports for FAD, SMD and VWD: results, auctions, inventory, cancellations' }[d];
     const icon = d === 'Report' ? '<img src="assets/ic-report.png" alt="" width="20" height="20">' : deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox');
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;

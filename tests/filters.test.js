@@ -38,3 +38,19 @@ test('Log Activity: the "no activity yet" note works with a picked-value list', 
   P.U(scr.id).applied = { module: ['SMD'] }; assert.match(scr.emptyNote(), /SMD/);
   P.U(scr.id).applied = { module: ['SMD', 'VWD'] }; assert.strictEqual(scr.emptyNote(), null);
 });
+test('every dropdown panel carries its own Apply filter button, so an open panel never hides the way to apply', () => {
+  const P = load();
+  for (const id of ['report/cancellation-monitoring', 'FAD/unpaid', 'report/inventory-monitoring']) {
+    const scr = P.byId[id], h = P.filterCard(scr), selects = scr.filters.filter(f => f.type === 'select').length, panels = h.split('<div class="msel-p"').slice(1);
+    assert.strictEqual(panels.length, selects, id);
+    for (const p of panels) {
+      const body = p.split('</details>')[0];
+      assert.match(body, /<div class="msel-f"><button type="submit" class="btn pr">[^]*Apply filter<\/button><\/div><\/div>$/, `${id}: the footer is the last thing inside the panel`);
+      assert.ok(body.indexOf('class="msel-f"') > body.lastIndexOf('data-mfilter'), `${id}: below the tick boxes`);
+    }
+    const form = h.split('<form class="fb" data-form="filter">')[1].split('</form>')[0];
+    assert.strictEqual(form.split('class="msel-f"').length - 1, selects, `${id}: the panels sit inside the filter form, so their submit button applies every filter`);
+    assert.match(form, /<div class="btns">[^]*Reset[^]*<button type="submit" class="btn pr">[^]*Apply filter<\/button><\/div>$/, `${id}: the form's own Reset and Apply stay`);
+  }
+  const plain = P.byId['customer-inquiry']; assert.ok(plain.filters.length && !plain.filters.some(f => f.type === 'select')); assert.doesNotMatch(P.filterCard(plain), /msel-f/, 'no dropdown, no panel footer');
+});

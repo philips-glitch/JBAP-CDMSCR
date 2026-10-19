@@ -57,7 +57,7 @@ test('Inventory Summary table: Total row, integer cells, no empty state while un
   const inYard = P.inventoryRows().filter(r => r.yard === 'In yard').length;
   assert.ok(html.includes(`>${inYard.toLocaleString('en-US')}</td>`), 'the In Yard total shows');
   for (const h of ['Seller', 'In Yard', 'Listed', 'Not Listed', 'Awarded', 'For Release', 'For Return']) assert.ok(html.includes(`<span>${h}</span>`), h);
-  P.U(scr.id).page = 1; assert.match(html, /aria-label="Inventory Summary"/);
+  assert.match(html, /aria-label="Inventory Summary"/);
 });
 
 test('Cancellation Monitoring columns, sort, filters and totals', () => {
@@ -119,4 +119,33 @@ test('Cancellation Monitoring and Inventory Summary: page head is Home > Report 
   assert.strictEqual(P.MOVED['FAD/cancellation-monitoring'], 'report/cancellation-monitoring'); assert.strictEqual(P.MOVED['SMD/cancellation-monitoring'], 'report/cancellation-monitoring');
   assert.strictEqual(P.routeOf('report/inventory-summary'), 'report/inventory-summary');
   const all = P.SCREENS.map(s => s.id); assert.strictEqual(new Set(all).size, all.length, 'screen ids are unique');
+});
+test('Inventory Summary agrees with Inventory Monitoring: every seller x status x parking pick equals the rows that screen returns through its own filters', () => {
+  const P = load(), sum = P.byId['report/inventory-summary'], inv = P.byId['report/inventory-monitoring'], all = inv.rows();
+  const sellers = inv.filters.find(f => f.key === 'seller').options(), statuses = { Listed: 'listed', 'Not Listed': 'not_listed', Awarded: 'awarded', 'For Release': 'for_release', 'For Return': 'for_return' };
+  const monitoring = (pick, seller, status) => { P.U(inv.id).applied = Object.assign({ yard: ['In yard'] }, seller ? { seller: [seller] } : {}, status ? { inv_status: [status] } : {}, pick.length ? { parking: pick } : {}); return P.applyFilters(inv, all).length; };
+  let compared = 0;
+  for (const pick of [[], ['OPEN PARKING'], ['STEEL PARKING'], ['IMET PARKING'], ['Not recorded'], ['IMET PARKING', 'Not recorded'], ['OPEN PARKING', 'STEEL PARKING', 'IMET PARKING', 'Not recorded']]) {
+    P.U(sum.id).applied = pick.length ? { parking: pick } : {};
+    const rows = sum.rows(), by = Object.fromEntries(rows.map(r => [r.seller, r]));
+    assert.strictEqual(rows.reduce((a, r) => a + r.in_yard, 0), monitoring(pick), `units, parking ${pick}`);
+    for (const seller of sellers) {
+      assert.strictEqual(by[seller]?.in_yard ?? 0, monitoring(pick, seller), `${seller} in yard, parking ${pick}`); compared++;
+      for (const [status, key] of Object.entries(statuses)) { assert.strictEqual(by[seller]?.[key] ?? 0, monitoring(pick, seller, status), `${seller} ${status}, parking ${pick}`); compared++; }
+    }
+    assert.deepStrictEqual(Object.keys(by).filter(k => !sellers.includes(k)), [], 'no seller row Inventory Monitoring cannot filter on');
+  }
+  assert.ok(compared > 300, 'a real comparison: ' + compared);
+});
+test('menu counts do not follow the Parking pick of Inventory Summary (sidebar, Home), switch on or off', () => {
+  const P = load(), scr = P.byId['report/inventory-summary'], whole = scr.rows().length;
+  P.U(scr.id).applied = { parking: ['IMET PARKING', 'Not recorded'] };
+  assert.ok(scr.rows().length < whole, 'the pick narrows the table');
+  for (const on of [false, true]) {
+    P.setProposed(on);
+    const side = grp(P.sideHtml(''), 'Report'), card = P.homeLayout().split('<section class="hcard">').find(c => c.includes('<b>Report</b>'));
+    assert.match(side, new RegExp(`href="#/report/inventory-summary"[^>]*>Inventory Summary<span class="ptag mini new"[^>]*>New</span><span class="cnt">${whole}</span>`), `sidebar, switch ${on}`);
+    assert.match(card, new RegExp(`href="#/report/inventory-summary">Inventory Summary<span class="ptag mini new"[^>]*>New</span><span class="cnt">${whole}</span>`), `Home, switch ${on}`);
+  }
+  assert.strictEqual(P.countOf(scr), whole); assert.strictEqual(P.countOf(P.byId['report/cancellation-monitoring']), P.CX().length, 'other screens count their rows');
 });

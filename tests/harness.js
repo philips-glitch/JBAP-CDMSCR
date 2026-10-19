@@ -19,7 +19,7 @@ const EXPORTS = ['D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enric
   // JBAP feedback round 2 (16 Oct 2026)
   'routeOf', 'route', 'location', 'MOVED', 'validateEdits', 'entryLayout', 'recordPenaltyPayment', 'parseDateInput', 'dateField', 'queryCard', 'listedAhead', 'newHtml', 'newMini', 'sellerCode', 'filterCard', 'recordSellerPayment', 'recordDeadlineExtension', 'extendError', 'listingsOf', 'releaseDateError',
   // Report > Inventory Monitoring (19 Oct 2026)
-  'inventoryRows', 'sortRows'];
+  'inventoryRows', 'sortRows', 'countOf'];
 function load() {
   const window = { addEventListener() {} };
   new Function('window', fs.readFileSync(path.join(ROOT, 'data.js'), 'utf8'))(window);
