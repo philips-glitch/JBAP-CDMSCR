@@ -498,7 +498,7 @@ const SCREENS = [
       return { pay: notFuture(p) || notBefore(p, r.bdate, 'the Billing Date') || (!p && cr ? 'is required with a Collection Receipt' : null), cr: p && !cr ? 'is required with a Payment Date' : null }; },
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid billings removed from the list.',
     ruleP: ['P3', 'Collection Receipt is typed for now; it will come through JBAP\'s existing NOAH integration once it is re-routed from Access to CDMS.'] },
-  // JBAP feedback (16 Oct 2026, #14): the list under the entry form is the cancellation monitoring (Cancellation Monitoring removed from FAD and SMD)
+  // JBAP feedback (16 Oct 2026, #14): the list under the entry form replaces the FAD and SMD Cancellation Monitoring; Report › Cancellation Monitoring (19 Oct 2026) lists the same cancellations for everyone
   { dept: 'FAD', slug: 'cancellation-entry', title: 'Cancellation Entry', actions: VFSU, layout: 'entry', queue: () => cdmsCancelsPending().length,
     rule: 'Enter the Auction No. and Lot to find the transaction, then record the cancellation. The list below shows every cancellation with its billing and payment dates.',
     ruleP: ['P2', 'Lots already cancelled in CDMS wait at the top: add the waiver decision and Confirm. The record and the penalty billing are the same as for a cancellation entered here.'],
@@ -640,6 +640,32 @@ const SCREENS = [
       { key: 'parking', label: 'Parking Location', type: 'select', options: () => ['OPEN PARKING', 'STEEL PARKING', 'IMET PARKING', 'Not recorded'], match: (r, v) => (r.parking || 'Not recorded') === v },
       { key: 'plate', label: 'Plate Number' }],
     totals: rows => ({ plate: `${rows.length} units`, model: INV_STATUSES.map(t => `${t} ${rows.filter(r => r.inv_status === t).length}`).filter(t => !t.endsWith(' 0')).join(' · ') }) },
+  // JBAP feedback (19 Oct 2026, Q70): one row per seller, like the REPORT sheet of JBAP's parking inventory file; the Parking Location filter chooses which units are counted
+  { id: 'report/inventory-summary', dept: 'Report', title: 'Inventory Summary', actions: VFS, isNew: true,
+    rule: `Units in the yard per seller and inventory status, like the REPORT sheet of JBAP's parking inventory file (proposal, Q70). Units without a seller are grouped as Not recorded. The Parking Location filter narrows the units counted.`,
+    rows: () => {
+      const pk = filterVals(U('report/inventory-summary').applied.parking), by = {};
+      inventoryRows().filter(r => r.yard === 'In yard' && (!pk.length || pk.includes(r.parking || 'Not recorded'))).forEach(u => {
+        const k = u.seller || 'Not recorded', o = by[k] ||= { id: k, seller: k, in_yard: 0, listed: 0, not_listed: 0, awarded: 0, for_release: 0, for_return: 0 };
+        o.in_yard++; const f = { Listed: 'listed', 'Not Listed': 'not_listed', Awarded: 'awarded', 'For Release': 'for_release', 'For Return': 'for_return' }[u.inv_status]; if (f) o[f]++;
+      });
+      return Object.values(by);
+    },
+    sort: ['seller', 'asc'],
+    cols: [C('Seller', 'seller', 'code'), C('In Yard', 'in_yard', 'int'), C('Listed', 'listed', 'int'), C('Not Listed', 'not_listed', 'int'), C('Awarded', 'awarded', 'int'), C('For Release', 'for_release', 'int'), C('For Return', 'for_return', 'int')],
+    filters: [{ key: 'parking', label: 'Parking Location', type: 'select', options: () => ['OPEN PARKING', 'STEEL PARKING', 'IMET PARKING', 'Not recorded'], match: () => true }],   // rows() applies the pick (it chooses the units, not the rows), so the generic filter lets every row through
+    totals: rows => Object.fromEntries([['seller', 'Total'], ...['in_yard', 'listed', 'not_listed', 'awarded', 'for_release', 'for_return'].map(k => [k, intf(sumBy(rows, k))])]) },
+  // JBAP feedback (19 Oct 2026, Q69): the list of every cancellation for FAD and SMD (the old FAD and SMD Cancellation Monitoring links open it); Cancellation Entry keeps its own list under the entry form
+  { id: 'report/cancellation-monitoring', dept: 'Report', title: 'Cancellation Monitoring', actions: VFS, isNew: true,
+    rule: 'Every cancellation, view only, for FAD and SMD (proposal, Q69). Cancellation Entry keeps its own list for recording. Prototype: Seller is blank for cancellations whose lot is not in the sample data.',
+    rows: CX, sort: ['dcancel', 'desc'],
+    cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 220 }), C('Buyer ID', 'cid', 'code'), C('Plate Number', 'plate', 'code'), C('Seller', 'seller', 'code'),
+      C('Date Cancelled', 'dcancel', 'date'), C('Waived?', 'waived', 'rocheck'), C('Justification', 'just', 'text', { w: 240 }), C('Penalty', 'penalty', 'money'), C('Billing Date', 'bill_date', 'date'),
+      C('Date Paid', 'paid_date', 'date'), C('Cancellation Fee Remitted', 'remitted', 'date')],
+    filters: [AUCTION_FILTER, { key: 'customer', keys: ['customer', 'cid'], label: 'Customer Name / Buyer ID', w: 'w2' }, { key: 'plate', label: 'Plate Number' },
+      { key: 'seller', label: 'Seller', type: 'select', options: () => [...sellerOpts(), 'Not recorded'], match: (r, v) => (r.seller || 'Not recorded') === v },   // most sample cancellations are of lots outside the sample, so their seller is unknown
+      { key: 'waived', label: 'Waived', type: 'select', w: 'w1', options: () => ['Yes', 'No'], match: (r, v) => (v === 'Yes') === !!r.waived }],
+    totals: rows => ({ customer: `${rows.length} cancellations`, penalty: money(sumBy(rows, 'penalty')) }) },
 
   // ===================== Customer › Customer Inquiry (read-only; Sales Actions is not part of the prototype) =====================
   { id: CUST_ID, dept: 'Customer', title: 'Customer Inquiry', actions: VFS,
@@ -970,7 +996,7 @@ function proposedPanels() {
 function homeLayout() {
   const card = d => {
     const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}${newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a></li>`).join('');
-    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch, Rebate Monitoring. Live data: Unreleased Unit, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Result Summary, Auction Monitoring and Inventory Monitoring, for FAD, SMD and VWD' }[d];
+    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch, Rebate Monitoring. Live data: Unreleased Unit, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Monitoring and summary reports for FAD, SMD and VWD: results, auctions, inventory, cancellations' }[d];
     const icon = d === 'Report' ? '<img src="assets/ic-report.png" alt="" width="20" height="20">' : deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox');
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
@@ -984,7 +1010,7 @@ function homeLayout() {
 const MOVED = { 'FAD/result-summary': 'report/result-summary', 'SMD/result-summary': 'report/result-summary',
   'FAD/auction-monitoring': 'report/auction-monitoring', 'SMD/auction-monitoring': 'report/auction-monitoring', 'VWD/auction-monitoring': 'report/inventory-monitoring',
   'VWD/inventory': 'report/inventory-monitoring', 'SMD/inventory': 'report/inventory-monitoring',
-  'FAD/cancellation-monitoring': 'FAD/cancellation-entry', 'SMD/cancellation-monitoring': 'FAD/cancellation-entry', 'FAD/cancellation-payment': 'FAD/cancellation-billing' };
+  'FAD/cancellation-monitoring': 'report/cancellation-monitoring', 'SMD/cancellation-monitoring': 'report/cancellation-monitoring', 'FAD/cancellation-payment': 'FAD/cancellation-billing' };
 const moved = h => Object.hasOwn(MOVED, h) ? MOVED[h] : null;   // own keys only: '#/constructor' is neither a moved nor a known screen
 const routeOf = h => { const t = moved(h) || h, scr = Object.hasOwn(byId, t) ? byId[t] : null; return scr && shown(scr) ? t : custRoute(t) ? t : ''; };   // a proposed screen opens only with the switch on
 function route() {

@@ -35,7 +35,7 @@ test('Date Paid: not before the Billing Date; Amount more than 0', () => {
   assert.match(scr.validate(b, { paid_date: '2000-01-01' }).paid_date, /before/);
   assert.match(scr.validate(b, { paid_date: P.TODAY, amount: '0' }).amount, /more than 0/);
 });
-test('Cancellation Entry lists every cancellation with filters; Cancellation Monitoring is gone', () => {
+test('Cancellation Entry lists every cancellation with filters; FAD and SMD no longer have their own Cancellation Monitoring', () => {
   const P = load(), scr = P.byId['FAD/cancellation-entry'];
   assert.strictEqual(P.byId['FAD/cancellation-monitoring'], undefined); assert.strictEqual(P.byId['SMD/cancellation-monitoring'], undefined);
   assert.deepStrictEqual(scr.cols.map(c => c.key), ['auction', 'lot', 'customer', 'cid', 'plate', 'dcancel', 'waived', 'just', 'bill_date', 'paid_date', 'remitted']);
@@ -45,6 +45,6 @@ test('Cancellation Entry lists every cancellation with filters; Cancellation Mon
   P.U(scr.id).applied = { waived: 'No' }; const n = P.applyFilters(scr, scr.rows()); assert.ok(n.length && n.every(r => !r.waived));
   P.U(scr.id).applied = {}; const h = P.entryLayout(scr); assert.match(h, /data-form="filter"/); assert.match(h, /aria-label="Cancellations"/);
 });
-test('35 screens (34 with the Proposed improvements switch off)', () => {
-  const P = load(); assert.strictEqual(P.SCREENS.length, 35); assert.strictEqual(P.SCREENS.filter(P.shown).length, 34);
+test('37 screens (36 with the Proposed improvements switch off)', () => {
+  const P = load(); assert.strictEqual(P.SCREENS.length, 37); assert.strictEqual(P.SCREENS.filter(P.shown).length, 36);
 });
