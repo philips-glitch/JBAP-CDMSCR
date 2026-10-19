@@ -963,7 +963,7 @@ const CUST_LOT_COLS = [C('Auction Month', 'amonth', 'code'), C('Auction No.', 'a
 const CUST_CX_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 200 }),
   C('Date Cancelled', 'dcancel', 'date'), C('Waived?', 'waived', 'rocheck'), C('Justification', 'just', 'text', { w: 240 }), C('Penalty', 'penalty', 'money'), C('Billing Date', 'bill_date', 'date'), C('Paid Date', 'paid_date', 'date')];
 const CUST_DOAS_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
-  C('Seller Payment', 'pay_seller', 'date'), C('Receipt of DOAS', 'rcv_doas', 'date'), C('EWB Call Out', 'ewb_callout', 'date', { isNew: true }), C('Working Days Since Receipt', 'doas_days', 'int')];
+  C('Seller Payment', 'pay_seller', 'date'), C('Receipt of DOAS', 'rcv_doas', 'date'), C('EWB Call Out', 'ewb_callout', 'date', { isNew: true }), C('Working Days Since Receipt / Call Out', 'doas_days', 'int', { isNew: true })];
 const CUST_DOCS_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
   C('JBAP Receipt of Documents', 'orig_docs', 'date'), C('ATF No.', 'atf_no', 'code')];
 // Customer page: Customer Information (not built) and Customer Transaction History (cards, purchases by seller, lot lists as tabs with their own URL)

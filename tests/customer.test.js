@@ -92,8 +92,8 @@ test('customer page: Pending DOAS signature and Documents for release (JBAP, 16 
   assert.ok(b.pending_doas.length > 0 && b.pending_doas.every(v => v.rcv_doas || (v.doas === 'branch' && v.ewb_callout)), 'Receipt of DOAS is filled on every row (EWB: or called out)');
   assert.deepStrictEqual(b.docs_release.map(v => v.id).sort(), mine.filter(v => v.orig_docs && !v.to_buyer).map(v => v.id).sort());
   const h = P.customerPage(cid, 'pending-doas'), t = h.slice(h.indexOf('aria-label="Lot lists"'));
-  for (const x of ['Seller Payment', 'Receipt of DOAS', 'EWB Call Out', 'Working Days Since Receipt']) assert.ok(t.includes(`>${x}<`), x);
-  assert.ok(t.indexOf('>Receipt of DOAS<') < t.indexOf('>EWB Call Out<') && t.indexOf('>EWB Call Out<') < t.indexOf('>Working Days Since Receipt<'), 'EWB Call Out sits after Receipt of DOAS');
+  for (const x of ['Seller Payment', 'Receipt of DOAS', 'EWB Call Out', 'Working Days Since Receipt / Call Out']) assert.ok(t.includes(`>${x}<`), x);
+  assert.ok(t.indexOf('>Receipt of DOAS<') < t.indexOf('>EWB Call Out<') && t.indexOf('>EWB Call Out<') < t.indexOf('>Working Days Since Receipt / Call Out<'), 'EWB Call Out sits after Receipt of DOAS');
   assert.strictEqual((t.match(/<tr data-lot=/g) || []).length, b.pending_doas.length);
   assert.match(t, /aria-current="page">Pending DOAS signature<span class="ptag mini new"[^>]*>New<\/span><span class="cnt">/);
   const withDocs = all.find(v => v.orig_docs && !v.to_buyer).cid, d = P.customerPage(withDocs, 'docs-release');
@@ -194,7 +194,7 @@ test('Pending DOAS signature: who is listed, and the working days (EWB: from Rec
   assert.ok(checked > 10, 'a fair number of EWB lots compared');
 });
 
-test('customer page: the New mark sits on the Pending DOAS signature tab and the EWB Call Out column only', () => {
+test('customer page: the New mark sits on the Pending DOAS signature tab, the EWB Call Out column and the working days column only', () => {
   const P = load(), cid = P.V().find(v => v.doas === 'branch' && v.ewb_callout && !v.ewb_signed && v.cid && v.status === 'Sold').cid;
   for (const tab of ['sold', 'pending-doas']) {   // the tab bar is the same on every list
     const h = P.customerPage(cid, tab), bar = h.slice(h.indexOf('aria-label="Lot lists"'), h.indexOf('</nav>', h.indexOf('aria-label="Lot lists"')));
@@ -202,10 +202,11 @@ test('customer page: the New mark sits on the Pending DOAS signature tab and the
     assert.match(bar, /Pending DOAS signature<span class="ptag mini new" title="[^"]+">New<\/span><span class="cnt">\d+<\/span>/);
   }
   const t = P.customerPage(cid, 'pending-doas');
-  assert.strictEqual((t.match(/class="ptag new"/g) || []).length, 1, 'one New mark on the column heads');
+  assert.strictEqual((t.match(/class="ptag new"/g) || []).length, 2, 'two New marks on the column heads: EWB Call Out and the working days column (its meaning changed)');
+  assert.match(t, /<th scope="col"><span class="hb">Working Days Since Receipt \/ Call Out<span class="ptag new"/);
   assert.match(t, /<th scope="col"><span class="hb">EWB Call Out<span class="ptag new"/);
   assert.doesNotMatch(P.customerPage(cid, 'docs-release'), /<span class="hb">EWB Call Out/, 'other lists do not get the column');
-  assert.match(t, /EWB Call Out[\s\S]*Working Days Since Receipt/);
+  assert.match(t, /EWB Call Out[\s\S]*Working Days Since Receipt \/ Call Out/);
   const rule = t.slice(t.indexOf('<p class="rule">'), t.indexOf('</p>', t.indexOf('<p class="rule">')));
   assert.match(rule, /called out/i, 'the page rule says EWB lots count once called out');
   const lot = P.V().find(v => v.cid === cid && v.doas === 'branch' && v.ewb_callout && !v.ewb_signed);
