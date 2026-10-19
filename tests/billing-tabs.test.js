@@ -29,9 +29,9 @@ test('every grouped screen shows the group heading, breadcrumb and tab bar in ta
   for (const [group, ids] of Object.entries(GROUPS)) {
     for (const id of ids) {
       const s = P.byId[id], h = P.pageHead(s);
-      assert.ok(h.includes(`<h1>${group}</h1>`), `${id} h1`);
+      assert.ok(h.includes(`<h1>${group}${P.newHtml({ isNew: ids.some(x => P.byId[x].isNew) })}</h1>`), `${id} h1`);   // the group heading shows New when one of its tabs is new
       assert.ok(h.includes(`<span>FAD</span>›<span>${group}</span>›<b>${s.title}</b>`), `${id} breadcrumb`);
-      assert.ok(h.includes(`<a href="#/${id}" class="tab is-active" aria-current="page">${s.title}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`), `${id} active tab`);
+      assert.ok(h.includes(`<a href="#/${id}" class="tab is-active" aria-current="page">${s.title}${P.newMini(s)}<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`), `${id} active tab`);
       for (const other of ids.filter(x => x !== id)) assert.ok(h.includes(`<a href="#/${other}" class="tab">`), `${id} links to ${other}`);
       const order = ids.map(x => h.indexOf(`href="#/${x}" class="tab`)); assert.deepStrictEqual([...order].sort((a, b) => a - b), order, `${group} tab order`);
       assert.deepStrictEqual(P.groupOf(s).map(x => x.id), ids);

@@ -28,9 +28,9 @@ test('Pending Awarding: Transfer Fees come from the seller parameters (read-only
   P.U(scr.id).edits[r.id] = { transfer_fee: '99999' }; P.recordAwarding(scr, [r]);
   assert.strictEqual(r._raw.transfer_fee, P.D.vehicles.find(v => v.id === r.id).transfer_fee, 'a stray edit is ignored');
 });
-test('Commission Billing shows the seller code and the auction date; Cancellation Entry shows the Auction No.', () => {
+test('Commission Billing shows the seller code, the Auction No. and the auction date; Cancellation Entry shows the Auction No.', () => {
   const P = load(), cb = P.byId['FAD/commission-billing'];
-  assert.deepStrictEqual(cb.cols.slice(0, 3).map(c => [c.label, c.key]), [['Customer Name', 'customer'], ['Seller', 'seller'], ['Auction Date', 'adate']]);
+  assert.deepStrictEqual(cb.cols.slice(0, 4).map(c => [c.label, c.key]), [['Customer Name', 'customer'], ['Seller', 'seller'], ['Auction No.', 'auction'], ['Auction Date', 'adate']]);
   const scr = P.byId['FAD/cancellation-entry'], v = P.V().find(x => x.status === 'Sold');
   P.U(scr.id).entry = { auction: String(v.auction), lot: v.lot, found: v, errors: {}, note: '', form: { status: 'Sold', date: P.TODAY, waived: false, just: '' } };
   const h = P.entryLayout(scr);

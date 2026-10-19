@@ -355,15 +355,17 @@ const INVENTORY = { slug: 'inventory', title: 'Inventory', actions: VFS, tag: 'W
 
 const SCREENS = [
   // ===================== FAD =====================
-  { dept: 'FAD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFSU,
-    rule: 'Vehicles with status SOLD and a blank Awarding Date. Tick For BAAF and press Email BAAF to award. Transfer Fees come from the seller parameters and are not changed here (JBAP, 16 Oct 2026). Security Bond defaults from the seller settings; override it when needed.',
+  { dept: 'FAD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFSU, isNew: true,
+    rule: 'Vehicles with status SOLD and a blank Awarding Date. Tick For BAAF and press Email BAAF to award. Transfer Fees come from the seller parameters and are not changed here (JBAP, 16 Oct 2026). Security Bond defaults from the seller settings; override it when needed. Rebate is entered here before the BAAF (proposal, Q73).',
     rows: () => sold().filter(v => !v.awarding), sort: ['lot', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('For BAAF', 'for_baaf', 'check', { edit: 'check' }), C('Seller Approved', 'saaf_approved', 'date', { proposed: true, tag: 'P5' }),
-      C('Awarding Date', 'awarding', 'date', { edit: 'date' }), C('Rebate', 'rebate', 'money'), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
+      C('Awarding Date', 'awarding', 'date', { edit: 'date' }), C('Rebate', 'rebate', 'money', { edit: 'money', isNew: true }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
       C('Make/Model', 'model', 'text', { w: 210 }), C('Result Price', 'price', 'money'), C('Transfer Fees', 'transfer_fee', 'money'), C('Security Bond', 'security_bond', 'money', { edit: 'money' })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
+    // [BEHAVIOR] JBAP feedback (19 Oct 2026, proposal Q73): the rebate is entered before the BAAF; 0 or more, not above the result price; blank = none
     validate: (r, e) => ({ awarding: notFuture(e.awarding) || notBefore(e.awarding, r.auction_end, 'the auction end'),
-      security_bond: 'security_bond' in e && (e.security_bond === '' || Number(e.security_bond) < 0) ? 'must be 0 or more' : null }),
+      security_bond: 'security_bond' in e && (e.security_bond === '' || Number(e.security_bond) < 0) ? 'must be 0 or more' : null,
+      rebate: 'rebate' in e && e.rebate !== '' ? (Number(e.rebate) < 0 ? 'must be 0 or more' : r.price != null && Number(e.rebate) > r.price ? 'cannot be more than the result price' : null) : null }),
     buttons: [{ label: 'Email BAAF', kind: 'ol', icon: 'mail', act: 'emailBaaf', count: 'for_baaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Vehicles with an Awarding Date moved to Unpaid.',
     queue: true, ready: { key: 'for_baaf', when: r => !!r.saaf_approved },
@@ -378,7 +380,7 @@ const SCREENS = [
     validate: (r, e) => ({ buyer_paid: notFuture(e.buyer_paid) || notBefore(e.buyer_paid, r.awarding, 'the Awarding Date') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Paid vehicles moved to Payment Seller.' },
-  { dept: 'FAD', slug: 'payment-seller', title: 'Payment Seller', actions: VFSU, rule: 'Vehicles with status SOLD, a Buyer Paid date, and a blank Payment to Seller date. Deadline = 3 working days after Buyer Paid. To JBAP = commission + VAT − 15% withholding tax (NET sellers); Payable to Seller = total − To JBAP.',
+  { dept: 'FAD', slug: 'payment-seller', title: 'Payment Seller', actions: VFSU, isNew: true, rule: 'Vehicles with status SOLD, a Buyer Paid date, and a blank Payment to Seller date. Deadline = 3 working days after Buyer Paid. To JBAP = commission + VAT − 15% withholding tax (NET sellers); Payable to Seller = total − To JBAP. Printing records the payment date on every printed lot (JBAP, 19 Oct 2026).',
     rows: () => sold().filter(v => v.buyer_paid && !v.pay_seller), sort: ['pay_deadline', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction No.', 'auction', 'code'), C('Plate Number', 'plate', 'code'),
       C('Total (Awarded Price + Transfer Fees + Security Bond)', 'total', 'money'), C('To JBAP', 'to_jbap', 'money'), C('Payable to Seller', 'payable', 'money'), C('Payment to Seller Date', 'pay_seller', 'date', { edit: 'date' }), C('Payment Voucher No.', 'voucher_no', 'text', { edit: 'text', proposed: true, tag: 'P3' }),
@@ -386,7 +388,7 @@ const SCREENS = [
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     totals: rows => ({ total: money(sumBy(rows, 'total')), to_jbap: money(sumBy(rows, 'to_jbap')), payable: money(sumBy(rows, 'payable')) }),
     validate: (r, e) => ({ pay_seller: notFuture(e.pay_seller) || notBefore(e.pay_seller, r.buyer_paid, 'Buyer Paid') }),
-    buttons: [{ label: 'Print payment to seller', kind: 'ol', icon: 'print', act: 'printSeller', count: 'print_seller' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
+    buttons: [{ label: 'Record payment date & print', kind: 'ol', icon: 'print', act: 'printSeller', count: 'print_seller', isNew: true }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Paid sellers moved to Seller Acknowledgement and Commission Billing.',
     queue: true, ready: { key: 'print_seller', when: () => true },
     ruleP: ['P4', 'Every lot arrives pre-ticked for printing; untick a lot to hold it back. Payment Voucher No. (P3) is typed for now; it will come through JBAP\'s existing NOAH integration once it is re-routed from Access to CDMS.'] },
@@ -473,10 +475,10 @@ const SCREENS = [
     validate: (r, e) => ({ rebate_paid: notFuture(e.rebate_paid) || notBefore(e.rebate_paid, r.buyer_paid, 'Buyer Paid') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid rebates removed from the list.' },
   // FAD › Billing: Commission Billing first, then Billing Monitoring and Unpaid Billing (tabs in this order; user requests of 15 and 16 Oct 2026)
-  { dept: 'FAD', slug: 'commission-billing', title: 'Commission Billing', group: 'Billing', actions: VSU,
+  { dept: 'FAD', slug: 'commission-billing', title: 'Commission Billing', group: 'Billing', actions: VSU, isNew: true,
     rule: 'Result price records with a Remittance Date and no commission billing yet. Tick Print?, then Print commission billing to record the NOAH billing number and date.',
     rows: () => sold().filter(v => v.pay_seller && !v.billed), sort: ['customer', 'asc'],
-    cols: [C('Customer Name', 'customer', 'text', { w: 260 }), C('Seller', 'seller', 'code'), C('Auction Date', 'adate', 'code'), C('Plate Number', 'plate', 'code'), C('Print?', 'print_comm', 'check', { edit: 'check' }), C('Remittance Date', 'pay_seller', 'date'),
+    cols: [C('Customer Name', 'customer', 'text', { w: 260 }), C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code', { isNew: true }), C('Auction Date', 'adate', 'code'), C('Plate Number', 'plate', 'code'), C('Print?', 'print_comm', 'check', { edit: 'check' }), C('Remittance Date', 'pay_seller', 'date'),
       C('Winning Bid', 'price', 'money'), C('Commission', 'com', 'money'), C('VAT', 'cvat', 'money'), C('Total', 'ctotal', 'money')],
     totals: rows => ({ plate: `${rows.length} units`, price: money(sumBy(rows, 'price')), com: money(sumBy(rows, 'com')), cvat: money(sumBy(rows, 'cvat')), ctotal: money(sumBy(rows, 'ctotal')) }),
     buttons: [{ label: 'Print commission billing', kind: 'ol', icon: 'print', act: 'printComm', count: 'print_comm' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
@@ -1042,6 +1044,14 @@ function recordBillingTransmittal(scr, rows) {
   const ui = U(scr.id);
   rows.forEach(r => { logChange(scr, 'Update', r, [['Transmittal Date', 'date', r._raw.trans, TODAY], ['Print Transmittal?', 'check', r._raw.print_trans, false]]); r._raw.trans = TODAY; r._raw.print_trans = false; delete ui.edits[r.id]; });
 }
+// [BEHAVIOR] JBAP feedback (19 Oct 2026, FAD #1): printing the payment to seller records the payment date on every printed lot
+function recordSellerPayment(scr, rows, iso) {
+  rows.forEach(r => {
+    logChange(scr, 'Update', r, [['Payment to Seller Date', 'date', r._raw.pay_seller, iso], ['Print Payment to Seller', 'check', r._raw.print_seller, false]]);
+    r._raw.pay_seller = iso; r._raw.print_seller = false;
+    clearTick(scr, r.id, 'print_seller'); clearTick(scr, r.id, 'pay_seller');   // a date typed on the row is replaced by the recorded one
+  });
+}
 // [BEHAVIOR] Sending the dispatch notice sets the Dispatch Date (date entered on the row, else today); pull-out deadline = 3 working days later
 function recordDispatch(scr, rows, dateFor) {
   const ui = U(scr.id);
@@ -1053,9 +1063,10 @@ function recordAwarding(scr, rows) {
   rows.forEach(r => {
     const e = ui.edits[r.id] || {}, award = e.awarding || TODAY, tf = r._raw.transfer_fee;
     const sb = 'security_bond' in e && e.security_bond !== '' ? Number(e.security_bond) : r.security_bond, bond = !!(sb || r.security_bond);   // a bond, or a bond overridden to 0
+    const rb = 'rebate' in e ? (e.rebate === '' ? null : Number(e.rebate)) : r._raw.rebate;   // JBAP feedback (19 Oct 2026): the rebate typed on this screen is saved with the awarding
     logChange(scr, 'Update', r, [['Awarding Date', 'date', r._raw.awarding, award], ['Transfer Fees', 'money', r._raw.transfer_fee, tf],
-      ...(bond ? [['Security Bond', 'money', r._raw.security_bond ?? null, sb]] : []), ['For BAAF', 'check', r._raw.for_baaf, false]]);
-    r._raw.awarding = award; r._raw.transfer_fee = tf; if (bond) r._raw.security_bond = sb; r._raw.for_baaf = false; delete ui.edits[r.id];
+      ...(bond ? [['Security Bond', 'money', r._raw.security_bond ?? null, sb]] : []), ['Rebate', 'money', r._raw.rebate ?? null, rb], ['For BAAF', 'check', r._raw.for_baaf, false]]);
+    r._raw.awarding = award; r._raw.transfer_fee = tf; if (bond) r._raw.security_bond = sb; r._raw.rebate = rb; r._raw.for_baaf = false; delete ui.edits[r.id];
   });
 }
 // [BEHAVIOR] VWD releases only when the seller's DOAS is signed (DOAS sellers) and no storage penalty is unpaid (JBAP Q17).
@@ -1163,7 +1174,8 @@ const ACTIONS = {
     setMsg(scr, null); render();
     const groups = {}; rows.forEach(r => (groups[r.cid] ||= []).push(r));
     const eff = (r, k) => (k in (ui.edits[r.id] || {}) ? ui.edits[r.id][k] : r[k]);
-    const lotsOf = list => list.map(r => Object.assign({}, r, { transfer_fee: Number(eff(r, 'transfer_fee') || 0), security_bond: Number(eff(r, 'security_bond') || 0) }));
+    const lotsOf = list => list.map(r => Object.assign({}, r, { transfer_fee: Number(eff(r, 'transfer_fee') || 0), security_bond: Number(eff(r, 'security_bond') || 0),
+      rebate: (v => v === '' || v == null ? null : Number(v))(eff(r, 'rebate')) }));   // the rebate typed on the screen goes on the BAAF rebate attachment before it is saved
     const buyerOf = list => ({ customer: list[0].customer, cid: list[0].cid, email: list[0].email });
     const docs = {};
     const mails = Object.values(groups).map(list => {
@@ -1202,9 +1214,19 @@ const ACTIONS = {
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Print Payment to Seller</b> on at least one vehicle first.'); render(); return; }
     setMsg(scr, null); render();
     const groups = {}; rows.forEach(r => (groups[r.seller] ||= []).push(r));
-    const body = Object.entries(groups).map(([code, list]) => REPORTS.payableToSeller(code, list, TODAY)).join('');
-    openModal({ title: 'Print payment to seller', icon: 'print', wide: true, body, note: 'Support for the manual disbursement preparation.',
-      footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
+    const reports = Object.entries(groups).map(([code, list]) => REPORTS.payableToSeller(code, list, TODAY)).join('');
+    const body = `<div class="fgrid two no-print" style="padding:0 0 12px"><div class="fld"><label for="ps-date">Payment date</label>${dateField('ps-date', TODAY)}<span class="err" id="ps-date-err"></span></div></div>${reports}`;
+    openModal({ title: 'Print payment to seller', icon: 'print', wide: true, body, note: 'Records the payment date on every printed lot.',
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record payment date & print', kind: 'pr', icon: 'print', onClick: () => {
+        const iso = parseDateInput($('#ps-date').value, TODAY), latest = rows.map(r => r.buyer_paid).filter(Boolean).sort().pop();
+        const err = iso === null ? 'Type the date as mm/dd/yyyy, or t for today.' : !iso ? 'Payment date is required.' : iso > TODAY ? 'Cannot be after today.'
+          : latest && iso < latest ? `Cannot be before ${fmtDate(latest)} (the latest Buyer Paid of these lots).` : '';
+        $('#ps-date-err').textContent = err; $('#ps-date').classList.toggle('is-invalid', !!err);
+        if (err) { $('#ps-date').focus(); return; }
+        recordSellerPayment(scr, rows, iso); render();
+        openModal({ title: 'Print payment to seller', icon: 'print', wide: true, body: reports, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
+        printModal(); toast(`Payment to Seller date ${fmtDate(iso)} recorded on ${rows.length} lot(s). They moved to Seller Acknowledgement and Commission Billing.`);
+      } }] });
   },
   printComm(scr) {
     const rows = selectedRows(scr, 'print_comm');

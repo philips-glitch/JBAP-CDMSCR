@@ -11,7 +11,7 @@ test('New badge on screens, menu items, columns and buttons marked isNew; nothin
   const card = P.dataCard(scr, 'x');
   assert.match(card, /<span>Auction Number<\/span>[^]*?<span class="ptag new"/);
   assert.match(card, /data-act="save">[^]*?Save changes<span class="ptag new"/);
-  assert.doesNotMatch(P.pageHead(P.byId['FAD/payment-seller']), /ptag new/);
+  assert.doesNotMatch(P.pageHead(P.byId['FAD/seller-acknowledgement']), /ptag new/);
   P.byId['FAD/rebate-payable'].isNew = true;
   assert.match(P.sideHtml(''), />Rebate<span class="ptag mini new"/, 'a group shows New when one of its screens is new');
 });
