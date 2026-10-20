@@ -69,7 +69,7 @@ test('rebate workbook escapes text and writes dates as Excel dates', () => {
 });
 test('FAD Rebate Monitoring shows the key report columns with totals; SMD keeps its Access snapshot columns', () => {
   const P = load(), scr = P.byId['FAD/rebate-monitoring'], rows = scr.rows();
-  assert.deepStrictEqual(scr.cols.map(c => c.label), ['Auction No.', 'Lot', 'Plate Number', 'Make/Model', 'Seller', 'Buyer', 'Minimum Bid', 'Highest Offer', 'Rebate', 'Commission', 'Revenue (Net of Rebate)', 'Date Remitted']);
+  assert.deepStrictEqual(scr.cols.map(c => c.label), ['Auction No.', 'Lot', 'Plate Number', 'Make/Model', 'Seller', 'Buyer', 'Minimum Bid', 'Highest Offer', 'Rebate', 'Rebate Approved (President)', 'Commission', 'Revenue (Net of Rebate)', 'Date Remitted']);
   assert.deepStrictEqual(P.byId['SMD/rebate-monitoring'].cols.map(c => c.key), ['adate', 'lot', 'customer', 'plate', 'rebate', 'buyer_paid', 'rebate_paid']);
   const v = rows.find(r => r.price && r.com), x = P.rebateRecord(v);
   assert.deepStrictEqual([v.min_bid, v.highest_offer, v.rebate_revenue], [x.minBid, x.highestOffer, x.revenue], 'screen and download agree');

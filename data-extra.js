@@ -15,6 +15,9 @@
     V050: { bond_orcr_jbap: '2026-10-06', bond_orcr_seller: '2026-10-07' },
     V054: { bond_forfeited: '2026-10-07', bond_remarks: 'Sample: buyer did not transfer the ORCR' } };
   D.vehicles.forEach(v => { if (bond[v.id]) Object.assign(v, bond[v.id]); });
+  // [MOCK] JBAP answer Q5 (20 Oct 2026): rebate approval date (Rebate Approved (President)) on two Pending Awarding lots that already carry a rebate in the Access data:
+  // V102 and V095 show a date, so FAD can award them; V092 (also SAAF-approved, so pre-ticked with the switch on), V067, V074 and V082 have a rebate and no date yet, so Email BAAF holds them back.
+  D.vehicles.forEach(v => { const d = { V102: '2026-08-25', V095: '2026-09-28' }[v.id]; if (d) v.rebate_approved = d; });
   // [MOCK] P2: lots cancelled in CDMS that FAD has not recorded yet (FAD confirms them on Cancellation Entry)
   D.cdmsCancels = [
     { vid: 'V107', date: '2026-09-29', reason: 'Buyer did not pay within the buyer deadline' },
