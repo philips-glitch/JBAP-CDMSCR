@@ -73,10 +73,10 @@ test('customer page: Customer Information is disabled, Transaction History shows
   for (const k of ['Lots bought', 'Total bought (PHP)', 'Pending awarding', 'Unpaid', 'Cancellations']) assert.ok(html.includes(`>${k}<`), k);
   assert.ok(html.includes(money(b.sold.reduce((a, v) => a + (v.price || 0), 0))), 'total bought');
   for (const h of ['Seller', 'Seller Name', 'Units Bought', 'Total Amount (PHP)', 'Unpaid Units', 'Last Auction']) assert.ok(html.includes(`>${h}<`), h);
-  for (const [slug, label, n] of [['sold', 'Sold', b.sold.length], ['pending-awarding', 'Pending Awarding', b.pending.length], ['unpaid', 'Unpaid', b.unpaid.length], ['pending-doas', 'Pending DOAS signature', b.pending_doas.length], ['docs-release', 'Documents for release', b.docs_release.length], ['cancellation', 'Cancellation', b.cancels.length]])
-    assert.match(html, new RegExp(`href="#/customer/${cid}${slug === 'sold' ? '' : '/' + slug}"[^>]*>${label}${slug === 'pending-doas' ? '<span class="ptag mini new"[^>]*>New</span>' : ''}<span class="cnt">${n}</span>`), slug);   // only Pending DOAS signature carries the New mark (Q82)
+  for (const [slug, label, n] of [['sold', 'Sold', b.sold.length], ['pending-awarding', 'Pending Awarding', b.pending.length], ['unpaid', 'Unpaid', b.unpaid.length], ['vehicle-release', 'Vehicle for release', b.for_release.length], ['pending-doas', 'Pending DOAS signature', b.pending_doas.length], ['docs-release', 'Documents for release', b.docs_release.length], ['cancellation', 'Cancellation', b.cancels.length]])
+    assert.match(html, new RegExp(`href="#/customer/${cid}${slug === 'sold' ? '' : '/' + slug}"[^>]*>${label}${['pending-doas', 'vehicle-release'].includes(slug) ? '<span class="ptag mini new"[^>]*>New</span>' : ''}<span class="cnt">${n}</span>`), slug);   // Pending DOAS signature (Q82) and Vehicle for release (Q21) carry the New mark
   assert.doesNotMatch(html, /Sales Actions/, 'no Sales Actions tab');
-  for (const h of ['Auction Month', 'Auction No.', 'Lot', 'Plate', 'Make/Model', 'Result Price', 'Notarial', 'Commission', 'Total', 'Step']) assert.ok(html.includes(`>${h}<`), h);
+  for (const h of ['Auction Month', 'Auction No.', 'Lot', 'Plate', 'Make/Model', 'Result Price', 'Notarial', 'Commission', 'Total', 'Step', 'Date of Release / Return']) assert.ok(html.includes(`>${h}<`), h);
   const lotTable = html.slice(html.indexOf('aria-label="Lot lists"'));
   assert.strictEqual((lotTable.match(/<tr data-lot=/g) || []).length, b.sold.length, 'one row per sold lot');
   assert.match(lotTable, new RegExp(`<tfoot><tr><td[^>]*>Total \\(${b.sold.length}\\)</td>`));
@@ -194,11 +194,12 @@ test('Pending DOAS signature: who is listed, and the working days (EWB: from Rec
   assert.ok(checked > 10, 'a fair number of EWB lots compared');
 });
 
-test('customer page: the New mark sits on the Pending DOAS signature tab, the EWB Call Out column and the working days column only', () => {
+test('customer page: the New mark sits on the Vehicle for release and Pending DOAS signature tabs, the EWB Call Out column and the working days column (and Date of Release / Return on Sold)', () => {
   const P = load(), cid = P.V().find(v => v.doas === 'branch' && v.ewb_callout && !v.ewb_signed && v.cid && v.status === 'Sold').cid;
   for (const tab of ['sold', 'pending-doas']) {   // the tab bar is the same on every list
     const h = P.customerPage(cid, tab), bar = h.slice(h.indexOf('aria-label="Lot lists"'), h.indexOf('</nav>', h.indexOf('aria-label="Lot lists"')));
-    assert.strictEqual((bar.match(/ptag/g) || []).length, 1, `${tab}: one New mark in the tab bar`);
+    assert.strictEqual((bar.match(/ptag/g) || []).length, 2, `${tab}: two New marks in the tab bar`);
+    assert.match(bar, /Vehicle for release<span class="ptag mini new" title="[^"]+">New<\/span><span class="cnt">\d+<\/span>/);
     assert.match(bar, /Pending DOAS signature<span class="ptag mini new" title="[^"]+">New<\/span><span class="cnt">\d+<\/span>/);
   }
   const t = P.customerPage(cid, 'pending-doas');
