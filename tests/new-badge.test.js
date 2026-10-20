@@ -12,6 +12,9 @@ test('New badge on screens, menu items, columns and buttons marked isNew; nothin
   assert.match(card, /<span>Auction Number<\/span>[^]*?<span class="ptag new"/);
   assert.match(card, /data-act="save">[^]*?Save changes<span class="ptag new"/);
   assert.doesNotMatch(P.pageHead(P.byId['FAD/seller-acknowledgement']), /ptag new/);
-  P.byId['FAD/rebate-payable'].isNew = true;
-  assert.match(P.sideHtml(''), />Rebate<span class="ptag mini new"/, 'a group shows New when one of its screens is new');
+  const rb = ['SMD/rebate-monitoring', 'SMD/rebate-payable'].map(id => P.byId[id]);   // SMD › Rebate: both tabs are new (20 Oct 2026), so the group is
+  assert.ok(rb.every(s => s.isNew) && !P.byId['FAD/rebate-monitoring'].isNew, 'SMD Rebate tabs are New; FAD Rebate Monitoring is not');
+  assert.match(P.sideHtml(''), />Rebate<span class="ptag mini new"/);
+  rb.forEach(s => { s.isNew = false; }); assert.doesNotMatch(P.sideHtml(''), />Rebate<span class="ptag mini new"/, 'no new tab, no badge on the group');
+  rb[1].isNew = true; assert.match(P.sideHtml(''), />Rebate<span class="ptag mini new"/, 'a group shows New when one of its screens is new');
 });

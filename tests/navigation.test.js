@@ -18,7 +18,7 @@ test('old links of moved or merged screens open their new place', () => {
   const P = load();
   const want = { 'FAD/result-summary': 'report/result-summary', 'SMD/result-summary': 'report/result-summary', 'FAD/auction-monitoring': 'report/auction-monitoring',
     'SMD/auction-monitoring': 'report/auction-monitoring', 'VWD/auction-monitoring': 'report/inventory-monitoring', 'FAD/cancellation-monitoring': 'report/cancellation-monitoring',
-    'SMD/cancellation-monitoring': 'report/cancellation-monitoring', 'FAD/cancellation-payment': 'FAD/cancellation-billing' };
+    'SMD/cancellation-monitoring': 'report/cancellation-monitoring', 'FAD/cancellation-payment': 'FAD/cancellation-billing', 'FAD/rebate-payable': 'SMD/rebate-payable' };
   for (const [from, to] of Object.entries(want)) assert.strictEqual(P.routeOf(from), to, from);
   assert.strictEqual(P.routeOf('FAD/unpaid'), 'FAD/unpaid'); assert.strictEqual(P.routeOf('nope'), ''); assert.strictEqual(P.routeOf('customer/B0313'), 'customer/B0313');
   for (const h of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) assert.strictEqual(P.routeOf(h), '', `'#/${h}' is not a screen (inherited object properties are not routes)`);
@@ -35,7 +35,7 @@ test('route(): an inherited property name in the address is not a moved screen, 
 });
 test('sidebar: every menu item shows its record count; grouped entries and Log Activity do not', () => {
   const P = load(), side = P.sideHtml('');
-  for (const id of ['FAD/unpaid', 'FAD/document-monitoring', 'FAD/security-bond', 'SMD/unpaid', 'VWD/for-dispatch', 'customer-inquiry', 'report/result-summary']) {
+  for (const id of ['FAD/unpaid', 'FAD/document-monitoring', 'FAD/security-bond', 'FAD/rebate-monitoring', 'SMD/unpaid', 'VWD/for-dispatch', 'customer-inquiry', 'report/result-summary']) {
     const s = P.byId[id];
     assert.match(side, new RegExp(`href="#/${id}"[^>]*>${s.title}(<span class="ptag[^<]*</span>)?<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`), id);
   }
@@ -53,5 +53,5 @@ test('sidebar: a grouped entry carries the tag of its tagged screen (SMD Return 
     for (const g of ['Billing', 'Rebate']) assert.doesNotMatch(entry(side, g).replace(/<span class="ptag mini new"[^>]*>New<\/span>/, ''), /ptag/, `${g} has no tag of its own`);
   }
   P.setProposed(false);
-  assert.ok(!['FAD/commission-billing', 'FAD/billing-monitoring', 'FAD/unpaid-billing', 'FAD/rebate-monitoring', 'FAD/rebate-payable'].some(id => P.byId[id].tag), 'no Billing or Rebate screen is tagged');
+  assert.ok(!['FAD/commission-billing', 'FAD/billing-monitoring', 'FAD/unpaid-billing', 'FAD/rebate-monitoring', 'SMD/rebate-monitoring', 'SMD/rebate-payable'].some(id => P.byId[id].tag), 'no Billing or Rebate screen is tagged');
 });

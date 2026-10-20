@@ -396,9 +396,13 @@ const resultTotals = rows => { const u = sumBy(rows, 'units'), t = sumBy(rows, '
 const UNREL_COLS = [C('Customer Name', 'customer', 'text', { w: 280 }), C('Auction No.', 'auction', 'code'), C('Make/Model', 'model', 'text', { w: 240 }), C('Plate Number', 'plate', 'code'),
   C('Location', 'location', 'code'), C('Dispatch Deadline', 'dispatch_deadline', 'date', { late: true }), C('Penalty', 'penalty', 'money')];
 const UNREL_FILTERS = [AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }, { key: 'dispatch_deadline', label: 'Dispatch Deadline', type: 'daterange', w: 'w2' }];
-const REBMON_COLS = [   // SMD Rebate Monitoring (Access snapshot); FAD has its own columns from JBAP's Rebate Monitoring file
-  C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 320 }), C('Plate', 'plate', 'code'),
-  C('Rebate', 'rebate', 'money'), C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date')];
+// [BEHAVIOR] Rebate Monitoring: FAD's screen and SMD › Rebate › Rebate Monitoring (since the user request of 20 Oct 2026) are the same live list, so both take their rows, sorting, columns and totals from REBMON and stay equal.
+// The key columns of JBAP's Rebate Monitoring file (user choice of 16 Oct 2026); Month, VCN, Year, Color, Buyer ID and Awarded Price stay in the download only
+const REBMON_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 180 }), C('Seller', 'seller', 'code'),
+  C('Buyer', 'customer', 'text', { w: 220 }), C('Minimum Bid', 'min_bid', 'money'), C('Highest Offer', 'highest_offer', 'money'), C('Rebate', 'rebate', 'money'), C('Rebate Approved (President)', 'rebate_approved', 'date', { isNew: true }),
+  C('Commission', 'com', 'money'), C('Revenue (Net of Rebate)', 'rebate_revenue', 'money'), C('Date Remitted', 'rebate_paid', 'date')];
+const REBMON = { rows: () => sold().filter(v => v.rebate), sort: ['auction_lot', 'desc'], cols: REBMON_COLS,
+  totals: rows => ({ plate: `${rows.length} lots`, rebate: money(sumBy(rows, 'rebate')), com: money(sumBy(rows, 'com')), rebate_revenue: money(sumBy(rows, 'rebate_revenue')) }) };
 const SCREENS = [
   // ===================== FAD =====================
   { dept: 'FAD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFSU, isNew: true,
@@ -506,23 +510,11 @@ const SCREENS = [
     cols: [C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }),
       C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller Deadline', 'pay_deadline', 'date'), C('Total (Result Price + Transfer Fees + Security Bond)', 'total', 'money')],
     totals: rows => ({ seller: 'Total liability to sellers', total: money(sumBy(rows, 'total')) }) },
-  // FAD › Rebate: Rebate Monitoring and Rebate Payable as two tabs (user request of 16 Oct 2026); SMD keeps its own Rebate Monitoring
-  // The key columns of JBAP's Rebate Monitoring file (user choice of 16 Oct 2026); Month, VCN, Year, Color, Buyer ID and Awarded Price stay in the download only
-  { dept: 'FAD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', group: 'Rebate', actions: VS,
+  // FAD › Rebate Monitoring (one menu entry; until 20 Oct 2026 it was a tab of a FAD menu Rebate, and Rebate Payable has moved to SMD › Rebate). The columns come from REBMON, shared with SMD.
+  { dept: 'FAD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', actions: VS,
     rule: 'Result price records with status SOLD and a rebate. Minimum Bid = Awarded Price, Highest Offer = Minimum Bid − Rebate, Revenue = Commission − Rebate (JBAP\'s Rebate Monitoring file). Download report saves an Excel file of the rebates in an auction range with all the file\'s columns. Rebate Approved (President) is blank for lots awarded before the approval date was recorded.',
-    rows: () => sold().filter(v => v.rebate), sort: ['auction_lot', 'desc'],
-    cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 180 }), C('Seller', 'seller', 'code'),
-      C('Buyer', 'customer', 'text', { w: 220 }), C('Minimum Bid', 'min_bid', 'money'), C('Highest Offer', 'highest_offer', 'money'), C('Rebate', 'rebate', 'money'), C('Rebate Approved (President)', 'rebate_approved', 'date', { isNew: true }),
-      C('Commission', 'com', 'money'), C('Revenue (Net of Rebate)', 'rebate_revenue', 'money'), C('Date Remitted', 'rebate_paid', 'date')],
-    totals: rows => ({ plate: `${rows.length} lots`, rebate: money(sumBy(rows, 'rebate')), com: money(sumBy(rows, 'com')), rebate_revenue: money(sumBy(rows, 'rebate_revenue')) }),
+    ...REBMON,
     buttons: [{ label: 'Download report', kind: 'ol', icon: 'download', act: 'downloadRebate', view: true }] },   // view: shown on a view-only screen (it changes no data)
-  { dept: 'FAD', slug: 'rebate-payable', title: 'Rebate Payable', group: 'Rebate', actions: VSU, rule: 'Result price records with status SOLD, a rebate, a Buyer Paid date, and a blank Rebate Paid date.',
-    rows: () => sold().filter(v => v.rebate && v.buyer_paid && !v.rebate_paid), sort: ['adate', 'asc'],
-    cols: [C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 360 }), C('Rebate', 'rebate', 'money'),
-      C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date', { edit: 'date' })],
-    totals: rows => ({ rebate: money(sumBy(rows, 'rebate')) }),
-    validate: (r, e) => ({ rebate_paid: notFuture(e.rebate_paid) || notBefore(e.rebate_paid, r.buyer_paid, 'Buyer Paid') }),
-    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid rebates removed from the list.' },
   // FAD › Billing: Commission Billing first, then Billing Monitoring and Unpaid Billing (tabs in this order; user requests of 15 and 16 Oct 2026)
   { dept: 'FAD', slug: 'commission-billing', title: 'Commission Billing', group: 'Billing', actions: VSU, isNew: true,
     rule: 'Result price records with a Remittance Date and no commission billing yet. Tick Print?, then Print commission billing to record the NOAH billing number and date.',
@@ -584,10 +576,10 @@ const SCREENS = [
     validate: (r, e) => ({ rts_fad_ok: notFuture(e.rts_fad_ok) || notBefore(e.rts_fad_ok, r.rts_smd_ok, 'the SMD Manager approval') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Approved units moved to VWD › For Return to Seller.' },
 
-  // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch and Rebate Monitoring; live data on Unreleased Unit, Return to Seller, SMD Manager Approval and SAAF) =====================
-  // JBAP answer Q11 (20 Oct 2026): SMD's update screen for the SAAF is standard (it was proposal P5); live data, unlike SMD's five legacy-sample screens
+  // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch; live data on SAAF, Unreleased Unit, Rebate Monitoring, Rebate Payable, Return to Seller and SMD Manager Approval) =====================
+  // JBAP answer Q11 (20 Oct 2026): SMD's update screen for the SAAF is standard (it was proposal P5); live data, unlike SMD's four legacy-sample screens
   { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU, isNew: true,
-    rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch and Rebate Monitoring in SMD still show the legacy sample). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; the date shows in FAD Pending Awarding (JBAP answer Q11).',
+    rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch in SMD still show the legacy sample). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; the date shows in FAD Pending Awarding (JBAP answer Q11).',
     rows: () => sold().filter(v => !v.awarding), sort: ['seller', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
       C('Awarded Price', 'price', 'money'), C('For SAAF', 'for_saaf', 'check', { edit: 'check', disabledWhen: r => !!r.saaf_approved }), C('SAAF Sent', 'saaf_sent', 'date'), C('Seller Approved', 'saaf_approved', 'date', { edit: 'date' })],
@@ -626,8 +618,18 @@ const SCREENS = [
     rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'],
     cols: [...UNREL_COLS.map(c => c.key === 'location' ? Object.assign({}, c, { isNew: true }) : c), C('Penalty Paid', 'penalty_paid', 'money', { isNew: true })], filters: UNREL_FILTERS,   // Location is new to SMD only: an SMD copy carries the mark, FAD and VWD share the unmarked column
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), penalty_paid: money(sumBy(rows, 'penalty_paid')) }) },
-  { dept: 'SMD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', actions: VS, rule: 'Result price records with status SOLD and a rebate.',
-    rows: () => SMD('rebates'), cols: REBMON_COLS, sort: ['buyer_paid', 'desc'] },
+  // SMD › Rebate (user request of 20 Oct 2026): Rebate Monitoring (the live list FAD shows, view only) and Rebate Payable (moved from FAD; SMD records Rebate Paid)
+  { dept: 'SMD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', group: 'Rebate', actions: VS, isNew: true,
+    rule: 'Result price records with status SOLD and a rebate: live data, the same list and columns as FAD Rebate Monitoring (user request, 20 Oct 2026). View only: no Download report here, it is in FAD Rebate Monitoring.',
+    ...REBMON },
+  { dept: 'SMD', slug: 'rebate-payable', title: 'Rebate Payable', group: 'Rebate', actions: VSU, isNew: true,
+    rule: 'Result price records with status SOLD, a rebate, a Buyer Paid date, and a blank Rebate Paid date. SMD records Rebate Paid (it was in FAD until the user request of 20 Oct 2026); a paid rebate leaves this list and shows as Date Remitted in Rebate Monitoring.',
+    rows: () => sold().filter(v => v.rebate && v.buyer_paid && !v.rebate_paid), sort: ['adate', 'asc'],
+    cols: [C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 360 }), C('Rebate', 'rebate', 'money'),
+      C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date', { edit: 'date' })],
+    totals: rows => ({ rebate: money(sumBy(rows, 'rebate')) }),
+    validate: (r, e) => ({ rebate_paid: notFuture(e.rebate_paid) || notBefore(e.rebate_paid, r.buyer_paid, 'Buyer Paid') }),
+    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid rebates removed from the list.' },
   { dept: 'SMD', slug: 'return-to-seller', title: 'Return to Seller', group: 'Return to Seller', actions: VFSU, tag: 'Wish', isNew: true,
     rule: `Units with status Not Sold or Cancelled that are not listed in an ongoing or future auction (JBAP, 16 Oct 2026), with no clearance yet. Tick For Return, then Print & email clearance form: one form per seller, emailed to FAD and VWD. Then the SMD Manager and the FAD Manager approve in CDMS (proposal, Q76); VWD sees the unit after the FAD approval.`,
     rows: () => V().filter(rtsEligible).map(v => Object.assign(v, { listings: listingsOf(v) })), sort: ['seller', 'asc'],
@@ -737,14 +739,14 @@ const SCREENS = [
 
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
-    rule: 'Every data change made in FAD, SMD and VWD, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals and the SAAF.',
+    rule: 'Every data change made in FAD, SMD and VWD, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals, the SAAF and Rebate Paid.',
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
       { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD', 'Settings'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Delete'] },
       { key: 'record', label: 'Record / Plate' }],
-    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them or sends a SAAF.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : null; } },
+    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them, sends a SAAF or records Rebate Paid.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -1084,7 +1086,7 @@ function proposedPanels() {
 function homeLayout() {
   const card = d => {
     const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}${newMini(s)}<span class="cnt">${countOf(s).toLocaleString()}</span></a></li>`).join('');
-    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch, Rebate Monitoring. Live data: Seller Awarding Acknowledgement, Unreleased Unit, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Monitoring and summary reports for FAD, SMD and VWD: results, auctions, inventory, cancellations' }[d];
+    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch. Live data: Seller Awarding Acknowledgement, Unreleased Unit, Rebate Monitoring, Rebate Payable, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Monitoring and summary reports for FAD, SMD and VWD: results, auctions, inventory, cancellations' }[d];
     const icon = d === 'Report' ? '<img src="assets/ic-report.png" alt="" width="20" height="20">' : deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox');
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
@@ -1098,7 +1100,8 @@ function homeLayout() {
 const MOVED = { 'FAD/result-summary': 'report/result-summary', 'SMD/result-summary': 'report/result-summary',
   'FAD/auction-monitoring': 'report/auction-monitoring', 'SMD/auction-monitoring': 'report/auction-monitoring', 'VWD/auction-monitoring': 'report/inventory-monitoring',
   'VWD/inventory': 'report/inventory-monitoring', 'SMD/inventory': 'report/inventory-monitoring',
-  'FAD/cancellation-monitoring': 'report/cancellation-monitoring', 'SMD/cancellation-monitoring': 'report/cancellation-monitoring', 'FAD/cancellation-payment': 'FAD/cancellation-billing' };
+  'FAD/cancellation-monitoring': 'report/cancellation-monitoring', 'SMD/cancellation-monitoring': 'report/cancellation-monitoring', 'FAD/cancellation-payment': 'FAD/cancellation-billing',
+  'FAD/rebate-payable': 'SMD/rebate-payable' };   // user request of 20 Oct 2026: Rebate Payable moved to SMD
 const moved = h => Object.hasOwn(MOVED, h) ? MOVED[h] : null;   // own keys only: '#/constructor' is neither a moved nor a known screen
 const routeOf = h => { const t = moved(h) || h, scr = Object.hasOwn(byId, t) ? byId[t] : null; return scr && shown(scr) ? t : custRoute(t) ? t : ''; };   // a proposed screen opens only with the switch on
 function route() {

@@ -14,7 +14,7 @@ const rptBank = () => `${esc(CO().name)}<br>${esc(CO().bank)}`;
 const DOC_TYPES = ['LTO Official Receipt', 'LTO Certificate of Registration', 'Deed of Motor Sale', 'Cancellation of Mortgage', 'Release of Mortgage', 'Promissory with Chattel Mortgage',
   'Voluntary surrender with SPA to sell', "Secretary's Certificate with ID", 'ID of Previous owner', 'Certificate of Sale', 'Lease Agreement', 'Car History and Used Car Waiver Form',
   'Extra-Judicial Foreclosure of Chattel', 'LRA - RD Official Receipt', 'Official Receipt representing notarial', 'Service Invoice from the seller', 'Spare Key', 'TPL Insurance Premium', 'Others'];
-// [BEHAVIOR] Rebate report (FAD › Rebate › Rebate Monitoring › Download report), modelled on JBAP's Rebate Monitoring file. CDMS keeps no minimum bid or
+// [BEHAVIOR] Rebate report (FAD › Rebate Monitoring › Download report), modelled on JBAP's Rebate Monitoring file. CDMS keeps no minimum bid or
 // highest offer, so they follow JBAP's file: Minimum Bid = Awarded Price (761 of 810 rows) and Highest Offer = Awarded Price − Rebate (797 of 810 rows).
 // Revenue = Commission − Rebate, as in the file; Commission is CDMS's commission for the seller (the file's rate is open, Q63). Same figures as the screen (rebateMoney).
 function rebateRecord(v) {
