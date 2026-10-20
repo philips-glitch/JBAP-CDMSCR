@@ -133,7 +133,7 @@ const REPORTS = {
       <h3>Documents</h3><div class="cols2">${list}</div>
       <h3>Acknowledgement</h3>${rptSign(['Received by (signature over printed name)', 'Date / time received'])}`);
   },
-  // P5 (proposed): Seller Awarding Acknowledgement Form. [MOCK] layout in the BAAF style until JBAP shares a sample (spec 2026-10-15 §6)
+  // JBAP answer Q11 (standard, was P5): Seller Awarding Acknowledgement Form. [MOCK] layout in the BAAF style until JBAP shares a sample (spec 2026-10-15 §6)
   saaf(code, lots, date) {
     const rows = lots.map(r => `<tr><td>${esc(r.adate)}</td><td class="c">${esc(r.lot)}</td><td>${esc(r.model)}</td><td class="c">${esc(r.plate)}</td><td class="r">${money(r.price)}</td></tr>`).join('');
     return rptPage('portrait', `<h1>Seller Awarding Acknowledgement Form</h1><p class="fn">Layout to be confirmed: JBAP has not shared a SAAF sample yet.</p>

@@ -397,7 +397,7 @@ const SCREENS = [
   { dept: 'FAD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFSU, isNew: true,
     rule: 'Vehicles with status SOLD and a blank Awarding Date. Tick For BAAF and press Email BAAF to award. Transfer Fees come from the seller parameters and are not changed here (JBAP, 16 Oct 2026). Security Bond defaults from the seller settings; override it when needed. Rebate is entered here before the BAAF (proposal, Q73). Rebates are recommended by SMD and approved by the President (JBAP answer Q5); FAD types the approval date.',
     rows: () => sold().filter(v => !v.awarding), sort: ['lot', 'asc'],
-    cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('For BAAF', 'for_baaf', 'check', { edit: 'check' }), C('Seller Approved', 'saaf_approved', 'date', { proposed: true, tag: 'P5' }),
+    cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('For BAAF', 'for_baaf', 'check', { edit: 'check' }), C('Seller Approved', 'saaf_approved', 'date', { isNew: true }),
       C('Awarding Date', 'awarding', 'date', { edit: 'date' }), C('Rebate', 'rebate', 'money', { edit: 'money', isNew: true }), C('Rebate Approved (President)', 'rebate_approved', 'date', { edit: 'date', isNew: true }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
       C('Make/Model', 'model', 'text', { w: 210 }), C('Result Price', 'price', 'money'), C('Transfer Fees', 'transfer_fee', 'money'), C('Security Bond', 'security_bond', 'money', { edit: 'money' })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
@@ -410,7 +410,7 @@ const SCREENS = [
     buttons: [{ label: 'Email BAAF', kind: 'ol', icon: 'mail', act: 'emailBaaf', count: 'for_baaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Vehicles with an Awarding Date moved to Unpaid.',
     queue: true, ready: { key: 'for_baaf', when: r => !!r.saaf_approved },
-    ruleP: ['P4', 'Lots the seller approved (SAAF, recorded by SMD) arrive pre-ticked for BAAF; untick a lot to hold it back.'] },
+    ruleP: ['P5', 'Lots the seller approved (SAAF, recorded by SMD) arrive pre-ticked for BAAF; untick a lot to hold it back.'] },
   { dept: 'FAD', slug: 'unpaid', title: 'Unpaid', actions: VFSU, rule: 'Vehicles with status SOLD, an Awarding Date, and a blank Buyer Paid date. Total = Awarded price + Transfer fees + Security Bond (sellers with a bond). Buyer deadline = 3 working days after awarding.',
     rows: () => sold().filter(v => v.awarding && !v.buyer_paid), sort: ['buyer_deadline', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Buyer ID', 'cid', 'code'), C('Seller', 'seller', 'code'),
@@ -578,16 +578,16 @@ const SCREENS = [
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Approved units moved to VWD › For Return to Seller.' },
 
   // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch and Rebate Monitoring; live data on Unreleased Unit, Return to Seller, SMD Manager Approval and SAAF) =====================
-  // P5 (switch on): SMD's update screen for the SAAF; live data, unlike SMD's five legacy-sample screens
-  { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU, proposed: true, tag: 'P5',
-    rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch and Rebate Monitoring in SMD still show the legacy sample). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; approved lots arrive pre-ticked in FAD Pending Awarding.',
+  // JBAP answer Q11 (20 Oct 2026): SMD's update screen for the SAAF is standard (it was proposal P5); live data, unlike SMD's five legacy-sample screens
+  { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU, isNew: true,
+    rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch and Rebate Monitoring in SMD still show the legacy sample). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; the date shows in FAD Pending Awarding (JBAP answer Q11).',
     rows: () => sold().filter(v => !v.awarding), sort: ['seller', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
       C('Awarded Price', 'price', 'money'), C('For SAAF', 'for_saaf', 'check', { edit: 'check', disabledWhen: r => !!r.saaf_approved }), C('SAAF Sent', 'saaf_sent', 'date'), C('Seller Approved', 'saaf_approved', 'date', { edit: 'date' })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ saaf_approved: notFuture(e.saaf_approved) || (e.saaf_approved && !r.saaf_sent ? 'needs the SAAF to be sent first' : notBefore(e.saaf_approved, r.saaf_sent, 'SAAF Sent')) }),
     buttons: [{ label: 'Email SAAF', kind: 'ol', icon: 'mail', act: 'emailSaaf', count: 'for_saaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
-    savedNote: 'Approved lots are ready in FAD Pending Awarding.',
+    savedNote: 'The approval dates show in FAD Pending Awarding.',
     queue: true, ready: { key: 'for_saaf', when: r => !r.saaf_sent } },
   { dept: 'SMD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFS, rule: 'Vehicles with status SOLD and a blank Awarding Date.',
     rows: () => SMD('pending'), sort: ['customer', 'asc'],
@@ -730,14 +730,14 @@ const SCREENS = [
 
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
-    rule: 'Every data change made in FAD, SMD and VWD, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals and, with the proposed improvements on, the SAAF.',
+    rule: 'Every data change made in FAD, SMD and VWD, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals and the SAAF.',
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
       { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD', 'Settings'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Delete'] },
       { key: 'record', label: 'Record / Plate' }],
-    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them or, with the proposed improvements on, sends a SAAF.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : null; } },
+    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them or sends a SAAF.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -884,7 +884,7 @@ function queueCounts(scr) {
 const PROPOSALS = [['P2', 'Cancellations made in CDMS wait for FAD to confirm', 'FAD/cancellation-entry'],
   ['P3', 'NOAH numbers stay typed for now; JBAP\'s existing NOAH integration will be re-routed from Access to CDMS. Optional Payment Voucher No.', 'FAD/payment-seller'],
   ['P4', 'Ready lots arrive pre-ticked on 7 lists; Commission Billing bills several sellers at once', 'FAD/commission-billing'],
-  ['P5', 'SMD sends the SAAF and records the seller approval; approved lots are ready for FAD', 'SMD/saaf'],
+  ['P5', 'Lots the seller approved in the SAAF arrive pre-ticked for the BAAF; the dispatch email is copied to Finance only', 'FAD/pending-awarding'],
   ['P6', 'Counts on the menu and "Waiting for you" on this page', '']];
 // [BEHAVIOR] P4: an untick on the ready key holds the lot back for this session. It is never saved, logged or counted as a change.
 const holdKey = scr => PROPOSED && scr.ready ? scr.ready.key : null;
@@ -1077,7 +1077,7 @@ function proposedPanels() {
 function homeLayout() {
   const card = d => {
     const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}${newMini(s)}<span class="cnt">${countOf(s).toLocaleString()}</span></a></li>`).join('');
-    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch, Rebate Monitoring. Live data: Unreleased Unit, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Monitoring and summary reports for FAD, SMD and VWD: results, auctions, inventory, cancellations' }[d];
+    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch, Rebate Monitoring. Live data: Seller Awarding Acknowledgement, Unreleased Unit, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Monitoring and summary reports for FAD, SMD and VWD: results, auctions, inventory, cancellations' }[d];
     const icon = d === 'Report' ? '<img src="assets/ic-report.png" alt="" width="20" height="20">' : deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox');
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
@@ -1302,7 +1302,7 @@ function recordCommissionBilling(scr, code, no, bd, rows) {
   rows.forEach(r => { logChange(scr, 'Update', r, [['Commission Billing No.', 'text', null, no], ['Print?', 'check', r._raw.print_comm, false]]); r._raw.billed = true; r._raw.print_comm = false; delete ed[r.id]; });
   return bill;
 }
-// [BEHAVIOR] P5: sending the SAAF records SAAF Sent = today on each lot (logged under SMD); SMD then enters the seller's approval
+// [BEHAVIOR] Q11: sending the SAAF records SAAF Sent = today on each lot (logged under SMD); SMD then enters the seller's approval
 function recordSaafSent(scr, rows) {
   rows.forEach(r => { logChange(scr, 'Update', r, [['SAAF Sent', 'date', r._raw.saaf_sent, TODAY], ['For SAAF', 'check', r._raw.for_saaf, false]]);
     r._raw.saaf_sent = TODAY; r._raw.for_saaf = false; clearTick(scr, r.id, 'for_saaf'); });
@@ -1376,7 +1376,7 @@ const ACTIONS = {
       } }] });
   },
   emailSaaf(scr) {
-    const rows = selectedRows(scr, 'for_saaf').filter(r => !r.saaf_approved);   // [BEHAVIOR] P5: an approved lot is never sent again
+    const rows = selectedRows(scr, 'for_saaf').filter(r => !r.saaf_approved);   // [BEHAVIOR] Q11: an approved lot is never sent again
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For SAAF</b> on at least one lot first.'); render(); return; }
     setMsg(scr, null); render();
     const groups = {}; rows.forEach(r => (groups[r.seller] ||= []).push(r));

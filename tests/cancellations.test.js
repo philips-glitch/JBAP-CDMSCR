@@ -45,6 +45,7 @@ test('Cancellation Entry lists every cancellation with filters; FAD and SMD no l
   P.U(scr.id).applied = { waived: 'No' }; const n = P.applyFilters(scr, scr.rows()); assert.ok(n.length && n.every(r => !r.waived));
   P.U(scr.id).applied = {}; const h = P.entryLayout(scr); assert.match(h, /data-form="filter"/); assert.match(h, /aria-label="Cancellations"/);
 });
-test('38 screens (37 with the Proposed improvements switch off)', () => {
-  const P = load(); assert.strictEqual(P.SCREENS.length, 38); assert.strictEqual(P.SCREENS.filter(P.shown).length, 37);
+test('38 screens (38 with the Proposed improvements switch off: the SAAF screen is standard since JBAP answer Q11)', () => {
+  const P = load(); assert.strictEqual(P.SCREENS.length, 38); assert.strictEqual(P.SCREENS.filter(P.shown).length, 38);
+  assert.ok(!P.SCREENS.some(s => s.proposed), 'no screen is behind the switch any more (columns still can be)');
 });
