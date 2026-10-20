@@ -44,3 +44,14 @@ test('sidebar: every menu item shows its record count; grouped entries and Log A
   assert.doesNotMatch(on, /href="#\/FAD\/payment-seller"[^>]*>Payment Seller<span class="cnt">/, 'switch on: a P6 queue shows its badges instead');
   assert.match(on, /href="#\/FAD\/unpaid"[^>]*>Unpaid<span class="cnt">/, 'no queue: count stays');
 });
+test('sidebar: a grouped entry carries the tag of its tagged screen (SMD Return to Seller: Wish) and no tag its screens do not have', () => {
+  const P = load(), entry = (side, title) => side.match(new RegExp(`<a class="mis[^>]*>${title}(?:<span[^>]*>[^<]*</span>)*<`))[0];
+  for (const on of [false, true]) {
+    P.setProposed(on); const side = P.sideHtml('');
+    assert.match(entry(side, 'Return to Seller'), /<span class="ptag mini wish">Wish<\/span>/, `Return to Seller keeps its Wish tag (switch ${on})`);
+    assert.strictEqual((entry(side, 'Return to Seller').match(/ptag mini wish/g) || []).length, 1, 'once');
+    for (const g of ['Billing', 'Rebate']) assert.doesNotMatch(entry(side, g).replace(/<span class="ptag mini new"[^>]*>New<\/span>/, ''), /ptag/, `${g} has no tag of its own`);
+  }
+  P.setProposed(false);
+  assert.ok(!['FAD/commission-billing', 'FAD/billing-monitoring', 'FAD/unpaid-billing', 'FAD/rebate-monitoring', 'FAD/rebate-payable'].some(id => P.byId[id].tag), 'no Billing or Rebate screen is tagged');
+});

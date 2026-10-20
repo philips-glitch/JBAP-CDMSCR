@@ -18,3 +18,8 @@ test('extension rules', () => {
   assert.match(P.extendError(v, { date: null, reason: 'x', by: 'y' }), /mm\/dd\/yyyy/);
   assert.strictEqual(P.extendError(v, { date: '2099-01-01', reason: 'x', by: 'y' }), null);
 });
+test('read-only fields of the Extend and Record payment dialogs have an accessible name', () => {
+  const P = load(), h = P.roField('Penalty due (PHP)', '1,500 & "more"');
+  assert.match(h, /<label>Penalty due \(PHP\)<\/label>/); assert.match(h, /<input class="ctl" value="1,500 &amp; &quot;more&quot;" aria-label="Penalty due \(PHP\)" readonly>/);
+  for (const label of ['Customer', 'Current deadline', 'Dispatch deadline', 'Days overdue']) assert.match(P.roField(label, 'x'), new RegExp(`aria-label="${label}"`));
+});

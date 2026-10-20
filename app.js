@@ -756,7 +756,7 @@ function sideHtml(route) {
       const label = q ? ` aria-label="${esc(title)}: ${q.ready} waiting, ${q.late} overdue"` : '';
       // [BEHAVIOR] JBAP feedback (16 Oct 2026, #3): the record count of each list; a group shows its counts on its tabs, a P6 queue (switch on) its badges
       const cnt = g || q ? '' : `<span class="cnt">${countOf(s).toLocaleString()}</span>`;
-      return `<a class="mis ${on ? 'is-active' : ''}" href="#/${list[0].id}" ${on ? 'aria-current="page"' : ''}${label}>${esc(title)}${g ? '' : tagMini(s)}${newMini(g ? { isNew: g.some(x => x.isNew) } : s)}${b}${cnt}</a>`;
+      return `<a class="mis ${on ? 'is-active' : ''}" href="#/${list[0].id}" ${on ? 'aria-current="page"' : ''}${label}>${esc(title)}${tagMini(g ? g.find(x => x.tag) || {} : s)}${newMini(g ? { isNew: g.some(x => x.isNew) } : s)}${b}${cnt}</a>`;   // a group shows the tag of its tagged screen, like its page title
     }).join('');
     return `<button type="button" class="mi" data-group="${d}" aria-expanded="${open}" aria-controls="grp-${d}">${deptSvg(d)}${d}<span class="caret"></span></button>
       <div class="lvs" id="grp-${d}" ${open ? '' : 'hidden'}>${items}</div>`;
@@ -796,7 +796,7 @@ function filterCard(scr) {
     if (fd.type === 'select') {
       const picked = filterVals(f[fd.key]).map(String), opts = fd.options().map(String);
       return `<div class="fld ${fd.w || ''}"><span class="lbl" id="${id}-l">${esc(fd.label)}</span><details class="msel" data-msel="${fd.key}"><summary class="ctl" aria-labelledby="${id}-l ${id}-s" title="${esc(filterLabel(picked))}"><span class="msel-t" id="${id}-s">${esc(filterLabel(picked))}</span></summary>
-        <div class="msel-p" role="group" aria-labelledby="${id}-l">${opts.map(o => `<label class="chkline"><input type="checkbox" class="chk" data-mfilter="${fd.key}" value="${esc(o)}"${picked.includes(o) ? ' checked' : ''}>${esc(o)}</label>`).join('')}<div class="msel-f"><button type="submit" class="btn pr">${IC.search}Apply filter</button></div></div></details></div>`;   // [BEHAVIOR] an open panel can cover Reset and Apply when the filter row wraps, so it carries its own Apply (a submit inside the form: applies every filter and closes the panel)
+        <div class="msel-p" role="group" aria-labelledby="${id}-l">${opts.map(o => `<label class="chkline"><input type="checkbox" class="chk" data-mfilter="${fd.key}" value="${esc(o)}"${picked.includes(o) ? ' checked' : ''}>${esc(o)}</label>`).join('')}<div class="msel-f"><button type="button" class="btn gh" data-act="resetFilter">${IC.reset}Reset</button><button type="submit" class="btn pr">${IC.search}Apply filter</button></div></div></details></div>`;   // [BEHAVIOR] an open panel can cover the form's Reset and Apply when the filter row wraps, so it carries its own Reset (clears every filter) and Apply (a submit inside the form: applies every filter and closes the panel)
     }
     if (fd.type === 'daterange') {
       return `<div class="fld ${fd.w || 'w2'}"><span class="lbl" id="${id}-l">${esc(fd.label)}</span><div class="range" role="group" aria-labelledby="${id}-l">
@@ -809,6 +809,12 @@ function filterCard(scr) {
   return `<section class="card filter" aria-label="Filter"><div class="card-h"><div class="ico">${IC.filter}</div>Filter${newMini({ isNew: hasSel })}</div>
     ${hasSel ? '<p class="note msel-hint">Tick one or more values in a dropdown.</p>' : ''}<form class="fb" data-form="filter">${fields}<div class="btns"><button type="button" class="btn gh" data-act="resetFilter">${IC.reset}Reset</button>
     <button type="submit" class="btn pr">${IC.search}Apply filter</button></div></form></section>`;
+}
+
+// [BEHAVIOR] Applying or resetting a filter re-renders the page, which drops focus to <body>: focus goes back to the dropdown the keyboard user was in (its button), else to the Filter card's Apply button
+const filterFocusKey = el => el?.closest?.('[data-msel]')?.dataset?.msel || null;
+function refocusFilter(root, key) {
+  (key && root?.querySelector(`details.msel[data-msel="${key}"] > summary`) || root?.querySelector('section.card.filter .btns button[type="submit"]'))?.focus();
 }
 
 // [BEHAVIOR] P4: with the switch on, a work list's tick starts on for ready rows (scr.ready = { key, when }). The default is not saved
@@ -1105,6 +1111,15 @@ function recordBillingTransmittal(scr, rows) {
   const ui = U(scr.id);
   rows.forEach(r => { logChange(scr, 'Update', r, [['Transmittal Date', 'date', r._raw.trans, TODAY], ['Print Transmittal?', 'check', r._raw.print_trans, false]]); r._raw.trans = TODAY; r._raw.print_trans = false; delete ui.edits[r.id]; });
 }
+// [BEHAVIOR] The Payment to Seller date typed in the print dialog (iso: ISO date, '' = blank, null = not a date): the first problem as text, or null when it can be recorded. Not before the latest Buyer Paid of the printed lots.
+function paymentDateError(rows, iso) {
+  const latest = rows.map(r => r.buyer_paid).filter(Boolean).sort().pop();
+  if (iso === null) return 'Type the date as mm/dd/yyyy, or t for today.';
+  if (!iso) return 'Payment date is required.';
+  if (iso > TODAY) return 'Cannot be after today.';
+  if (latest && iso < latest) return `Cannot be before ${fmtDate(latest)} (the latest Buyer Paid of these lots).`;
+  return null;
+}
 // [BEHAVIOR] JBAP feedback (19 Oct 2026, FAD #1): printing the payment to seller records the payment date on every printed lot
 function recordSellerPayment(scr, rows, iso) {
   rows.forEach(r => {
@@ -1147,6 +1162,8 @@ function recordRelease(scr, v, f) {
   Object.assign(v._raw, { release: f.date, vrf_no: vrf, release_to: f.to, release_type: f.type, release_items: f.items });
   return vrf;
 }
+// A read-only field of a dialog; the input carries the label as its accessible name (the visible label is not tied to it)
+const roField = (label, val) => `<div class="fld"><label>${label}</label><input class="ctl" value="${esc(val)}" aria-label="${esc(label)}" readonly></div>`;
 // [BEHAVIOR] JBAP feedback (16 Oct 2026, #9): paying the storage penalty records the full amount due today (optional OR / reference no.) and moves the dispatch deadline to today
 function recordPenaltyPayment(scr, v, ref) {
   const amount = v.penalty;
@@ -1296,13 +1313,11 @@ const ACTIONS = {
     setMsg(scr, null); render();
     const groups = {}; rows.forEach(r => (groups[r.seller] ||= []).push(r));
     const reportsDated = date => Object.entries(groups).map(([code, list]) => REPORTS.payableToSeller(code, list, date)).join(''), reports = reportsDated(TODAY);
-    const body = `<div class="fgrid two no-print" style="padding:0 0 12px"><div class="fld"><label for="ps-date">Payment date</label>${dateField('ps-date', TODAY)}<span class="err" id="ps-date-err"></span></div></div>${reports}`;
-    openModal({ title: 'Print payment to seller', icon: 'print', wide: true, body, note: 'Records the payment date on every printed lot.',
+    const body = `<div class="fgrid two no-print" style="padding:0 0 12px"><div class="fld"><label for="ps-date">Payment date</label>${dateField('ps-date', TODAY)}<span class="err" id="ps-date-err" role="alert"></span></div></div>${reports}`;
+    openModal({ title: `Print payment to seller: ${rows.length} lot(s), ${Object.keys(groups).length} seller(s)`, icon: 'print', wide: true, body, note: 'Records the payment date on every printed lot.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record payment date & print', kind: 'pr', icon: 'print', onClick: () => {
-        const iso = parseDateInput($('#ps-date').value, TODAY), latest = rows.map(r => r.buyer_paid).filter(Boolean).sort().pop();
-        const err = iso === null ? 'Type the date as mm/dd/yyyy, or t for today.' : !iso ? 'Payment date is required.' : iso > TODAY ? 'Cannot be after today.'
-          : latest && iso < latest ? `Cannot be before ${fmtDate(latest)} (the latest Buyer Paid of these lots).` : '';
-        $('#ps-date-err').textContent = err; $('#ps-date').classList.toggle('is-invalid', !!err);
+        const iso = parseDateInput($('#ps-date').value, TODAY), err = paymentDateError(rows, iso);
+        $('#ps-date-err').textContent = err || ''; $('#ps-date').classList.toggle('is-invalid', !!err);
         if (err) { $('#ps-date').focus(); return; }
         recordSellerPayment(scr, rows, iso); render();
         // the printed report carries the recorded payment date
@@ -1463,11 +1478,10 @@ const ACTIONS = {
   },
   payPenalty(scr, el) {
     const v = scr.rows().find(r => r.id === el.dataset.rid); if (!v || !(v.penalty > 0)) return;
-    const ro = (label, val) => `<div class="fld"><label>${label}</label><input class="ctl" value="${esc(val)}" readonly></div>`;
     openModal({ title: `Record penalty payment: ${v.plate}`, icon: 'save',
-      body: `<div class="fgrid two">${ro('Customer', v.customer)}${ro('Dispatch deadline', fmtDate(v.dispatch_deadline))}${ro('Days overdue', daysBetween(v.dispatch_deadline, TODAY))}${ro('Penalty due (PHP)', money(v.penalty))}
+      body: `<div class="fgrid two">${roField('Customer', v.customer)}${roField('Dispatch deadline', fmtDate(v.dispatch_deadline))}${roField('Days overdue', daysBetween(v.dispatch_deadline, TODAY))}${roField('Penalty due (PHP)', money(v.penalty))}
         <div class="fld full"><label for="pp-ref">Reference / OR No. (optional)</label><input class="ctl" id="pp-ref" placeholder="e.g. OR 12345"></div></div>
-        <p class="note">Records the payment today (${fmtDate(TODAY)}) and moves the dispatch deadline to today. If the unit is still in the yard tomorrow, the penalty starts again (to confirm, Q75).</p>`,
+        <p class="note">Records the payment today (${fmtDate(TODAY)}) and moves the dispatch deadline to today. If the unit is still in the yard tomorrow, the penalty starts again (to confirm, Q84).</p>`,
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record payment', kind: 'pr', icon: 'save', onClick: () => {
         const amount = recordPenaltyPayment(scr, v, $('#pp-ref').value.trim()); closeModal(); render();
         toast(`Penalty of PHP ${money(amount)} recorded for ${esc(v.plate)}. The dispatch deadline is now ${fmtDate(TODAY)}; the penalty no longer blocks the release.`);
@@ -1476,9 +1490,8 @@ const ACTIONS = {
   },
   extendDeadline(scr, el) {
     const v = scr.rows().find(r => r.id === el.dataset.rid); if (!v) return;
-    const ro = (label, val) => `<div class="fld"><label>${label}</label><input class="ctl" value="${esc(val)}" readonly></div>`;
     openModal({ title: `Extend dispatch deadline: ${v.plate}`, icon: 'save',
-      body: `<div class="fgrid two">${ro('Customer', v.customer)}${ro('Current deadline', fmtDate(v.dispatch_deadline))}${ro('Penalty due (PHP)', money(v.penalty || 0))}
+      body: `<div class="fgrid two">${roField('Customer', v.customer)}${roField('Current deadline', fmtDate(v.dispatch_deadline))}${roField('Penalty due (PHP)', money(v.penalty || 0))}
         <div class="fld"><label for="xd-date">New deadline</label>${dateField('xd-date', '')}</div>
         <div class="fld full"><label for="xd-reason">Reason</label><textarea class="ctl" id="xd-reason" placeholder="Why the deadline is extended"></textarea></div>
         <div class="fld full"><label for="xd-by">Approved by (FAD Manager)</label><input class="ctl" id="xd-by" placeholder="Name of the FAD Manager" autocomplete="off"></div>
@@ -1495,7 +1508,7 @@ const ACTIONS = {
       } }] });
     $('#xd-date')?.focus();   // openModal focuses the first input (the read-only Customer)
   },
-  resetFilter(scr) { const ui = U(scr.id); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); },
+  resetFilter(scr) { const ui = U(scr.id), key = filterFocusKey(document.activeElement); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); refocusFilter($('#content'), key); },
   entryClear(scr) { U(scr.id).entry = null; render(); },
 };
 
@@ -1547,7 +1560,8 @@ function bind() {
     if (form === 'filter') {
       content.querySelectorAll('[data-filter]').forEach(i => { ui.filters[i.dataset.filter] = i.value; });
       content.querySelectorAll('[data-msel]').forEach(d => { ui.filters[d.dataset.msel] = tickedOf(d, d.dataset.msel); });
-      ui.applied = JSON.parse(JSON.stringify(ui.filters)); ui.page = 1; render();
+      const key = filterFocusKey(document.activeElement);
+      ui.applied = JSON.parse(JSON.stringify(ui.filters)); ui.page = 1; render(); refocusFilter(content, key);
     }
     if (form === 'query') {
       // [BEHAVIOR] text that is not a date stays in the box, marked invalid, and no query is run; a blank box still means today

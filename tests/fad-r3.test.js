@@ -42,3 +42,16 @@ test('Payment Seller: the printed report carries the date it is given', () => {
   const P = load(), rows = P.byId['FAD/payment-seller'].rows().slice(0, 1);
   assert.match(P.REPORTS.payableToSeller(rows[0].seller, rows, '2025-12-30'), /30 December 2025/);
 });
+test('Payment Seller dialog date check: blank, unreadable, future, before the latest Buyer Paid, valid', () => {
+  const P = load(), rows = P.byId['FAD/payment-seller'].rows().slice(0, 3), latest = rows.map(r => r.buyer_paid).filter(Boolean).sort().pop();
+  assert.ok(latest && latest < P.TODAY, 'the rows have a Buyer Paid date before the demo date');
+  assert.strictEqual(P.paymentDateError(rows, ''), 'Payment date is required.');
+  assert.strictEqual(P.paymentDateError(rows, P.parseDateInput('13/45', P.TODAY)), 'Type the date as mm/dd/yyyy, or t for today.', 'unreadable text (null from parseDateInput)');
+  assert.strictEqual(P.paymentDateError(rows, null), 'Type the date as mm/dd/yyyy, or t for today.');
+  assert.strictEqual(P.paymentDateError(rows, '2099-01-01'), 'Cannot be after today.');
+  const d = new Date(latest + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1); const before = d.toISOString().slice(0, 10);
+  assert.strictEqual(P.paymentDateError(rows, before), `Cannot be before ${P.fmtDate(latest)} (the latest Buyer Paid of these lots).`);
+  assert.strictEqual(P.paymentDateError(rows, latest), null, 'the latest Buyer Paid itself is fine');
+  assert.strictEqual(P.paymentDateError(rows, P.TODAY), null);
+  assert.strictEqual(P.paymentDateError([{ buyer_paid: '' }, {}], '2000-01-01'), null, 'no Buyer Paid on the lots: only today and the format are checked');
+});

@@ -86,7 +86,7 @@ h1{font-family:var(--font-head);font-weight:600;font-size:30px;color:#141414;mar
 .msel-t{min-width:0;margin-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msel>summary:focus-visible{outline:none;border-color:var(--navy);box-shadow:0 0 0 2px rgba(41,58,142,.18)}
 .msel-p{position:absolute;z-index:20;top:100%;left:0;min-width:100%;max-height:260px;overflow:auto;background:#fff;border:1px solid var(--line-2);border-radius:4px;box-shadow:0 6px 18px rgba(23,37,101,.15);padding:6px 10px}
-.msel-f{position:sticky;bottom:-6px;margin:6px -10px -6px;padding:8px 10px;background:#fff;border-top:1px solid var(--line-2);text-align:right}.msel-f .btn{height:30px}
+.msel-f{position:sticky;bottom:-6px;margin:6px -10px -6px;padding:8px 10px;background:#fff;border-top:1px solid var(--line-2);display:flex;justify-content:flex-end;gap:8px}.msel-f .btn{height:30px}
 .fld .msel-p .chkline{height:30px;white-space:nowrap;font-size:13px;font-weight:400;color:var(--text)}
 .note.msel-hint{margin:0;padding:10px 18px 0}
 .ctl{height:34px;border:1px solid var(--line-2);border-radius:3px;background:#fff;padding:0 10px;font-size:13px;width:100%}
@@ -219,8 +219,9 @@ tfoot td{font-weight:700;background:#eef1f8;border-top:2px solid var(--line-2);b
   .fld,.fld.w2{width:100%}
   .fgrid{grid-template-columns:1fr}
   .acts{display:none}
-  .top .user{height:48px}
+  .top{gap:8px}.top .logo{height:30px}.top .user{height:48px}   /* phone width: the top bar fits 375px (burger, logo, Prototype tag, switch) */
 }
+@media (max-width:480px){.top .user{display:none}}   /* the signed-in picture gives way on a phone; the Prototype disclaimer stays */
 
 /* ---------- Reports (layouts of the MS Access samples) ---------- */
 .rpt{background:#fff;color:#111;font-size:12px;line-height:1.45;padding:16mm 14mm;margin:0 auto 16px;border:1px solid var(--line);max-width:1040px}
