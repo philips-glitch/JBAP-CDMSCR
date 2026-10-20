@@ -595,7 +595,7 @@ const SCREENS = [
     validate: (r, e) => ({ saaf_approved: notFuture(e.saaf_approved) || (e.saaf_approved && !r.saaf_sent ? 'needs the SAAF to be sent first' : notBefore(e.saaf_approved, r.saaf_sent, 'SAAF Sent')) }),
     buttons: [{ label: 'Email SAAF', kind: 'ol', icon: 'mail', act: 'emailSaaf', count: 'for_saaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'The approval dates show in FAD Pending Awarding.',
-    queue: true },   // the P6 count stays; no pre-tick on the standard screen
+    queue() { return this.rows().filter(r => !r.saaf_sent).length; } },   // P6 (switch on): waiting = the lots whose SAAF SMD has not sent yet; no pre-tick on the standard screen
   { dept: 'SMD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFS, rule: 'Vehicles with status SOLD and a blank Awarding Date.',
     rows: () => SMD('pending'), sort: ['customer', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 200 }), C('For BAAF', 'for_baaf', 'rocheck'),

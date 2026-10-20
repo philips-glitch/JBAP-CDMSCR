@@ -96,14 +96,21 @@ test('F2: an approved lot cannot be ticked for SAAF and Email SAAF skips it', ()
   const m = P.U(scr.id).msg; assert.ok(m && m.type === 'error' && /at least one lot/.test(m.html), 'nothing to send');
 });
 
-test('the SAAF screen has no pre-tick (switch off or on) but keeps its P6 queue count', () => {
+test('the SAAF screen has no pre-tick (switch off or on); its P6 count is the lots whose SAAF has not been sent yet', () => {
   const P = load(), scr = P.byId['SMD/saaf'];
-  assert.ok(!scr.ready, 'no ready rule'); assert.strictEqual(scr.queue, true);
+  assert.ok(!scr.ready, 'no ready rule'); assert.strictEqual(typeof scr.queue, 'function', 'a count the screen gives');
   for (const on of [false, true]) { P.setProposed(on); assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf'), [], 'switch ' + on + ': nothing is pre-ticked'); }
   assert.strictEqual(P.isProposed(), true);
-  assert.deepStrictEqual(P.queueCounts(scr), { ready: scr.rows().length, late: 0 }, 'the P6 count is the lots on the list');
-  scr.rows().forEach(r => { P.U(scr.id).edits[r.id] = { for_saaf: r.id === 'V087' }; });   // a saved or typed tick still works
-  assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf').map(r => r.id), ['V087']);
+  const unsent = () => scr.rows().filter(r => !r.saaf_sent).length, all = scr.rows().length;
+  assert.ok(unsent() > 0 && unsent() < all, 'sample: some lots sent (7), most not');
+  assert.deepStrictEqual(P.queueCounts(scr), { ready: unsent(), late: 0 }, 'SMD still has to send these');
+  assert.strictEqual(P.queueCounts(scr).ready, all - 7, '7 lots have a SAAF sent (4 approved, 3 waiting): they are not counted');
+  const r = scr.rows().find(x => !x.saaf_sent); P.recordSaafSent(scr, [r]);   // sending one lot takes it off the count
+  assert.strictEqual(P.queueCounts(scr).ready, all - 8);
+  assert.match(P.homeLayout(), new RegExp('Seller Awarding Acknowledgement<span class="cnt">' + (all - 8) + '</span>'), 'Waiting for you on Home shows the same number');
+  const eight = P.sideHtml(''); assert.match(eight, new RegExp('aria-label="Seller Awarding Acknowledgement: ' + (all - 8) + ' waiting, 0 overdue"'));
+  scr.rows().forEach(x => { P.U(scr.id).edits[x.id] = { for_saaf: x.id === 'V087' }; });   // a saved or typed tick still works
+  assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf').map(x => x.id), ['V087']);
 });
 test('the P4 text and the README P4 row name the lists still tagged P4 (Pending Awarding\'s pre-tick is tagged P5)', () => {
   const P = load(), p4 = P.SCREENS.filter(s => s.ready && s.ruleP && s.ruleP[0] === 'P4'), p4text = P.PROPOSALS.find(p => p[0] === 'P4')[1];
