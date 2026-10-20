@@ -18,6 +18,28 @@
   // [MOCK] JBAP answer Q5 (20 Oct 2026): rebate approval date (Rebate Approved (President)) on two Pending Awarding lots that already carry a rebate in the Access data:
   // V102 and V095 show a date, so FAD can award them; V092 (also SAAF-approved, so pre-ticked with the switch on), V067, V074 and V082 have a rebate and no date yet, so Email BAAF holds them back.
   D.vehicles.forEach(v => { const d = { V102: '2026-08-25', V095: '2026-09-28' }[v.id]; if (d) v.rebate_approved = d; });
+  // [MOCK] JBAP answer Q14 (20 Oct 2026): holiday list for Settings > Holiday List. Sample list of the fixed-date Philippine holidays of 2025-11 to 2026-12, to be kept by the CDMS administrator (ADMIN role);
+  // check it against the official proclamation (moving holidays such as Holy Week and Eid are not listed). Working days skip these dates, both types, as well as weekends.
+  D.holidays = [
+    { date: '2025-11-01', name: "All Saints' Day", type: 'Special non-working day' },
+    { date: '2025-11-30', name: 'Bonifacio Day', type: 'Regular holiday' },
+    { date: '2025-12-08', name: 'Feast of the Immaculate Conception', type: 'Special non-working day' },
+    { date: '2025-12-25', name: 'Christmas Day', type: 'Regular holiday' },
+    { date: '2025-12-30', name: 'Rizal Day', type: 'Regular holiday' },
+    { date: '2025-12-31', name: 'Last Day of the Year', type: 'Special non-working day' },
+    { date: '2026-01-01', name: "New Year's Day", type: 'Regular holiday' },
+    { date: '2026-04-09', name: 'Araw ng Kagitingan', type: 'Regular holiday' },
+    { date: '2026-05-01', name: 'Labor Day', type: 'Regular holiday' },
+    { date: '2026-06-12', name: 'Independence Day', type: 'Regular holiday' },
+    { date: '2026-08-21', name: 'Ninoy Aquino Day', type: 'Special non-working day' },
+    { date: '2026-08-31', name: 'National Heroes Day', type: 'Regular holiday' },
+    { date: '2026-11-01', name: "All Saints' Day", type: 'Special non-working day' },
+    { date: '2026-11-30', name: 'Bonifacio Day', type: 'Regular holiday' },
+    { date: '2026-12-08', name: 'Feast of the Immaculate Conception', type: 'Special non-working day' },
+    { date: '2026-12-25', name: 'Christmas Day', type: 'Regular holiday' },
+    { date: '2026-12-30', name: 'Rizal Day', type: 'Regular holiday' },
+    { date: '2026-12-31', name: 'Last Day of the Year', type: 'Special non-working day' },
+  ];
   // [MOCK] P2: lots cancelled in CDMS that FAD has not recorded yet (FAD confirms them on Cancellation Entry)
   D.cdmsCancels = [
     { vid: 'V107', date: '2026-09-29', reason: 'Buyer did not pay within the buyer deadline' },

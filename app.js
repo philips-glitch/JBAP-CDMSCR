@@ -25,10 +25,13 @@ const fmtDate = iso => { if (!iso) return ''; const [y, m, d] = iso.split('-'); 
 const toDate = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
 const toIso = dt => dt.toISOString().slice(0, 10);
 const addDays = (iso, n) => { const d = toDate(iso); d.setUTCDate(d.getUTCDate() + n); return toIso(d); };
-// [BEHAVIOR] Working days skip Saturday and Sunday only. Holiday list is an open question (Q14).
-function addWorkdays(iso, n) { let d = toDate(iso), left = n; while (left > 0) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6) left--; } return toIso(d); }
-// [BEHAVIOR] Working days from a to b, both days included, like Excel NETWORKDAYS without holidays. Blank when a is blank or after b.
-function workdaysBetween(a, b) { if (!a || !b || a > b) return null; let n = 0; for (const d = toDate(a), e = toDate(b); d <= e; d.setUTCDate(d.getUTCDate() + 1)) { const w = d.getUTCDay(); if (w !== 0 && w !== 6) n++; } return n; }
+// [BEHAVIOR] JBAP answer Q14 (20 Oct 2026): working days skip Saturdays, Sundays and every date in the holiday list (Settings > Holiday List; regular holidays and special non-working days alike).
+// Every deadline (buyer, payment to seller, dispatch), aging and customer page count is built on these two functions. HOLIDAY_DATES is rebuilt from S.holidays when the list loads and each time a holiday is added or removed.
+let HOLIDAY_DATES = new Set();
+const isWorkday = d => { const w = d.getUTCDay(); return w !== 0 && w !== 6 && !HOLIDAY_DATES.has(toIso(d)); };
+function addWorkdays(iso, n) { let d = toDate(iso), left = n; while (left > 0) { d.setUTCDate(d.getUTCDate() + 1); if (isWorkday(d)) left--; } return toIso(d); }
+// [BEHAVIOR] Working days from a to b, both days included, like Excel NETWORKDAYS with the holiday list. Blank when a is blank or after b.
+function workdaysBetween(a, b) { if (!a || !b || a > b) return null; let n = 0; for (const d = toDate(a), e = toDate(b); d <= e; d.setUTCDate(d.getUTCDate() + 1)) { if (isWorkday(d)) n++; } return n; }
 const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / 86400000);
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 // [BEHAVIOR] JBAP feedback (16 Oct 2026, #4): dates can be typed. t / today = the demo date; mm/dd/yyyy, mm/dd/yy (20yy), mm/dd and mmdd (year of the demo date),
@@ -77,16 +80,19 @@ const DEPT_ICON = {
   FAD: '<rect x="5" y="2.5" width="14" height="19" rx="1.6"/><rect x="7.8" y="5.3" width="8.4" height="3.6" rx=".6"/><path d="M8.3 12.3h.1M12 12.3h.1M15.7 12.3h.1M8.3 15.3h.1M12 15.3h.1M15.7 15.3h.1M8.3 18.3h.1M12 18.3h.1M15.7 18.3h.1"/>',
   SMD: '<rect x="3" y="3.5" width="18" height="12.5" rx="1.2"/><path d="M12 16v3.5M8 21h8"/><path d="M6.5 13v-2.5M10 13V8.5M13.5 13v-3M17 13V6.5"/>',
   VWD: '<path d="M2.5 9.5L12 4l9.5 5.5V21h-19z"/><path d="M6 21v-6.5h12V21"/><path d="M7.6 17.8h8.8M9 14.5l1-1.8h4l1 1.8"/><path d="M8.6 19.6h.1M15.4 19.6h.1"/>',
+  SET: '<path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>',
   LOG: '<rect x="4.5" y="3.5" width="13" height="17.5" rx="1.4"/><path d="M8 3.5V2.5h6v2H8z"/><path d="M7.5 9h7M7.5 12.5h4"/><circle cx="17" cy="17" r="4.2"/><path d="M17 15v2.2l1.4 1"/>',
 };
 const deptSvg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DEPT_ICON[d]}</svg>`;
 
 // ─── State ────────────────────────────────────────────────────────────
 // [MOCK] Deep copy of data.js so "Reset demo data" is just a page refresh.
-const S = D ? JSON.parse(JSON.stringify({ veh: D.vehicles, cancels: D.cancellations, billing: D.billing, log: [] })) : null;
+const S = D ? JSON.parse(JSON.stringify({ veh: D.vehicles, cancels: D.cancellations, billing: D.billing, log: [], holidays: D.holidays || [] })) : null;
+const syncHolidays = () => { HOLIDAY_DATES = new Set(S.holidays.map(h => h.date)); };
+if (S) syncHolidays();
 const SELLER = D ? Object.fromEntries(D.sellers.map(s => [s.code, s])) : {};
 const UI = {};          // per-screen UI state: filters, sort, page, edits, errors, message
-const OPEN = { Customer: false, Report: false, FAD: false, SMD: false, VWD: false };
+const OPEN = { Customer: false, Report: false, FAD: false, SMD: false, VWD: false, Settings: false };
 
 // ─── Proposed improvements switch (spec 2026-10-15) ──────────────────
 // [BEHAVIOR] Off = the CR scope exactly; on = LOGIQUE's proposals P2–P6 (P1 withdrawn after JBAP's feedback of 15 Oct 2026). A link with ?proposed=1 opens with the switch on.
@@ -287,7 +293,7 @@ const addLog = e => S.log.push(Object.assign({ id: `L${S.log.length + 1}`, date:
 if (S) (D.activityLog || []).forEach(addLog);
 const logVal = (type, v) => type === 'check' ? (v ? 'Yes' : 'No') : v === null || v === undefined || v === '' ? ''
   : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : type === 'date' ? fmtDate(v) : type === 'money' ? money(v) : String(v);
-const logRecord = r => r.auction ? `Auction ${r.auction}, Lot ${r.lot || '-'}${r.plate ? ` · ${r.plate}` : ''}` : `Billing #${r.no}`;
+const logRecord = r => r.auction ? `Auction ${r.auction}, Lot ${r.lot || '-'}${r.plate ? ` · ${r.plate}` : ''}` : r.holiday ? `Holiday ${fmtDate(r.date)} · ${r.name}` : `Billing #${r.no}`;
 // [BEHAVIOR] changes: [[field label, type, old value, new value]]. Update rows whose value did not change are skipped.
 function logChange(scr, action, r, changes) {
   const at = `${TODAY} ${new Date().toTimeString().slice(0, 8)}`;   // demo date + real clock time
@@ -295,6 +301,33 @@ function logChange(scr, action, r, changes) {
     const old = logVal(type, o), nw = logVal(type, n);
     if (action !== 'Update' || old !== nw) addLog({ at, user: LOG_USER, module: scr.dept, screen: scr.title, action, record: logRecord(r), field, old, new: nw });
   });
+}
+
+// ─── Holiday list (Settings › Holiday List; JBAP answer Q14, 20 Oct 2026) ──
+// [BEHAVIOR] The list lives in S.holidays (a session copy of D.holidays, so a refresh restores the sample). In CDMS only users with the ADMIN role add or remove holidays; the prototype has no login, so every visitor can.
+const HOLIDAY_TYPES = ['Regular holiday', 'Special non-working day'];
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const holidayRows = () => S.holidays.map(h => Object.assign({ id: h.date, day: WEEKDAYS[toDate(h.date).getUTCDay()], year: h.date.slice(0, 4) }, h));
+// The problem with each field of the Add holiday form, or null (f.date: ISO date, '' = blank, null = not a date)
+function holidayErrors(f) {
+  const dup = f.date && S.holidays.find(h => h.date === f.date);
+  return { date: f.date === null ? 'Type the date as mm/dd/yyyy, or t for today.' : !f.date ? 'Date is required.' : dup ? `A holiday is already listed on ${fmtDate(f.date)} (${dup.name}).` : null,
+    name: !String(f.name || '').trim() ? 'Holiday name is required.' : null,
+    type: !HOLIDAY_TYPES.includes(f.type) ? 'Choose the type of holiday.' : null };
+}
+const holidayError = f => Object.values(holidayErrors(f)).find(Boolean) || null;
+// [BEHAVIOR] Adding or removing a holiday changes every deadline and aging count that spans the date at once, and is logged under module Settings (a removal is a Delete)
+function recordHolidayAdd(scr, f) {
+  const h = { date: f.date, name: f.name.trim(), type: f.type };
+  S.holidays.push(h); S.holidays.sort((x, y) => x.date.localeCompare(y.date)); syncHolidays();
+  logChange(scr, 'Create', Object.assign({ holiday: true }, h), [['Date', 'date', null, h.date], ['Holiday', 'text', null, h.name], ['Type', 'text', null, h.type]]);
+  return h;
+}
+function recordHolidayRemove(scr, date) {
+  const i = S.holidays.findIndex(h => h.date === date); if (i < 0) return false;
+  const [h] = S.holidays.splice(i, 1); syncHolidays();
+  logChange(scr, 'Delete', Object.assign({ holiday: true }, h), [['Date', 'date', h.date, null], ['Holiday', 'text', h.name, null], ['Type', 'text', h.type, null]]);
+  return true;
 }
 
 // ─── Column helper ────────────────────────────────────────────────────
@@ -687,16 +720,23 @@ const SCREENS = [
     filters: [{ key: 'cid', label: 'Buyer ID', type: 'text', w: 'w1' }, { key: 'customer', label: 'Buyer Name' }],
     totals: rows => ({ customer: `${rows.length} buyers`, lots: intf(sumBy(rows, 'lots')), total_bought: money(sumBy(rows, 'total_bought')), unpaid: intf(sumBy(rows, 'unpaid')), cancels: intf(sumBy(rows, 'cancels')) }) },
 
+  // ===================== Settings › Holiday List (JBAP answer Q14, 20 Oct 2026) =====================
+  { id: 'settings/holidays', dept: 'Settings', title: 'Holiday List', actions: VFSU, layout: 'holidays', isNew: true, listTitle: 'Holidays',
+    rule: 'Holidays and other non-working days: working days skip Saturdays, Sundays and every date listed here, regular holiday or special non-working day. In CDMS only users with the ADMIN role add or remove holidays (JBAP answer Q14); deadlines and aging skip these dates. Prototype: the list is sample data (check it against the official proclamation) and the ADMIN role is not simulated; changes last until you refresh the page.',
+    rows: holidayRows, sort: ['date', 'asc'],
+    cols: [C('Date', 'date', 'date'), C('Day', 'day', 'text', { w: 120 }), C('Holiday', 'name', 'text', { w: 320 }), C('Type', 'type', 'text', { w: 200 }), C('Remove', 'id', 'rowbtn', { act: 'removeHoliday', btn: 'Remove' })],
+    filters: [{ key: 'year', label: 'Year', type: 'select', w: 'w1', options: () => [...new Set(S.holidays.map(h => h.date.slice(0, 4)))].sort() }, { key: 'type', label: 'Type', type: 'select', options: () => HOLIDAY_TYPES }] },
+
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
-    rule: 'Every data change made in FAD, SMD and VWD, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals and, with the proposed improvements on, the SAAF.',
+    rule: 'Every data change made in FAD, SMD and VWD, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals and, with the proposed improvements on, the SAAF.',
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
-      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel'] },
+      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD', 'Settings'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Delete'] },
       { key: 'record', label: 'Record / Plate' }],
-    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them or, with the proposed improvements on, sends a SAAF.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : null; } },
+    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them or, with the proposed improvements on, sends a SAAF.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -772,18 +812,19 @@ function sideHtml(route) {
   }).join('');
   const logOn = route === LOG_ID;
   const log = `<a class="mi ${logOn ? 'is-active' : ''}" href="#/${LOG_ID}" ${logOn ? 'aria-current="page"' : ''}>${deptSvg('LOG')}Log Activity</a>`;
-  return TOP_BEFORE.map(x => TOP_MENUS[x[1]] ? topMenu(x[1], route) : disabledItem(x)).join('') + groups + TOP_AFTER.map(disabledItem).join('') + log +
-    '<p class="side-note">Prototype: only Customer Inquiry, Report, FAD, SMD, VWD and Log Activity are active. Other menus are disabled.</p>';
+  return TOP_BEFORE.map(x => TOP_MENUS[x[1]] ? topMenu(x[1], route) : disabledItem(x)).join('') + groups + TOP_AFTER.map(disabledItem).join('') + topMenu('settings', route) + log +
+    '<p class="side-note">Prototype: only Customer Inquiry, Report, FAD, SMD, VWD, Settings and Log Activity are active. Other menus are disabled.</p>';
 }
 // Top-level menus outside FAD / SMD / VWD: Customer (Customer Inquiry; a customer page keeps it highlighted) and Report. Items show their record count.
 const TOP_MENUS = { customer: { dept: 'Customer', disabled: ['Sales Actions'], on: (s, r) => r === s.id || (s.id === CUST_ID && !!custRoute(r)) },
-  report: { dept: 'Report', disabled: [], on: (s, r) => r === s.id } };
+  report: { dept: 'Report', disabled: [], on: (s, r) => r === s.id },
+  settings: { dept: 'Settings', disabled: [], icon: 'SET', on: (s, r) => r === s.id } };   // Settings (JBAP answer Q14): after the other menus, before Log Activity; its icon is drawn inline
 function topMenu(key, route) {
   const m = TOP_MENUS[key], open = OPEN[m.dept];
   const items = SCREENS.filter(s => s.dept === m.dept && shown(s)).map(s => { const on = m.on(s, route);
     return `<a class="mis ${on ? 'is-active' : ''}" href="#/${s.id}" ${on ? 'aria-current="page"' : ''}>${esc(s.title)}${tagMini(s)}${newMini(s)}<span class="cnt">${countOf(s).toLocaleString()}</span></a>`; }).join('');
   const off = m.disabled.map(t => `<button type="button" class="mis is-disabled" aria-disabled="true" data-disabled="${esc(t)}" title="Not part of this prototype">${esc(t)}</button>`).join('');
-  return `<button type="button" class="mi" data-group="${m.dept}" aria-expanded="${open}" aria-controls="grp-${m.dept}"><img src="assets/ic-${key}.png" alt="">${m.dept}<span class="caret"></span></button>
+  return `<button type="button" class="mi" data-group="${m.dept}" aria-expanded="${open}" aria-controls="grp-${m.dept}">${m.icon ? deptSvg(m.icon) : `<img src="assets/ic-${key}.png" alt="">`}${m.dept}<span class="caret"></span></button>
     <div class="lvs" id="grp-${m.dept}" ${open ? '' : 'hidden'}>${items}${off}</div>`;
 }
 function renderSide(route) { $('#menu').innerHTML = sideHtml(route); }
@@ -867,8 +908,8 @@ function cellHtml(scr, r, c, upd) {
   if (c.type === 'rocheck' || c.type === 'check') return `<td class="c"><span class="ro-chk ${v ? 'on' : ''}" role="img" aria-label="${v ? 'Yes' : 'No'}">${v ? IC.check : ''}</span></td>`;
   if (c.type === 'status' && !v) return '<td class="c"></td>';   // yard and inspection units have no auction status
   if (c.type === 'status') { const k = { Sold: 'sold', 'Not Sold': 'ns', Cancelled: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
-  if (c.type === 'action') { const k = { Update: 'up', Create: 'sold', Cancel: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
-  if (c.type === 'rowbtn') return c.showWhen && !c.showWhen(r) ? '<td class="c"></td>' : `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}" aria-label="${esc(c.btn)} ${esc(r.plate || '')}">${esc(c.btn)}</button></td>`;
+  if (c.type === 'action') { const k = { Update: 'up', Create: 'sold', Cancel: 'cx', Delete: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
+  if (c.type === 'rowbtn') return c.showWhen && !c.showWhen(r) ? '<td class="c"></td>' : `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}" aria-label="${esc(c.btn)} ${esc(r.plate || r.name || '')}">${esc(c.btn)}</button></td>`;
   if (c.type === 'logval' && (v ?? '') === '') return '<td><span class="blank">(blank)</span></td>';
   let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : c.type === 'datetime' ? `${fmtDate(v.slice(0, 10))} ${v.slice(11)}` : (v ?? '');
   const late = c.late && v && v < TODAY ? ' late' : '';
@@ -934,6 +975,22 @@ function cdmsCancelPanel(scr) {
     <div class="msg error" id="cc-err" role="alert" hidden>${IC.info}<div id="cc-err-t"></div></div>
     <div class="tw"><table><thead><tr><th scope="col">Plate</th><th scope="col">Auction / Lot</th><th scope="col">Customer Name</th><th scope="col">Cancelled in CDMS</th><th scope="col">CDMS Reason</th><th scope="col">Waive fee?</th><th scope="col">Justification</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
     <tbody>${rows || `<tr><td colspan="8"><div class="empty">${IC.inbox}<b>Nothing to confirm</b>Every CDMS cancellation is recorded.</div></td></tr>`}</tbody></table></div></section>`;
+}
+// [BEHAVIOR] Settings › Holiday List: the Add holiday form above the list; what was typed stays, with the message, when it is refused
+function holidayForm(scr) {
+  const ui = U(scr.id), f = ui.hf || (ui.hf = { date: '', name: '', type: '', errors: {} }), er = k => f.errors[k] ? `<span class="err" id="hl-${k}-err">${esc(f.errors[k])}</span>` : '';
+  return `<section class="card" aria-label="Add holiday"><div class="card-h"><div class="ico">${IC.cal}</div>Add holiday</div>
+    <form class="fb" data-form="holiday" novalidate><div class="fld"><label for="hl-date">Date</label>${dateField('hl-date', f.date, f.errors.date ? 'aria-invalid="true"' : '', f.errors.date ? 'is-invalid' : '')}${er('date')}</div>
+    <div class="fld w2"><label for="hl-name">Holiday</label><input class="ctl${f.errors.name ? ' is-invalid' : ''}" id="hl-name" autocomplete="off" placeholder="e.g. Eid'l Fitr" value="${esc(f.name)}"${f.errors.name ? ' aria-invalid="true"' : ''}>${er('name')}</div>
+    <div class="fld"><label for="hl-type">Type</label><select class="ctl${f.errors.type ? ' is-invalid' : ''}" id="hl-type"${f.errors.type ? ' aria-invalid="true"' : ''}><option value="">Choose the type</option>${HOLIDAY_TYPES.map(t => `<option${t === f.type ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>${er('type')}</div>
+    <div class="btns"><button type="submit" class="btn pr">${IC.save}Add holiday</button></div></form></section>`;
+}
+function holidayAdd(scr) {
+  const ui = U(scr.id), raw = $('#hl-date').value.trim(), date = parseDateInput(raw, TODAY), f = { date, name: $('#hl-name').value.trim(), type: $('#hl-type').value }, errors = holidayErrors(f);
+  const bad = ['date', 'name', 'type'].find(k => errors[k]);
+  if (bad) { ui.hf = { date: date === null ? raw : date, name: f.name, type: f.type, errors: Object.fromEntries(Object.entries(errors).filter(([, m]) => m)) }; render(); $(`#hl-${bad}`)?.focus(); return; }
+  recordHolidayAdd(scr, f); ui.hf = null; render();
+  toast(`Holiday added: ${fmtDate(f.date)}, ${esc(f.name.trim())}. Deadlines and aging now skip that date.`);
 }
 function entryLayout(scr) {
   const ui = U(scr.id), e = ui.entry || (ui.entry = { auction: '', lot: '', found: null, errors: {}, form: null });
@@ -1020,7 +1077,7 @@ function homeLayout() {
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
   return `<div class="home"><nav class="crumb" aria-label="Breadcrumb"><b>Home</b></nav><h1>Post-Auction Menus</h1>
-    <p class="lead">Clickable prototype of the new Customer Inquiry, Report, FAD, SMD and VWD menus that replace the MS Access post-auction forms. Data is sample data and resets when you refresh the page. Demo date: <b>${fmtDate(TODAY)}</b>.</p>
+    <p class="lead">Clickable prototype of the new Customer Inquiry, Report, FAD, SMD and VWD menus that replace the MS Access post-auction forms, plus Settings › Holiday List. Data is sample data and resets when you refresh the page. Demo date: <b>${fmtDate(TODAY)}</b>.</p>
     ${PROPOSED ? proposedPanels() : ''}<div class="hgrid">${['FAD', 'SMD', 'VWD', 'Report'].map(card).join('')}</div></div>`;
 }
 
@@ -1048,7 +1105,7 @@ function render() {
   document.title = `${scr.title} | ${scr.top ? '' : `${scr.dept} | `}CDMS Prototype`;
   let html = pageHead(scr);
   if (scr.layout === 'entry') html += entryLayout(scr);
-  else { if (scr.layout === 'query') html += queryCard(scr); if (scr.filters && scr.actions.includes('Filter')) html += filterCard(scr); html += dataCard(scr, scr.title + ' list'); }
+  else { if (scr.layout === 'query') html += queryCard(scr); if (scr.layout === 'holidays') html += holidayForm(scr); if (scr.filters && scr.actions.includes('Filter')) html += filterCard(scr); html += dataCard(scr, scr.listTitle || scr.title + ' list'); }
   c.innerHTML = html;
 }
 
@@ -1529,6 +1586,15 @@ const ACTIONS = {
       } }] });
     $('#xd-date')?.focus();   // openModal focuses the first input (the read-only Customer)
   },
+  // [BEHAVIOR] JBAP answer Q14: a holiday is removed after a confirmation; deadlines and aging count the day again
+  removeHoliday(scr, el) {
+    const h = S.holidays.find(x => x.date === el.dataset.rid); if (!h) return;
+    openModal({ title: 'Remove this holiday?', icon: 'ban',
+      body: `<p><b>${esc(h.name)}</b> (${fmtDate(h.date)}, ${esc(h.type)}) will be removed from the holiday list.</p><p>Deadlines and aging count that date as a working day again (a Saturday or Sunday stays a non-working day).</p>`,
+      footer: [{ label: 'Keep holiday', kind: 'gh', onClick: closeModal }, { label: 'Remove holiday', kind: 'dg', icon: 'ban', onClick: () => {
+        recordHolidayRemove(scr, h.date); closeModal(); render(); toast(`Holiday removed: ${fmtDate(h.date)}, ${esc(h.name)}.`);
+      } }] });
+  },
   resetFilter(scr) { const ui = U(scr.id), key = filterFocusKey(document.activeElement); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); refocusFilter($('#content'), key); },
   entryClear(scr) { U(scr.id).entry = null; render(); },
 };
@@ -1558,7 +1624,7 @@ function bind() {
   const content = $('#content'), menu = $('#menu');
   menu.addEventListener('click', ev => {
     const g = ev.target.closest('[data-group]'); if (g) { OPEN[g.dataset.group] = !OPEN[g.dataset.group]; renderSide(route()); return; }
-    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, Report, FAD, SMD, VWD and Log Activity are active.`, 'warn'); return; }
+    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, Report, FAD, SMD, VWD, Settings and Log Activity are active.`, 'warn'); return; }
     if (ev.target.closest('.mis, a.mi')) document.body.classList.remove('nav-open');
   });
   content.addEventListener('change', ev => {
@@ -1592,6 +1658,7 @@ function bind() {
       ui.asOf = iso || TODAY; ui.page = 1; render(); toast(`Liability generated as of ${fmtDate(ui.asOf)}.`);
     }
     if (form === 'find') entryFind(scr);
+    if (form === 'holiday') holidayAdd(scr);
     if (form === 'cancel') entryCancel(scr);
   });
   content.addEventListener('click', ev => {

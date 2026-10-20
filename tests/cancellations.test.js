@@ -45,6 +45,6 @@ test('Cancellation Entry lists every cancellation with filters; FAD and SMD no l
   P.U(scr.id).applied = { waived: 'No' }; const n = P.applyFilters(scr, scr.rows()); assert.ok(n.length && n.every(r => !r.waived));
   P.U(scr.id).applied = {}; const h = P.entryLayout(scr); assert.match(h, /data-form="filter"/); assert.match(h, /aria-label="Cancellations"/);
 });
-test('37 screens (36 with the Proposed improvements switch off)', () => {
-  const P = load(); assert.strictEqual(P.SCREENS.length, 37); assert.strictEqual(P.SCREENS.filter(P.shown).length, 36);
+test('38 screens (37 with the Proposed improvements switch off)', () => {
+  const P = load(); assert.strictEqual(P.SCREENS.length, 38); assert.strictEqual(P.SCREENS.filter(P.shown).length, 37);
 });

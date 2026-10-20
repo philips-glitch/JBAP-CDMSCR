@@ -32,7 +32,7 @@ test('P1 is withdrawn (JBAP feedback, 15 Oct 2026): Unpaid is the CR screen with
   assert.ok(!up.queue && !up.ready && !up.ruleP && !up.saveWarn);
   const src = ['app.js', 'data-extra.js', 'index.html'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
   assert.doesNotMatch(src, /cdmsPaid|cdms_full|cdms_confirm|cdmsPayments|confirmPaid|saveWarn|P1–P6|P1 to P6/);
-  assert.deepStrictEqual(P.byId['log-activity'].filters.find(f => f.key === 'action').options(), ['Update', 'Create', 'Cancel']);
+  assert.deepStrictEqual(P.byId['log-activity'].filters.find(f => f.key === 'action').options(), ['Update', 'Create', 'Cancel', 'Delete']);   // Delete: a holiday removed in Settings (20 Oct 2026)
 });
 test('P3: NOAH numbers stay typed until JBAP\'s existing NOAH integration is re-routed to CDMS', () => {
   const P = load(), p3 = P.PROPOSALS.find(p => p[0] === 'P3')[1];
