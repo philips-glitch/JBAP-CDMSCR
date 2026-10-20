@@ -350,6 +350,13 @@ function rebateApprovalError(rebate, approved, awarding) {
   const has = Number(rebate) > 0;
   return !has && approved ? 'No rebate to approve' : has && awarding && !approved ? REBATE_NEEDS_APPROVAL : null;
 }
+// [BEHAVIOR] Review of 20 Oct 2026: the approval date (the one in the edit, else the saved one) is not after the Awarding Date typed in the edit; a TYPED approval date is not before the start of the lot's auction (a saved date is not re-checked)
+function rebateApprovedError(r, e) {
+  const ap = 'rebate_approved' in e ? e.rebate_approved : r.rebate_approved;
+  return notFuture(e.rebate_approved) || notBefore(e.rebate_approved, r.auction_start, 'the auction start')
+    || (e.awarding && ap && ap > e.awarding ? `cannot be after the Awarding Date (${fmtDate(e.awarding)})` : null)
+    || ('rebate' in e || 'rebate_approved' in e || e.awarding ? rebateApprovalError('rebate' in e ? e.rebate : r.rebate, ap, e.awarding) : null);
+}
 
 // [BEHAVIOR] Document dates: not in the future, not before Buyer Paid, steps in order (EWB call out → signed; receipt → JBAP signed → seller receipt),
 // documents to the buyer only after JBAP has them. EWB columns only for sellers who sign at their branch; DOAS columns not for sellers without a DOAS.
@@ -406,7 +413,7 @@ const SCREENS = [
     validate: (r, e) => ({ awarding: notFuture(e.awarding) || notBefore(e.awarding, r.auction_end, 'the auction end'),
       security_bond: 'security_bond' in e && (e.security_bond === '' || Number(e.security_bond) < 0) ? 'must be 0 or more' : null,
       rebate: 'rebate' in e && e.rebate !== '' ? (Number(e.rebate) < 0 ? 'must be 0 or more' : r.price != null && Number(e.rebate) > r.price ? 'cannot be more than the result price' : null) : null,
-      rebate_approved: notFuture(e.rebate_approved) || ('rebate' in e || 'rebate_approved' in e || e.awarding ? rebateApprovalError('rebate' in e ? e.rebate : r.rebate, 'rebate_approved' in e ? e.rebate_approved : r.rebate_approved, e.awarding) : null) }),
+      rebate_approved: rebateApprovedError(r, e) }),
     buttons: [{ label: 'Email BAAF', kind: 'ol', icon: 'mail', act: 'emailBaaf', count: 'for_baaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Vehicles with an Awarding Date moved to Unpaid.',
     queue: true, ready: { key: 'for_baaf', when: r => !!r.saaf_approved },
@@ -502,7 +509,7 @@ const SCREENS = [
   // FAD › Rebate: Rebate Monitoring and Rebate Payable as two tabs (user request of 16 Oct 2026); SMD keeps its own Rebate Monitoring
   // The key columns of JBAP's Rebate Monitoring file (user choice of 16 Oct 2026); Month, VCN, Year, Color, Buyer ID and Awarded Price stay in the download only
   { dept: 'FAD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', group: 'Rebate', actions: VS,
-    rule: 'Result price records with status SOLD and a rebate. Minimum Bid = Awarded Price, Highest Offer = Minimum Bid − Rebate, Revenue = Commission − Rebate (JBAP\'s Rebate Monitoring file). Download report saves an Excel file of the rebates in an auction range with all the file\'s columns.',
+    rule: 'Result price records with status SOLD and a rebate. Minimum Bid = Awarded Price, Highest Offer = Minimum Bid − Rebate, Revenue = Commission − Rebate (JBAP\'s Rebate Monitoring file). Download report saves an Excel file of the rebates in an auction range with all the file\'s columns. Rebate Approved (President) is blank for lots awarded before the approval date was recorded.',
     rows: () => sold().filter(v => v.rebate), sort: ['auction_lot', 'desc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 180 }), C('Seller', 'seller', 'code'),
       C('Buyer', 'customer', 'text', { w: 220 }), C('Minimum Bid', 'min_bid', 'money'), C('Highest Offer', 'highest_offer', 'money'), C('Rebate', 'rebate', 'money'), C('Rebate Approved (President)', 'rebate_approved', 'date', { isNew: true }),
@@ -588,7 +595,7 @@ const SCREENS = [
     validate: (r, e) => ({ saaf_approved: notFuture(e.saaf_approved) || (e.saaf_approved && !r.saaf_sent ? 'needs the SAAF to be sent first' : notBefore(e.saaf_approved, r.saaf_sent, 'SAAF Sent')) }),
     buttons: [{ label: 'Email SAAF', kind: 'ol', icon: 'mail', act: 'emailSaaf', count: 'for_saaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'The approval dates show in FAD Pending Awarding.',
-    queue: true, ready: { key: 'for_saaf', when: r => !r.saaf_sent } },
+    queue: true },   // the P6 count stays; no pre-tick on the standard screen
   { dept: 'SMD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFS, rule: 'Vehicles with status SOLD and a blank Awarding Date.',
     rows: () => SMD('pending'), sort: ['customer', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 200 }), C('For BAAF', 'for_baaf', 'rocheck'),
@@ -725,7 +732,7 @@ const SCREENS = [
   { id: 'settings/holidays', dept: 'Settings', title: 'Holiday List', actions: VFSU, layout: 'holidays', isNew: true, listTitle: 'Holidays',
     rule: 'Holidays and other non-working days: working days skip Saturdays, Sundays and every date listed here, regular holiday or special non-working day. In CDMS only users with the ADMIN role add or remove holidays (JBAP answer Q14); deadlines and aging skip these dates. Prototype: the list is sample data (check it against the official proclamation) and the ADMIN role is not simulated; changes last until you refresh the page.',
     rows: holidayRows, sort: ['date', 'asc'],
-    cols: [C('Date', 'date', 'date'), C('Day', 'day', 'text', { w: 120 }), C('Holiday', 'name', 'text', { w: 320 }), C('Type', 'type', 'text', { w: 200 }), C('Remove', 'id', 'rowbtn', { act: 'removeHoliday', btn: 'Remove' })],
+    cols: [C('Date', 'date', 'date'), C('Day', 'day', 'text', { w: 120 }), C('Holiday', 'name', 'text', { w: 320 }), C('Type', 'type', 'text', { w: 200 }), C('Remove', 'id', 'rowbtn', { act: 'removeHoliday', btn: 'Remove', aria: r => `${r.name} ${fmtDate(r.date)}` })],
     filters: [{ key: 'year', label: 'Year', type: 'select', w: 'w1', options: () => [...new Set(S.holidays.map(h => h.date.slice(0, 4)))].sort() }, { key: 'type', label: 'Type', type: 'select', options: () => HOLIDAY_TYPES }] },
 
   // ===================== Log Activity (top-level menu, read-only) =====================
@@ -883,7 +890,7 @@ function queueCounts(scr) {
 }
 const PROPOSALS = [['P2', 'Cancellations made in CDMS wait for FAD to confirm', 'FAD/cancellation-entry'],
   ['P3', 'NOAH numbers stay typed for now; JBAP\'s existing NOAH integration will be re-routed from Access to CDMS. Optional Payment Voucher No.', 'FAD/payment-seller'],
-  ['P4', 'Ready lots arrive pre-ticked on 7 lists; Commission Billing bills several sellers at once', 'FAD/commission-billing'],
+  ['P4', 'Ready lots arrive pre-ticked on 6 lists; Commission Billing bills several sellers at once', 'FAD/commission-billing'],
   ['P5', 'Lots the seller approved in the SAAF arrive pre-ticked for the BAAF; the dispatch email is copied to Finance only', 'FAD/pending-awarding'],
   ['P6', 'Counts on the menu and "Waiting for you" on this page', '']];
 // [BEHAVIOR] P4: an untick on the ready key holds the lot back for this session. It is never saved, logged or counted as a change.
@@ -910,7 +917,7 @@ function cellHtml(scr, r, c, upd) {
   if (c.type === 'status' && !v) return '<td class="c"></td>';   // yard and inspection units have no auction status
   if (c.type === 'status') { const k = { Sold: 'sold', 'Not Sold': 'ns', Cancelled: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
   if (c.type === 'action') { const k = { Update: 'up', Create: 'sold', Cancel: 'cx', Delete: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
-  if (c.type === 'rowbtn') return c.showWhen && !c.showWhen(r) ? '<td class="c"></td>' : `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}" aria-label="${esc(c.btn)} ${esc(r.plate || r.name || '')}">${esc(c.btn)}</button></td>`;
+  if (c.type === 'rowbtn') return c.showWhen && !c.showWhen(r) ? '<td class="c"></td>' : `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}" aria-label="${esc(c.btn)} ${esc(c.aria ? c.aria(r) : r.plate || '')}">${esc(c.btn)}</button></td>`;
   if (c.type === 'logval' && (v ?? '') === '') return '<td><span class="blank">(blank)</span></td>';
   let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : c.type === 'datetime' ? `${fmtDate(v.slice(0, 10))} ${v.slice(11)}` : (v ?? '');
   const late = c.late && v && v < TODAY ? ' late' : '';
@@ -981,16 +988,16 @@ function cdmsCancelPanel(scr) {
 function holidayForm(scr) {
   const ui = U(scr.id), f = ui.hf || (ui.hf = { date: '', name: '', type: '', errors: {} }), er = k => f.errors[k] ? `<span class="err" id="hl-${k}-err">${esc(f.errors[k])}</span>` : '';
   return `<section class="card" aria-label="Add holiday"><div class="card-h"><div class="ico">${IC.cal}</div>Add holiday</div>
-    <form class="fb" data-form="holiday" novalidate><div class="fld"><label for="hl-date">Date</label>${dateField('hl-date', f.date, f.errors.date ? 'aria-invalid="true"' : '', f.errors.date ? 'is-invalid' : '')}${er('date')}</div>
-    <div class="fld w2"><label for="hl-name">Holiday</label><input class="ctl${f.errors.name ? ' is-invalid' : ''}" id="hl-name" autocomplete="off" placeholder="e.g. Eid'l Fitr" value="${esc(f.name)}"${f.errors.name ? ' aria-invalid="true"' : ''}>${er('name')}</div>
-    <div class="fld"><label for="hl-type">Type</label><select class="ctl${f.errors.type ? ' is-invalid' : ''}" id="hl-type"${f.errors.type ? ' aria-invalid="true"' : ''}><option value="">Choose the type</option>${HOLIDAY_TYPES.map(t => `<option${t === f.type ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>${er('type')}</div>
+    <form class="fb" data-form="holiday" novalidate><div class="fld"><label for="hl-date">Date</label>${dateField('hl-date', f.date, f.errors.date ? 'aria-invalid="true" aria-describedby="hl-date-err"' : '', f.errors.date ? 'is-invalid' : '')}${er('date')}</div>
+    <div class="fld w2"><label for="hl-name">Holiday</label><input class="ctl${f.errors.name ? ' is-invalid' : ''}" id="hl-name" autocomplete="off" placeholder="e.g. Eid'l Fitr" value="${esc(f.name)}"${f.errors.name ? ' aria-invalid="true" aria-describedby="hl-name-err"' : ''}>${er('name')}</div>
+    <div class="fld"><label for="hl-type">Type</label><select class="ctl${f.errors.type ? ' is-invalid' : ''}" id="hl-type"${f.errors.type ? ' aria-invalid="true" aria-describedby="hl-type-err"' : ''}><option value="">Choose the type</option>${HOLIDAY_TYPES.map(t => `<option${t === f.type ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>${er('type')}</div>
     <div class="btns"><button type="submit" class="btn pr">${IC.save}Add holiday</button></div></form></section>`;
 }
 function holidayAdd(scr) {
   const ui = U(scr.id), raw = $('#hl-date').value.trim(), date = parseDateInput(raw, TODAY), f = { date, name: $('#hl-name').value.trim(), type: $('#hl-type').value }, errors = holidayErrors(f);
   const bad = ['date', 'name', 'type'].find(k => errors[k]);
   if (bad) { ui.hf = { date: date === null ? raw : date, name: f.name, type: f.type, errors: Object.fromEntries(Object.entries(errors).filter(([, m]) => m)) }; render(); $(`#hl-${bad}`)?.focus(); return; }
-  recordHolidayAdd(scr, f); ui.hf = null; render();
+  recordHolidayAdd(scr, f); ui.hf = null; render(); $('#hl-date')?.focus();   // back to the first field, ready for the next holiday
   toast(`Holiday added: ${fmtDate(f.date)}, ${esc(f.name.trim())}. Deadlines and aging now skip that date.`);
 }
 function entryLayout(scr) {
@@ -1349,10 +1356,11 @@ const ACTIONS = {
     if (!ticked.length) { setMsg(scr, 'error', 'Tick <b>For BAAF</b> on at least one vehicle, then press Email BAAF.'); render(); return; }
     const { send: rows, held } = baafSplit(ticked, ui.edits);   // JBAP answer Q5: lots with a rebate and no approval date do not go
     const heldMsg = held.length ? `${held.length} vehicle(s) not sent:<br>${held.map(r => `Lot ${esc(r.lot || '-')} (${esc(r.plate || r.customer)}): ${esc(REBATE_NEEDS_APPROVAL)}`).join('<br>')}` : null;
-    if (!rows.length) { setMsg(scr, 'error', heldMsg); render(); return; }
+    const markHeld = () => held.forEach(r => { (ui.errors[r.id] ||= {}).rebate_approved = REBATE_NEEDS_APPROVAL; });   // the held lots' Rebate Approved cells turn red with the same message (validateEdits replaces ui.errors, so this runs after it)
+    if (!rows.length) { setMsg(scr, 'error', heldMsg); markHeld(); render(); return; }
     const errs = validateEdits(scr, rows.map(r => r.id).filter(id => ui.edits[id]));
-    if (errs.length) { setMsg(scr, 'error', `Please fix before sending:<br>${errs.join('<br>')}${heldMsg ? `<br>${heldMsg}` : ''}`); render(); return; }
-    setMsg(scr, heldMsg ? 'error' : null, heldMsg); render();
+    if (errs.length) { setMsg(scr, 'error', `Please fix before sending:<br>${errs.join('<br>')}${heldMsg ? `<br>${heldMsg}` : ''}`); markHeld(); render(); return; }
+    setMsg(scr, heldMsg ? 'error' : null, heldMsg); markHeld(); render();
     const groups = {}; rows.forEach(r => (groups[r.cid] ||= []).push(r));
     const eff = (r, k) => (k in (ui.edits[r.id] || {}) ? ui.edits[r.id][k] : r[k]);
     const lotsOf = list => list.map(r => Object.assign({}, r, { transfer_fee: Number(eff(r, 'transfer_fee') || 0), security_bond: Number(eff(r, 'security_bond') || 0),
@@ -1597,7 +1605,7 @@ const ACTIONS = {
     openModal({ title: 'Remove this holiday?', icon: 'ban',
       body: `<p><b>${esc(h.name)}</b> (${fmtDate(h.date)}, ${esc(h.type)}) will be removed from the holiday list.</p><p>Deadlines and aging count that date as a working day again (a Saturday or Sunday stays a non-working day).</p>`,
       footer: [{ label: 'Keep holiday', kind: 'gh', onClick: closeModal }, { label: 'Remove holiday', kind: 'dg', icon: 'ban', onClick: () => {
-        recordHolidayRemove(scr, h.date); closeModal(); render(); toast(`Holiday removed: ${fmtDate(h.date)}, ${esc(h.name)}.`);
+        recordHolidayRemove(scr, h.date); closeModal(); render(); $('#content')?.focus(); toast(`Holiday removed: ${fmtDate(h.date)}, ${esc(h.name)}.`);
       } }] });
   },
   resetFilter(scr) { const ui = U(scr.id), key = filterFocusKey(document.activeElement); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); refocusFilter($('#content'), key); },

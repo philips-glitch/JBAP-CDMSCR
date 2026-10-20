@@ -129,7 +129,7 @@ test('Add holiday form: typed date, name, type, Add holiday button; Remove is a 
   assert.match(h, /<label for="hl-name">Holiday<\/label><input class="ctl[^"]*" id="hl-name"/);
   assert.match(h, /<label for="hl-type">Type<\/label><select class="ctl[^"]*" id="hl-type"><option value="">[^<]*<\/option><option>Regular holiday<\/option><option>Special non-working day<\/option>/);
   assert.match(h, /type="submit" class="btn pr">[\s\S]*Add holiday<\/button>/);
-  const t = P.dataCard(scr, 'Holiday List'); assert.match(t, /data-act="removeHoliday" data-rid="2026-08-31" aria-label="Remove National Heroes Day"/);
+  const t = P.dataCard(scr, 'Holiday List'); assert.match(t, /data-act="removeHoliday" data-rid="2026-08-31" aria-label="Remove National Heroes Day 08\/31\/2026"/);
   assert.strictEqual(typeof P.ACTIONS.removeHoliday, 'function');
   assert.match(P.pageHead(scr), /Home<\/a>›<span>Settings<\/span>›<b>Holiday List<\/b>/);
   assert.match(P.pageHead(scr), /<h1>Holiday List<span class="ptag new"/);
@@ -166,4 +166,24 @@ test('Log Activity: Module filter offers Settings, Action filter offers Delete; 
   const row = log.rows().find(r => r.action === 'Delete'), cell = P.cellHtml(log, row, log.cols.find(c => c.key === 'action'), false);
   assert.match(cell, /<span class="st cx">Delete<\/span>/);
   assert.match(log.rule, /Settings/);
+});
+
+test('Add holiday form: every error shown is tied to its control with aria-describedby (none when there is no error)', () => {
+  const P = load(), scr = hs(P), ui = P.U(scr.id);
+  ui.hf = null; assert.doesNotMatch(P.holidayForm(scr), /aria-describedby|aria-invalid/, 'a clean form has neither');
+  ui.hf = { date: '', name: '', type: '', errors: { date: 'Date is required.', name: 'Holiday name is required.', type: 'Choose the type of holiday.' } };
+  const h = P.holidayForm(scr);
+  assert.match(h, /id="hl-date"[^>]*aria-describedby="hl-date-err"/); assert.match(h, /id="hl-name"[^>]*aria-describedby="hl-name-err"/); assert.match(h, /id="hl-type"[^>]*aria-describedby="hl-type-err"/);
+  for (const k of ['date', 'name', 'type']) assert.match(h, new RegExp('<span class="err" id="hl-' + k + '-err">'), k + ' message element exists for the reference');
+  ui.hf = { date: '', name: 'X', type: '', errors: { date: 'Date is required.' } };
+  const one = P.holidayForm(scr); assert.match(one, /aria-describedby="hl-date-err"/); assert.doesNotMatch(one, /hl-name-err|hl-type-err/, 'only the field with an error is described');
+  ui.hf = null;
+});
+test('Remove button name carries the holiday and its date, so two buttons never read the same', () => {
+  const P = load(), scr = hs(P), rows = scr.rows(), btn = scr.cols.find(c => c.type === 'rowbtn');
+  const names = rows.map(r => P.cellHtml(scr, r, btn, true).match(/aria-label="([^"]*)"/)[1]);
+  assert.strictEqual(new Set(names).size, names.length, 'all 18 distinct (Christmas Day appears in two years)');
+  assert.ok(names.includes('Remove Christmas Day 12/25/2026') && names.includes('Remove Christmas Day 12/25/2025'));
+  const plated = P.byId['FAD/unreleased-unit'], row = plated.rows().find(r => r.penalty > 0), pb = plated.cols.find(c => c.act === 'payPenalty');
+  assert.ok(P.cellHtml(plated, row, pb, true).includes('aria-label="Record payment ' + row.plate + '"'), 'plate-based buttons are unchanged');
 });

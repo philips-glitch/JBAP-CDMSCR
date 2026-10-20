@@ -50,8 +50,7 @@ test('seed: 4 lots approved by the seller, 3 sent and awaiting the seller', () =
 });
 test('sending the SAAF records SAAF Sent under SMD; the approval makes the lot ready for FAD', () => {
   const P = load(), scr = P.byId['SMD/saaf']; P.setProposed(true);
-  const sel = P.selectedRows(scr, 'for_saaf'); assert.ok(sel.length > 0 && sel.every(r => !r.saaf_sent), 'unsent lots are pre-ticked');
-  const r = sel[0], before = P.S.log.length;
+  const r = scr.rows().find(x => !x.saaf_sent), before = P.S.log.length;
   P.recordSaafSent(scr, [r]);
   assert.strictEqual(r._raw.saaf_sent, P.TODAY); assert.ok(P.S.log.slice(before).every(e => e.module === 'SMD'));
   P.U(scr.id).edits[r.id] = { saaf_approved: P.TODAY }; P.applyEdits(scr);
@@ -95,4 +94,28 @@ test('F2: an approved lot cannot be ticked for SAAF and Email SAAF skips it', ()
   assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf').map(r => r.id), ['V102'], 'the approved lot is ticked');
   try { P.ACTIONS.emailSaaf(scr); } catch (e) { /* DOM stub */ }
   const m = P.U(scr.id).msg; assert.ok(m && m.type === 'error' && /at least one lot/.test(m.html), 'nothing to send');
+});
+
+test('the SAAF screen has no pre-tick (switch off or on) but keeps its P6 queue count', () => {
+  const P = load(), scr = P.byId['SMD/saaf'];
+  assert.ok(!scr.ready, 'no ready rule'); assert.strictEqual(scr.queue, true);
+  for (const on of [false, true]) { P.setProposed(on); assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf'), [], 'switch ' + on + ': nothing is pre-ticked'); }
+  assert.strictEqual(P.isProposed(), true);
+  assert.deepStrictEqual(P.queueCounts(scr), { ready: scr.rows().length, late: 0 }, 'the P6 count is the lots on the list');
+  scr.rows().forEach(r => { P.U(scr.id).edits[r.id] = { for_saaf: r.id === 'V087' }; });   // a saved or typed tick still works
+  assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf').map(r => r.id), ['V087']);
+});
+test('the P4 text and the README P4 row name the lists still tagged P4 (Pending Awarding\'s pre-tick is tagged P5)', () => {
+  const P = load(), p4 = P.SCREENS.filter(s => s.ready && s.ruleP && s.ruleP[0] === 'P4'), p4text = P.PROPOSALS.find(p => p[0] === 'P4')[1];
+  assert.deepStrictEqual(p4.map(s => s.id).sort(), ['FAD/billing-monitoring', 'FAD/cancellation-billing', 'FAD/commission-billing', 'FAD/document-monitoring', 'FAD/for-dispatch', 'FAD/payment-seller']);
+  assert.match(p4text, /pre-ticked on 6 lists/); assert.doesNotMatch(p4text, /7 lists/);
+  assert.deepStrictEqual(P.SCREENS.filter(s => s.ready).map(s => s.id).sort(), [...p4.map(s => s.id), 'FAD/pending-awarding'].sort(), 'the other screen with a pre-tick is Pending Awarding (P5)');
+  const row = require('fs').readFileSync(require('path').join(__dirname, '..', 'README.md'), 'utf8').split('\n').find(l => l.startsWith('| P4 |')), where = row.split('|')[2];
+  for (const t of ['Payment Seller', 'Commission Billing', 'Billing Monitoring', 'For Dispatch', 'Document Monitoring', 'Cancellation Billing']) assert.ok(where.includes(t), t);
+  assert.ok(!where.includes('Pending Awarding'), 'README P4 row: Pending Awarding is in the P5 row');
+  assert.match(row, /6 lists|six lists/);
+});
+test('data-extra.js comments the SAAF sample as Q11, not P5', () => {
+  const t = require('fs').readFileSync(require('path').join(__dirname, '..', 'data-extra.js'), 'utf8');
+  assert.doesNotMatch(t, /\[MOCK\] P5: SAAF state/); assert.match(t, /\[MOCK\] Q11: SAAF state/);
 });

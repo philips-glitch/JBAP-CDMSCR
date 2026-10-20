@@ -125,3 +125,59 @@ test('[MOCK] sample: Pending Awarding has lots with a rebate and an approval dat
   assert.ok(!win.MOCK_DATA.vehicles.some(v => 'rebate_approved' in v), 'data.js is untouched');
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'data-extra.js'), 'utf8'), /\[MOCK\][^\n]*rebate/i, 'the sample carries a [MOCK] comment');
 });
+
+test('approval date bounds: not after the Awarding Date in the edit (else the saved date counts); a typed date not before the auction start', () => {
+  const P = load(), v = pa(P).validate, base = lot(P, { auction_start: '2026-09-21' }), saved = d => Object.assign({}, base, { rebate_approved: d });
+  assert.strictEqual(v(base, { awarding: '2026-09-30', rebate_approved: '2026-10-01' }).rebate_approved, 'cannot be after the Awarding Date (09/30/2026)');
+  assert.strictEqual(v(base, { awarding: '2026-09-30', rebate_approved: '2026-09-30' }).rebate_approved, null, 'the same day is fine');
+  assert.strictEqual(v(base, { awarding: '2026-09-30', rebate_approved: '2026-09-25' }).rebate_approved, null);
+  assert.strictEqual(v(saved('2026-10-02'), { awarding: '2026-10-01' }).rebate_approved, 'cannot be after the Awarding Date (10/01/2026)', 'the saved approval is checked against the typed Awarding Date');
+  assert.strictEqual(v(saved('2026-09-25'), { awarding: '2026-10-01' }).rebate_approved, null);
+  assert.strictEqual(v(base, { rebate_approved: '2026-10-01' }).rebate_approved, null, 'no Awarding Date in the edit: no upper bound');
+  assert.strictEqual(v(base, { awarding: '', rebate_approved: '2026-10-01' }).rebate_approved, null, 'a blank Awarding Date is no Awarding Date');
+  assert.strictEqual(v(base, { rebate_approved: '2026-09-20' }).rebate_approved, 'cannot be before the auction start (09/21/2026)');
+  assert.strictEqual(v(base, { rebate_approved: '2026-09-21' }).rebate_approved, null, 'the auction start itself is fine');
+  assert.strictEqual(v(saved('2026-09-01'), { awarding: '2026-10-01' }).rebate_approved, null, 'a saved date is not re-checked against the auction start when it is not typed');
+  assert.strictEqual(v(saved('2026-09-01'), { rebate: '4000' }).rebate_approved, null);
+  assert.strictEqual(v(base, { awarding: '2026-09-23', rebate_approved: '2026-09-24' }).rebate_approved, 'cannot be after the Awarding Date (09/23/2026)', 'both bounds: the lower one passes, the upper one fails');
+  assert.match(v(base, { rebate_approved: '2099-01-01' }).rebate_approved, /after today/, 'the future check stays first');
+  assert.strictEqual(v(lot(P, { rebate: null, auction_start: '2026-09-21' }), { rebate_approved: '2026-09-20' }).rebate_approved, 'cannot be before the auction start (09/21/2026)', 'a bound error comes before "No rebate to approve"');
+  const r = pa(P).rows().find(x => x.rebate && x.auction_start);   // a real lot: its own auction start
+  assert.strictEqual(v(r, { rebate_approved: P.D.auctions[String(r.auction)][0] }).rebate_approved, null);
+  const d = new Date(r.auction_start + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
+  assert.strictEqual(v(r, { rebate_approved: d.toISOString().slice(0, 10) }).rebate_approved, 'cannot be before the auction start (' + P.fmtDate(r.auction_start) + ')');
+});
+
+test('Save changes lists the bound errors with the column name', () => {
+  const P = load(), scr = pa(P), r = scr.rows().find(x => x.rebate && !x.rebate_approved);
+  P.U(scr.id).edits[r.id] = { awarding: P.TODAY, rebate_approved: '2000-01-01' };
+  const lines = P.validateEdits(scr); assert.strictEqual(lines.length, 1);
+  assert.match(lines[0], /<b>Rebate Approved \(President\)<\/b> cannot be before the auction start \(/);
+  P.U(scr.id).edits = {}; P.U(scr.id).errors = {};
+});
+
+test('Email BAAF marks each held lot\'s Rebate Approved cell invalid with the same message, next to the other errors', () => {
+  const P = load(), scr = pa(P), rows = scr.rows(), col = scr.cols.find(c => c.key === 'rebate_approved'), ed = P.U(scr.id).edits;
+  const held = rows.find(r => r.rebate && !r.rebate_approved), other = rows.find(r => !r.rebate && r.id !== held.id);
+  const call = () => { try { P.ACTIONS.emailBaaf(scr); } catch (e) { /* DOM stub: render() has no #content; the state is set before it */ } };
+  // only the held lot: nothing can be sent, the cell is marked
+  ed[held.id] = { for_baaf: true }; call();
+  assert.strictEqual(P.U(scr.id).errors[held.id].rebate_approved, NEEDS);
+  const td = P.cellHtml(scr, held, col, true);
+  assert.match(td, /aria-invalid="true" title="Rebate Approved \(President\): The rebate needs the President&#39;s approval date before awarding\."/);
+  assert.match(td, /class="cell-in dt  is-invalid"/);
+  // another ticked lot has its own error: validateEdits replaces ui.errors, the held mark is merged in afterwards
+  P.U(scr.id).errors = {}; ed[other.id] = { for_baaf: true, awarding: '2099-01-01' }; call();
+  const errs = P.U(scr.id).errors;
+  assert.match(errs[other.id].awarding, /after today/); assert.strictEqual(errs[held.id].rebate_approved, NEEDS);
+  // a lot that goes (nothing wrong) leaves no mark
+  P.U(scr.id).errors = {}; delete ed[other.id]; const fine = rows.find(r => !r.rebate && r.id !== held.id && r.id !== other.id); ed[fine.id] = { for_baaf: true }; call();
+  assert.strictEqual(P.U(scr.id).errors[held.id].rebate_approved, NEEDS); assert.ok(!P.U(scr.id).errors[fine.id]);
+  Object.keys(ed).forEach(k => delete ed[k]); P.U(scr.id).errors = {};
+});
+
+test('Rebate Monitoring rule: the approval date is blank for lots awarded before it was recorded', () => {
+  const P = load(), rule = P.byId['FAD/rebate-monitoring'].rule;
+  assert.match(rule, /Rebate Approved \(President\) is blank for lots awarded before the approval date was recorded\./);
+  assert.match(rule, /Download report saves an Excel file/, 'the earlier sentences stay');
+});

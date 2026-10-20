@@ -6,7 +6,7 @@ test('no badges with the switch off', () => {
 test('ready counts agree with the pre-ticks; late counts rows past a deadline column', () => {
   const P = load(); P.setProposed(true);
   const queues = P.SCREENS.filter(s => s.queue === true && s.ready);
-  assert.strictEqual(queues.length, 8, 'the 7 P4 lists and SMD SAAF');
+  assert.strictEqual(queues.length, 7, 'the 6 P4 lists and Pending Awarding (P5); the SMD SAAF screen keeps its count but has no pre-tick');
   for (const s of queues) assert.strictEqual(P.queueCounts(s).ready, P.selectedRows(s, s.ready.key).length, s.id);
   const ps = P.byId['FAD/payment-seller']; assert.strictEqual(P.queueCounts(ps).late, ps.rows().filter(r => r.pay_deadline < P.TODAY).length);
   assert.strictEqual(P.queueCounts(P.byId['FAD/cancellation-entry']).ready, P.cdmsCancelsPending().length);
