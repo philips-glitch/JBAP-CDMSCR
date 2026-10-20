@@ -216,7 +216,7 @@ tfoot td{font-weight:700;background:#eef1f8;border-top:2px solid var(--line-2);b
 }
 @media (max-width:768px){
   .hgrid{grid-template-columns:1fr}
-  .fld,.fld.w2{width:100%}
+  .fld,.fld.w1,.fld.w2{width:100%}
   .fgrid{grid-template-columns:1fr}
   .acts{display:none}
   .top{gap:8px}.top .logo{height:30px}.top .user{height:48px}   /* phone width: the top bar fits 375px (burger, logo, Prototype tag, switch) */
