@@ -1,16 +1,16 @@
 const test = require('node:test'), assert = require('node:assert');
 const { load } = require('./harness');
 // JBAP's SMD buyer search (Q21, 20 Oct 2026): Sales Action, Sold units, Pending Awarding, Unpaid, Vehicle for release, Cancellation; "+ Date of release/return".
-// Sales Actions stays out (Q22, user decision).
+// Sales Actions was left out in 20 Oct (Q22); JBAP, 26 Oct 2026: "include it in the scope", so it is the last tab (tests/sales-actions.test.js).
 const onRelease = P => P.V().filter(v => v.cid && v.status === 'Sold' && v.dispatch && !v.release);
 const lotTable = h => h.slice(h.indexOf('aria-label="Lot lists"'));
 const heads = h => [...lotTable(h).matchAll(/<th scope="col"><span class="hb">([^<]*)/g)].map(m => m[1]);
 
-test('tab order: Sold, Pending Awarding, Unpaid, Vehicle for release, Pending DOAS signature, Documents for release, Cancellation', () => {
+test('tab order: Sold, Pending Awarding, Unpaid, Vehicle for release, Pending DOAS signature, Documents for release, Cancellation, Sales Actions (New)', () => {
   const P = load(), cid = onRelease(P)[0].cid, h = P.customerPage(cid, 'sold'), bar = h.slice(h.indexOf('aria-label="Lot lists"'), h.indexOf('</nav>', h.indexOf('aria-label="Lot lists"')));
   assert.deepStrictEqual([...bar.matchAll(/class="tab[^"]*"[^>]*>([A-Za-z ]+?)(?:<span class="ptag|<span class="cnt)/g)].map(m => m[1]),
-    ['Sold', 'Pending Awarding', 'Unpaid', 'Vehicle for release', 'Pending DOAS signature', 'Documents for release', 'Cancellation']);
-  assert.doesNotMatch(h, /Sales Action/, 'Sales Actions stays out of the customer page');
+    ['Sold', 'Pending Awarding', 'Unpaid', 'Vehicle for release', 'Pending DOAS signature', 'Documents for release', 'Cancellation', 'Sales Actions']);
+  assert.match(bar, /Cancellation<span class="cnt">\d+<\/span><\/a><a href="#\/customer\/[^"]+\/sales-actions" class="tab">Sales Actions<span class="ptag mini new"[^>]*>New<\/span><span class="cnt">\d+<\/span><\/a>$/, 'Sales Actions is last and carries the New mark; the other tabs carry none');
 });
 
 test('custRoute reads the Vehicle for release list', () => {

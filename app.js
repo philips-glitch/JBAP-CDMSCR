@@ -88,7 +88,7 @@ const deptSvg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-
 
 // ─── State ────────────────────────────────────────────────────────────
 // [MOCK] Deep copy of data.js so "Reset demo data" is just a page refresh.
-const S = D ? JSON.parse(JSON.stringify({ veh: D.vehicles, cancels: D.cancellations, billing: D.billing, log: [], holidays: D.holidays || [] })) : null;
+const S = D ? JSON.parse(JSON.stringify({ veh: D.vehicles, cancels: D.cancellations, billing: D.billing, log: [], holidays: D.holidays || [], salesActions: D.salesActions || [] })) : null;   // salesActions: JBAP 26 Oct 2026, the session copy of the [MOCK] sample (Customer page › Sales Actions)
 const syncHolidays = () => { HOLIDAY_DATES = new Set(S.holidays.map(h => h.date)); };
 if (S) syncHolidays();
 const SELLER = D ? Object.fromEntries(D.sellers.map(s => [s.code, s])) : {};
@@ -281,12 +281,12 @@ function buyerOf(cid) {
     return { id: code, seller: code, seller_full: SELLER[code]?.name || code, units: mine.length, amount: r2(sumBy(mine, 'price')), unpaid: mine.filter(isUnpaidLot).length, last: Math.max(...mine.map(v => +v.auction)) };
   }).sort((x, y) => y.units - x.units || y.amount - x.amount);
   return Object.assign({}, b, { sold, pending: sold.filter(isPendingAward), unpaid: sold.filter(isUnpaidLot),
-    pending_doas: sold.filter(v => !v.buyer_doas && !v.seller_doas && !(v.doas === 'branch' && v.ewb_signed) && (v.rcv_doas || (v.doas === 'branch' && v.ewb_callout))).map(v => Object.assign(v, { doas_days: workdaysBetween(v.rcv_doas || v.ewb_callout, TODAY) })), for_release: sold.filter(v => v.dispatch && !v.release), docs_release: sold.filter(v => v.orig_docs && !v.to_buyer), cancels: CX().filter(c => c.cid === cid).sort((x, y) => y.auction - x.auction), sellers });
+    pending_doas: sold.filter(v => !v.buyer_doas && !v.seller_doas && !(v.doas === 'branch' && v.ewb_signed) && (v.rcv_doas || (v.doas === 'branch' && v.ewb_callout))).map(v => Object.assign(v, { doas_days: workdaysBetween(v.rcv_doas || v.ewb_callout, TODAY) })), for_release: sold.filter(v => v.dispatch && !v.release), docs_release: sold.filter(v => v.orig_docs && !v.to_buyer), cancels: CX().filter(c => c.cid === cid).sort((x, y) => y.auction - x.auction), sellers, sales: salesActionsOf(cid) });
 }
-const CUST_TABS = [['sold', 'Sold'], ['pending-awarding', 'Pending Awarding'], ['unpaid', 'Unpaid'], ['vehicle-release', 'Vehicle for release'], ['pending-doas', 'Pending DOAS signature'], ['docs-release', 'Documents for release'], ['cancellation', 'Cancellation']];   // optional third item: New mark on the tab label (none in round 5 so far)
+const CUST_TABS = [['sold', 'Sold'], ['pending-awarding', 'Pending Awarding'], ['unpaid', 'Unpaid'], ['vehicle-release', 'Vehicle for release'], ['pending-doas', 'Pending DOAS signature'], ['docs-release', 'Documents for release'], ['cancellation', 'Cancellation'], ['sales-actions', 'Sales Actions', true]];   // optional third item: New mark on the tab label (Sales Actions, JBAP 26 Oct 2026)
 const custHref = (cid, tab) => `#/customer/${encodeURIComponent(cid)}${tab && tab !== 'sold' ? '/' + tab : ''}`;
 function custRoute(h) {   // #/customer/<Buyer ID>[/<list>] → { cid, tab }
-  const m = /^customer\/([^/]+)(?:\/([^/]*))?$/.exec(h || ''); if (!m) return null;
+  const m = /^customer\/([^/]+)(?:\/([^/]*))?$/.exec(h || ''); if (!m || Object.hasOwn(byId, h)) return null;   // a screen id (customer/sales-actions) is a screen, not a Buyer ID
   let cid; try { cid = decodeURIComponent(m[1]); } catch { cid = m[1]; }
   return { cid, tab: CUST_TABS.some(t => t[0] === m[2]) ? m[2] : 'sold' };
 }
@@ -297,7 +297,7 @@ const addLog = e => S.log.push(Object.assign({ id: `L${S.log.length + 1}`, date:
 if (S) (D.activityLog || []).forEach(addLog);
 const logVal = (type, v) => type === 'check' ? (v ? 'Yes' : 'No') : v === null || v === undefined || v === '' ? ''
   : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : type === 'date' ? fmtDate(v) : type === 'money' ? money(v) : String(v);
-const logRecord = r => r.auction ? `Auction ${r.auction}, Lot ${r.lot || '-'}${r.plate ? ` · ${r.plate}` : ''}` : r.holiday ? `Holiday ${fmtDate(r.date)} · ${r.name}` : `Billing #${r.no}`;
+const logRecord = r => r.auction ? `Auction ${r.auction}, Lot ${r.lot || '-'}${r.plate ? ` · ${r.plate}` : ''}` : r.holiday ? `Holiday ${fmtDate(r.date)} · ${r.name}` : r.sales ? `Customer ${r.cid} · ${r.name}` : `Billing #${r.no}`;
 // [BEHAVIOR] changes: [[field label, type, old value, new value]]. Update rows whose value did not change are skipped.
 function logChange(scr, action, r, changes) {
   const at = `${TODAY} ${new Date().toTimeString().slice(0, 8)}`;   // demo date + real clock time
@@ -334,8 +334,35 @@ function recordHolidayRemove(scr, date) {
   return true;
 }
 
+// ─── Sales Actions (Customer page › Sales Actions and Customer › Sales Actions; JBAP, 26 Oct 2026) ──
+// [BEHAVIOR] SMD records what it did to follow up with a buyer: Date, Action, Notes and an optional Next Follow-up. The fields are LOGIQUE's proposal. The list lives in S.salesActions (a session copy of D.salesActions);
+// the prototype has no login, so By is "SMD user". Adding is on the customer page only; Customer › Sales Actions lists every action, view only. An add is logged under module SMD, action Create.
+const SALES_ACTIONS = ['Call', 'Email', 'Visit', 'Meeting', 'Other'];
+const SALES_BY = 'SMD user';
+const buyerName = cid => buyerIndex().get(cid)?.name || '';
+const salesNewestFirst = (a, b) => b.date.localeCompare(a.date);   // the sort is stable: of two actions on one date, the one added last stays on top
+const salesActionsOf = cid => S.salesActions.filter(a => a.cid === cid).sort(salesNewestFirst);
+const salesActionRows = () => { const idx = buyerIndex(); return S.salesActions.map(a => Object.assign({}, a, { customer: idx.get(a.cid)?.name || '' })).sort(salesNewestFirst); };
+// The problem with each field of the Add sales action form, or null. f.date and f.follow_up: ISO date, '' (blank) or null (not a date).
+function salesActionError(f) {
+  const e = {};
+  if (!f.date) e.date = 'Type the date as mm/dd/yyyy.';
+  else if (f.date > TODAY) e.date = 'Date cannot be after today.';
+  if (!SALES_ACTIONS.includes(f.action)) e.action = 'Choose the action.';
+  if (!String(f.notes || '').trim()) e.notes = 'Notes are required.';
+  if (f.follow_up === null) e.follow_up = 'Type the date as mm/dd/yyyy.';
+  else if (f.follow_up && f.date && !e.date && f.follow_up < f.date) e.follow_up = 'Next follow-up cannot be before the date.';
+  return Object.keys(e).length ? e : null;
+}
+function recordSalesAction(cid, f) {
+  const a = { id: 'SA-' + (S.salesActions.length + 1), cid, date: f.date, action: f.action, notes: String(f.notes).trim(), follow_up: f.follow_up || null, by: SALES_BY };
+  S.salesActions.unshift(a);
+  logChange({ dept: 'SMD', title: 'Sales Actions' }, 'Create', { sales: true, cid, name: buyerName(cid) }, [['Action', 'text', null, a.action], ['Notes', 'text', null, a.notes]]);
+  return a;
+}
+
 // ─── Column helper ────────────────────────────────────────────────────
-const C = (label, key, type = 'text', o = {}) => Object.assign({ label, key, type }, o);
+const C =(label, key, type = 'text', o = {}) => Object.assign({ label, key, type }, o);
 const CEN = new Set(['code', 'date', 'check', 'status', 'rocheck', 'datetime', 'action', 'rowbtn']);
 const RIGHT = new Set(['money', 'int']);
 const sumBy = (rows, k) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
@@ -784,7 +811,7 @@ const SCREENS = [
       C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller Deadline', 'pay_deadline', 'date'), C('Total (Result Price + Transfer Fees + Security Bond)', 'total', 'money')],
     totals: rows => ({ seller: 'Total liability to sellers', total: money(sumBy(rows, 'total')) }) },
 
-  // ===================== Customer › Customer Inquiry (read-only; Sales Actions is not part of the prototype) =====================
+  // ===================== Customer › Customer Inquiry (read-only) =====================
   { id: CUST_ID, dept: 'Customer', title: 'Customer Inquiry', actions: VFS,
     rule: 'One row per buyer (Buyer ID), from the lots and the cancellations. Lots Bought and Total Bought count SOLD lots at their result price; Unpaid Lots = awarded lots without a Buyer Paid date. Click a Buyer ID or name to open the customer page; buyer names on the FAD, SMD and VWD lists open it too.',
     rows: buyerRows, sort: ['last_auction', 'desc'],
@@ -792,6 +819,17 @@ const SCREENS = [
       C('Total Bought (PHP)', 'total_bought', 'money'), C('Unpaid Lots', 'unpaid', 'int'), C('Cancellations', 'cancels', 'int'), C('Last Auction', 'last_auction', 'code')],
     filters: [{ key: 'cid', label: 'Buyer ID', type: 'text', w: 'w1' }, { key: 'customer', label: 'Buyer Name' }],
     totals: rows => ({ customer: `${rows.length} buyers`, lots: intf(sumBy(rows, 'lots')), total_bought: money(sumBy(rows, 'total_bought')), unpaid: intf(sumBy(rows, 'unpaid')), cancels: intf(sumBy(rows, 'cancels')) }) },
+
+  // ===================== Customer › Sales Actions (JBAP feedback, 26 Oct 2026: "include it in the scope"; the fields are LOGIQUE's proposal) =====================
+  // View only: actions are added on the customer page, tab Sales Actions. A buyer's name and Buyer ID open that tab.
+  { id: 'customer/sales-actions', dept: 'Customer', title: 'Sales Actions', actions: VFS, isNew: true,
+    rule: 'Every sales action SMD recorded on a customer page, newest first (JBAP, 26 Oct 2026; fields are our proposal). Add actions on the customer page, tab Sales Actions. Follow-up due = Next Follow-up on or before today.',
+    rows: salesActionRows, sort: ['date', 'desc'],
+    cols: [C('Date', 'date', 'date'), C('Buyer ID', 'cid', 'code', { tab: 'sales-actions' }), C('Customer Name', 'customer', 'text', { w: 240, tab: 'sales-actions' }), C('Action', 'action', 'text'),
+      C('Notes', 'notes', 'text', { w: 300, wrap: true }), C('Next Follow-up', 'follow_up', 'date'), C('By', 'by', 'text')],
+    filters: [{ key: 'customer', keys: ['customer', 'cid'], label: 'Customer Name / Buyer ID', w: 'w2' }, { key: 'action', label: 'Action', type: 'select', options: () => SALES_ACTIONS },
+      { key: 'date', label: 'Date', type: 'daterange' },
+      { key: 'due', label: 'Follow-up due', type: 'select', w: 'w1', options: () => ['Yes', 'No'], match: (r, v) => (v === 'Yes') === !!(r.follow_up && r.follow_up <= TODAY) }] },
 
   // ===================== Approval › Rebate Approval (JBAP feedback, 26 Oct 2026; the President's menu) =====================
   // Rows: every lot with a rebate status (the default filter shows the pending ones). The menu number counts the pending rebates. Approve and Reject are row buttons on pending rows only.
@@ -816,14 +854,14 @@ const SCREENS = [
 
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
-    rule: 'Every data change made in FAD, SMD and VWD, every rebate decision of the President in Approval, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals, the SAAF and Result Price (saved rebates and cancelled sales); FAD entries include Rebate Paid.',
+    rule: 'Every data change made in FAD, SMD and VWD, every rebate decision of the President in Approval, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals, the SAAF and Result Price (saved rebates and cancelled sales); FAD entries include Rebate Paid. A sales action added on a customer page is logged under SMD.',
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
       { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD', 'Approval', 'Settings'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Delete'] },
       { key: 'record', label: 'Record / Plate' }],
-    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them, sends a SAAF, saves a rebate or cancels a sale in Result Price.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : m[0] === 'Approval' ? 'No activity yet: Approval logs an entry each time the President approves or rejects a rebate.' : null; } },
+    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them, sends a SAAF, saves a rebate, cancels a sale in Result Price or adds a sales action on a customer page.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : m[0] === 'Approval' ? 'No activity yet: Approval logs an entry each time the President approves or rejects a rebate.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -900,10 +938,10 @@ function sideHtml(route) {
   const logOn = route === LOG_ID;
   const log = `<a class="mi ${logOn ? 'is-active' : ''}" href="#/${LOG_ID}" ${logOn ? 'aria-current="page"' : ''}>${deptSvg('LOG')}Log Activity</a>`;
   return TOP_BEFORE.map(x => TOP_MENUS[x[1]] ? topMenu(x[1], route) : disabledItem(x)).join('') + groups + TOP_AFTER.map(disabledItem).join('') + topMenu('settings', route) + log +
-    '<p class="side-note">Prototype: only Customer Inquiry, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active. Other menus are disabled.</p>';
+    '<p class="side-note">Prototype: only Customer Inquiry, Sales Actions, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active. Other menus are disabled.</p>';
 }
 // Top-level menus outside FAD / SMD / VWD: Customer (Customer Inquiry; a customer page keeps it highlighted) and Report. Items show their record count.
-const TOP_MENUS = { customer: { dept: 'Customer', disabled: ['Sales Actions'], on: (s, r) => r === s.id || (s.id === CUST_ID && !!custRoute(r)) },
+const TOP_MENUS = { customer: { dept: 'Customer', disabled: [], on: (s, r) => r === s.id || (s.id === CUST_ID && !!custRoute(r)) },
   report: { dept: 'Report', disabled: [], on: (s, r) => r === s.id },
   approval: { dept: 'Approval', disabled: [], icon: 'APP', on: (s, r) => r === s.id },   // Approval (JBAP, 26 Oct 2026): Rebate Approval for the President; its icon is drawn inline
   settings: { dept: 'Settings', disabled: [], icon: 'SET', on: (s, r) => r === s.id } };   // Settings (JBAP answer Q14): after the other menus, before Log Activity; its icon is drawn inline
@@ -1001,8 +1039,8 @@ function cellHtml(scr, r, c, upd) {
   let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : c.type === 'datetime' ? `${fmtDate(v.slice(0, 10))} ${v.slice(11)}` : (v ?? '');
   const late = c.late && v && v < TODAY ? ' late' : '';
   // [BEHAVIOR] a buyer name or Buyer ID opens the customer page when the row has a known Buyer ID
-  const inner = (c.key === 'customer' || c.key === 'cid') && t !== '' && knownBuyer(r.cid) ? `<a class="blink" href="${custHref(r.cid)}">${esc(t)}</a>` : esc(t);
-  if (c.w) return `<td class="${cls}${late}"><div class="tx" style="max-width:${c.w}px" title="${esc(t)}">${inner}</div></td>`;
+  const inner = (c.key === 'customer' || c.key === 'cid') && t !== '' && knownBuyer(r.cid) ? `<a class="blink" href="${custHref(r.cid, c.tab)}">${esc(t)}</a>` : esc(t);   // c.tab: the customer page tab the link opens (Sales Actions list: its own tab)
+  if (c.w) return `<td class="${cls}${late}"><div class="tx${c.wrap ? ' wrap' : ''}" style="max-width:${c.w}px" title="${esc(t)}">${inner}</div></td>`;
   return `<td class="${cls}${late}">${inner}</td>`;
 }
 
@@ -1068,6 +1106,29 @@ function holidayAdd(scr) {
   recordHolidayAdd(scr, f); ui.hf = null; render(); $('#hl-date')?.focus();   // back to the first field, ready for the next holiday
   toast(`Holiday added: ${fmtDate(f.date)}, ${esc(f.name.trim())}. Deadlines and aging now skip that date.`);
 }
+// [BEHAVIOR] Customer page › Sales Actions: the Add sales action form above the buyer's list. What was typed stays, with its messages, when it is refused (salesDraft, one per buyer); focus goes to the first field with a problem.
+const salesDraft = {};
+function salesActionForm(cid) {
+  const f = salesDraft[cid] || { date: TODAY, action: 'Call', notes: '', follow_up: '', errors: {} };
+  const er = k => f.errors[k] ? `<span class="err" id="sa-${k}-err" role="alert">${esc(f.errors[k])}</span>` : '';
+  const bad = k => f.errors[k] ? `aria-invalid="true" aria-describedby="sa-${k}-err"` : '', inv = k => f.errors[k] ? ' is-invalid' : '';
+  return `<h3 class="sa-h" id="sa-form-h">Add sales action</h3>
+    <form class="fb" data-form="salesaction" novalidate aria-labelledby="sa-form-h"><div class="fld"><label for="sa-date">Date</label>${dateField('sa-date', f.date, bad('date'), inv('date').trim())}${er('date')}</div>
+    <div class="fld"><label for="sa-action">Action</label><select class="ctl${inv('action')}" id="sa-action" ${bad('action')}>${SALES_ACTIONS.map(a => `<option${a === f.action ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select>${er('action')}</div>
+    <div class="fld w3"><label for="sa-notes">Notes</label><textarea class="ctl${inv('notes')}" id="sa-notes" rows="3" ${bad('notes')}>${esc(f.notes)}</textarea>${er('notes')}</div>
+    <div class="fld"><label for="sa-follow_up">Next Follow-up (optional)</label>${dateField('sa-follow_up', f.follow_up, bad('follow_up'), inv('follow_up').trim())}${er('follow_up')}</div>
+    <div class="btns"><button type="submit" class="btn pr">${IC.save}Add sales action</button></div></form>`;
+}
+function salesActionAdd(cid) {
+  const rawDate = $('#sa-date').value.trim(), rawFollow = $('#sa-follow_up').value.trim();
+  const f = { date: parseDateInput(rawDate, TODAY), action: $('#sa-action').value, notes: $('#sa-notes').value.trim(), follow_up: parseDateInput(rawFollow, TODAY) }, errors = salesActionError(f);
+  if (errors) {
+    salesDraft[cid] = { date: f.date === null ? rawDate : f.date, action: f.action, notes: f.notes, follow_up: f.follow_up === null ? rawFollow : f.follow_up, errors };
+    render(); $(`#sa-${['date', 'action', 'notes', 'follow_up'].find(k => errors[k])}`)?.focus(); return;
+  }
+  recordSalesAction(cid, f); delete salesDraft[cid]; render(); $('#sa-date')?.focus();   // back to the first field, ready for the next action
+  toast(`Sales action added for ${esc(buyerName(cid))}: ${esc(f.action)} on ${fmtDate(f.date)}.`);
+}
 // Read-only table for the customer page (no sorting, paging or editing)
 function plainTable(cols, rows, totals, empty) {
   const stub = { id: 'customer-page' };
@@ -1090,6 +1151,7 @@ const CUST_DOAS_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'co
   C('Seller Payment', 'pay_seller', 'date'), C('Receipt of DOAS', 'rcv_doas', 'date'), C('EWB Call Out', 'ewb_callout', 'date'), C('Working Days Since Receipt / Call Out', 'doas_days', 'int')];
 const CUST_DOCS_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
   C('JBAP Receipt of Documents', 'orig_docs', 'date'), C('ATF No.', 'atf_no', 'code')];
+const CUST_SALES_COLS = [C('Date', 'date', 'date'), C('Action', 'action', 'text'), C('Notes', 'notes', 'text', { w: 360, wrap: true }), C('Next Follow-up', 'follow_up', 'date'), C('By', 'by', 'text')];   // JBAP 26 Oct 2026
 // Customer page: Customer Information (not built) and Customer Transaction History (cards, purchases by seller, lot lists as tabs with their own URL)
 function customerPage(cid, tab) {
   const b = buyerOf(cid), crumb = last => `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›<span>Customer</span>›<a href="#/${CUST_ID}">Customer Inquiry</a>›<b>${esc(last)}</b></nav>`;
@@ -1100,19 +1162,20 @@ function customerPage(cid, tab) {
     + `${kpi('Cancellations', intf(b.cancels.length), `${b.cancels.filter(c => !c.waived).length} with fee`)}</div>`;
   const sellers = `<section class="card" aria-label="Purchases by seller"><div class="card-h"><div class="ico">${IC.table}</div>Purchases by seller<span class="bdg">${b.sellers.length}</span></div>
     ${plainTable(CUST_SELLER_COLS, b.sellers, { seller: `Total (${b.sellers.length})`, units: intf(sumBy(b.sellers, 'units')), amount: money(sumBy(b.sellers, 'amount')), unpaid: intf(sumBy(b.sellers, 'unpaid')) }, 'No lots bought yet')}</section>`;
-  const lists = { sold: b.sold, 'pending-awarding': b.pending, unpaid: b.unpaid, 'vehicle-release': b.for_release, 'pending-doas': b.pending_doas, 'docs-release': b.docs_release, cancellation: b.cancels }, rows = lists[tab] || b.sold, t = lists[tab] ? tab : 'sold';
+  const lists = { sold: b.sold, 'pending-awarding': b.pending, unpaid: b.unpaid, 'vehicle-release': b.for_release, 'pending-doas': b.pending_doas, 'docs-release': b.docs_release, cancellation: b.cancels, 'sales-actions': b.sales }, rows = lists[tab] || b.sold, t = lists[tab] ? tab : 'sold';
   const tabs = `<nav class="tabs in-card" aria-label="Lot lists">${CUST_TABS.map(([slug, label, isNew]) => `<a href="${custHref(cid, slug)}" class="tab${slug === t ? ' is-active' : ''}"${slug === t ? ' aria-current="page"' : ''}>${label}${newMini({ isNew })}<span class="cnt">${lists[slug].length}</span></a>`).join('')}</nav>`;
   const count = { auction: `Total (${rows.length})` };
-  const table = t === 'cancellation' ? plainTable(CUST_CX_COLS, rows, { auction: `Total (${rows.length})`, penalty: money(sumBy(rows, 'penalty')) }, 'No cancellations')
+  const table = t === 'sales-actions' ? salesActionForm(cid) + plainTable(CUST_SALES_COLS, rows, null, 'No sales actions recorded for this buyer yet')
+    : t === 'cancellation' ? plainTable(CUST_CX_COLS, rows, { auction: `Total (${rows.length})`, penalty: money(sumBy(rows, 'penalty')) }, 'No cancellations')
     : t === 'pending-doas' ? plainTable(CUST_DOAS_COLS, rows, count, 'No DOAS waiting for the buyer\'s signature')
     : t === 'docs-release' ? plainTable(CUST_DOCS_COLS, rows, count, 'No documents waiting for release')
     : plainTable(t === 'sold' ? CUST_SOLD_COLS : t === 'vehicle-release' ? CUST_REL_COLS : CUST_LOT_COLS, rows, { amonth: `Total (${rows.length})`, price: money(sumBy(rows, 'price')), transfer_fee: money(sumBy(rows, 'transfer_fee')), com: money(sumBy(rows, 'com')), total: money(sumBy(rows, 'total')), penalty: t === 'vehicle-release' ? money(sumBy(rows, 'penalty')) : '' },
       t === 'vehicle-release' ? 'No vehicle waiting for release' : 'No lots in this list');
-  return `${crumb(cid)}<div class="hrow"><h1>Customer Detail</h1><div class="acts">Allowed actions&nbsp;<span class="pill">View</span></div></div>
+  return `${crumb(cid)}<div class="hrow"><h1>Customer Detail</h1><div class="acts">Allowed actions&nbsp;<span class="pill">View</span>${t === 'sales-actions' ? '<span class="pill u">Update</span>' : ''}</div></div>
     <nav class="tabs" aria-label="Customer detail"><span class="tab is-disabled" aria-disabled="true" title="Not part of this prototype">Customer Information</span><a href="${custHref(cid)}" class="tab is-active" aria-current="page">Customer Transaction History${b.unpaid.length ? `<span class="cnt warn">${b.unpaid.length} unpaid</span>` : ''}</a></nav>
-    <p class="rule">${IC.info}<span>Everything this buyer has bought at auction, from the same lot data as the FAD lists (read-only). Notarial = transfer fee; Total = Result Price + Notarial + Security Bond. Step = how far the lot has got: Pending award → Unpaid → Paid → Seller Ack. → For Dispatch → Unreleased → Released or Returned. Customer Information is not part of this prototype. Pending DOAS signature = Receipt of DOAS filled, signed DOAS not back yet, or, for EWB, called out and not yet signed (proposal, Q82); working days count from Receipt of DOAS, else from EWB Call Out; Documents for release = JBAP has the documents, the buyer does not yet. Vehicle for release = dispatched (Dispatch Date filled) and not released yet, with its dispatch deadline and storage penalty. Date of Release / Return on the Sold list = the release date of the lot (any release type), blank while the unit is in the yard (JBAP answer Q21).</span></p>
+    <p class="rule">${IC.info}<span>Everything this buyer has bought at auction, from the same lot data as the FAD lists (read-only). Notarial = transfer fee; Total = Result Price + Notarial + Security Bond. Step = how far the lot has got: Pending award → Unpaid → Paid → Seller Ack. → For Dispatch → Unreleased → Released or Returned. Customer Information is not part of this prototype. Pending DOAS signature = Receipt of DOAS filled, signed DOAS not back yet, or, for EWB, called out and not yet signed (proposal, Q82); working days count from Receipt of DOAS, else from EWB Call Out; Documents for release = JBAP has the documents, the buyer does not yet. Vehicle for release = dispatched (Dispatch Date filled) and not released yet, with its dispatch deadline and storage penalty. Date of Release / Return on the Sold list = the release date of the lot (any release type), blank while the unit is in the yard (JBAP answer Q21). Sales Actions = what SMD did to follow up with this buyer (call, email, visit or meeting), newest first; the Add sales action form records a new one (JBAP, 26 Oct 2026; the fields are our proposal).</span></p>
     <h2 class="cust-h">${esc(cid)} · ${esc(b.name)}</h2>${b.email ? `<p class="cust-sub">${esc(b.email)}</p>` : ''}
-    ${cards}${sellers}<section class="card" aria-label="Lots"><div class="card-h"><div class="ico">${IC.table}</div>Lots</div>${tabs}${table}</section>`;
+    ${cards}${sellers}<section class="card" aria-label="${t === 'sales-actions' ? 'Sales Actions' : 'Lots'}"><div class="card-h"><div class="ico">${IC.table}</div>${t === 'sales-actions' ? 'Sales Actions' : 'Lots'}</div>${tabs}${table}</section>`;
 }
 // P6 (switch on): what the switch adds, and what is waiting per department
 function proposedPanels() {
@@ -1859,7 +1922,7 @@ function bind() {
   const content = $('#content'), menu = $('#menu');
   menu.addEventListener('click', ev => {
     const g = ev.target.closest('[data-group]'); if (g) { OPEN[g.dataset.group] = !OPEN[g.dataset.group]; renderSide(route()); return; }
-    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active.`, 'warn'); return; }
+    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, Sales Actions, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active.`, 'warn'); return; }
     if (ev.target.closest('.mis, a.mi')) document.body.classList.remove('nav-open');
   });
   content.addEventListener('change', ev => {
@@ -1878,7 +1941,9 @@ function bind() {
     if (el.dataset.filter) U(route()).filters[el.dataset.filter] = el.value;
   });
   content.addEventListener('submit', ev => {
-    ev.preventDefault(); const scr = currentScr(); if (!scr) return; const ui = U(scr.id), form = ev.target.dataset.form;
+    ev.preventDefault();
+    if (ev.target.dataset.form === 'salesaction') { const c = custRoute(route()); if (c) salesActionAdd(c.cid); return; }   // the customer page has no screen of its own
+    const scr = currentScr(); if (!scr) return; const ui = U(scr.id), form = ev.target.dataset.form;
     if (form === 'filter') {
       content.querySelectorAll('[data-filter]').forEach(i => { ui.filters[i.dataset.filter] = i.value; });
       content.querySelectorAll('[data-msel]').forEach(d => { ui.filters[d.dataset.msel] = tickedOf(d, d.dataset.msel); });

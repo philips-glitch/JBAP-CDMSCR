@@ -77,7 +77,7 @@ h1{font-family:var(--font-head);font-weight:600;font-size:30px;color:#141414;mar
 .card-h .hint{font-size:12px;color:#c9cfeb;display:flex;gap:14px}
 .fb{padding:12px 16px 14px;display:flex;flex-wrap:wrap;gap:12px 14px;align-items:flex-end}
 .fld{display:flex;flex-direction:column;gap:5px;width:205px}
-.fld.w1{width:150px}.fld.w2{width:300px}
+.fld.w1{width:150px}.fld.w2{width:300px}.fld.w3{width:440px}
 .fld label,.fld .lbl{font-size:12px;font-weight:600;color:#3b4466}
 /* multi-select filter dropdown (JBAP, 19 Oct 2026): a button that opens a list of tick boxes */
 .card.filter{overflow:visible}.card.filter .card-h{border-radius:var(--radius) var(--radius) 0 0}
@@ -138,6 +138,7 @@ tbody tr.is-dirty td{background:#fffdf4}
 td.r{text-align:right;font-variant-numeric:tabular-nums}
 td.c{text-align:center}
 .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx.wrap{overflow:visible;text-overflow:clip;white-space:normal;min-width:220px}   /* a long note wraps inside its column width instead of being cut; the table scrolls sideways before the note gets narrower than this */
 tfoot td{font-weight:700;background:#eef1f8;border-top:2px solid var(--line-2);border-bottom:0}
 .cell-in{height:26px;border:1px solid #b7c2dd;border-radius:3px;background:#fff;padding:0 6px;font-size:12.5px;width:100%;min-width:118px}
 .cell-in.num{text-align:right;min-width:100px}
@@ -227,7 +228,7 @@ tfoot td{font-weight:700;background:#eef1f8;border-top:2px solid var(--line-2);b
 }
 @media (max-width:768px){
   .hgrid{grid-template-columns:1fr}
-  .fld,.fld.w1,.fld.w2{width:100%}
+  .fld,.fld.w1,.fld.w2,.fld.w3{width:100%}
   .fgrid{grid-template-columns:1fr}
   .acts{display:none}
   .top{gap:8px}.top .logo{height:30px}.top .user{height:48px}   /* phone width: the top bar fits 375px (burger, logo, Prototype tag, switch) */
@@ -339,6 +340,7 @@ th span.hb:hover{background:none}
 .kpi .v{font-family:var(--font-head);font-size:26px;font-weight:600;color:var(--navy);margin:4px 0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kpi .s{font-size:12px;color:var(--muted)}
 .tabs.in-card{margin:10px 16px 0}
+.sa-h{margin:16px 16px 0;font-size:13.5px;font-weight:700;color:var(--navy)}   /* customer page, Sales Actions tab: the Add sales action form heading */
 @media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:768px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 

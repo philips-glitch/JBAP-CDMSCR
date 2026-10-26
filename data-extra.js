@@ -47,6 +47,17 @@
     { date: '2026-12-30', name: 'Rizal Day', type: 'Regular holiday' },
     { date: '2026-12-31', name: 'Last Day of the Year', type: 'Special non-working day' },
   ];
+  // [MOCK] JBAP 26 Oct 2026: sales actions (fields are LOGIQUE's proposal). Seven actions on three buyers that are in the data (B9034, and B0313 and B0193 with unpaid lots), 3 Sep to 6 Oct 2026, newest first.
+  // SA-6 has a Next Follow-up before the demo date (10/08/2026), so it shows under Follow-up due = Yes. "By" holds sample staff ids, not names.
+  D.salesActions = [
+    { id: 'SA-7', cid: 'B9034', date: '2026-10-06', action: 'Call', notes: 'Buyer asked when the original documents can be picked up. Told the buyer the DOAS has to be signed first.', follow_up: '2026-10-12', by: 'smd.staff' },
+    { id: 'SA-6', cid: 'B0313', date: '2026-10-05', action: 'Email', notes: 'Sent the list of unpaid lots and the payment deadline. Buyer to reply with the proof of payment.', follow_up: '2026-10-07', by: 'smd.staff' },
+    { id: 'SA-5', cid: 'B0193', date: '2026-10-02', action: 'Visit', notes: 'Buyer came to the office to pay for two lots and asked about the other unpaid lots.', follow_up: '2026-10-15', by: 'smd.staff' },
+    { id: 'SA-4', cid: 'B9034', date: '2026-09-28', action: 'Meeting', notes: 'Met the buyer about the DOAS waiting for signature. The buyer will sign this week.', follow_up: null, by: 'smd.manager' },
+    { id: 'SA-3', cid: 'B0313', date: '2026-09-22', action: 'Call', notes: 'Reminded the buyer of the payment deadline for the lots of the last auction.', follow_up: null, by: 'smd.staff' },
+    { id: 'SA-2', cid: 'B9034', date: '2026-09-15', action: 'Email', notes: 'Sent the vehicle dispatch form and the pick-up schedule.', follow_up: null, by: 'smd.staff' },
+    { id: 'SA-1', cid: 'B9034', date: '2026-09-03', action: 'Call', notes: 'Asked if the buyer will join the next auction. The buyer will check the list of cars first.', follow_up: null, by: 'smd.staff' },
+  ];
   // [MOCK] Q11: SAAF state on Pending Awarding lots: 4 approved by the seller (ready for FAD), 3 sent and awaiting the seller, the rest not sent
   const saaf = { V102: ['2026-08-20', '2026-08-24'], V103: ['2026-08-27', '2026-08-31'], V092: ['2026-09-03', '2026-09-07'], V096: ['2026-09-10', '2026-09-14'],
     V087: ['2026-09-10', null], V097: ['2026-09-10', null], V017: ['2026-09-17', null] };

@@ -150,7 +150,7 @@ test('sidebar: Settings is a top menu with Holiday List, after the other top men
   assert.ok(side.indexOf('data-disabled="Staff"') < side.indexOf('data-group="Settings"') && side.indexOf('data-group="Settings"') < side.indexOf('href="#/log-activity"'), 'between Staff and Log Activity');
   assert.match(side, /<a class="mis is-active" href="#\/settings\/holidays" aria-current="page">Holiday List<span class="cnt">18<\/span><\/a>/);
   assert.doesNotMatch(side, /data-disabled="Settings"/);
-  assert.match(side, /only Customer Inquiry, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active/);
+  assert.match(side, /only Customer Inquiry, Sales Actions, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active/);
   assert.match(P.homeLayout(), /VWD menus that replace the MS Access post-auction forms, plus Settings › Holiday List./);
 });
 

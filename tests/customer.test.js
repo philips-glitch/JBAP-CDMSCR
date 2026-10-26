@@ -75,7 +75,7 @@ test('customer page: Customer Information is disabled, Transaction History shows
   for (const h of ['Seller', 'Seller Name', 'Units Bought', 'Total Amount (PHP)', 'Unpaid Units', 'Last Auction']) assert.ok(html.includes(`>${h}<`), h);
   for (const [slug, label, n] of [['sold', 'Sold', b.sold.length], ['pending-awarding', 'Pending Awarding', b.pending.length], ['unpaid', 'Unpaid', b.unpaid.length], ['vehicle-release', 'Vehicle for release', b.for_release.length], ['pending-doas', 'Pending DOAS signature', b.pending_doas.length], ['docs-release', 'Documents for release', b.docs_release.length], ['cancellation', 'Cancellation', b.cancels.length]])
     assert.match(html, new RegExp(`href="#/customer/${cid}${slug === 'sold' ? '' : '/' + slug}"[^>]*>${label}<span class="cnt">${n}</span>`), slug);   // the New marks of 19 and 20 Oct (Pending DOAS signature, Vehicle for release) are gone since 26 Oct 2026
-  assert.doesNotMatch(html, /Sales Actions/, 'no Sales Actions tab');
+  assert.match(html, new RegExp(`href="#/customer/${cid}/sales-actions"[^>]*>Sales Actions<span class="ptag mini new"[^>]*>New</span><span class="cnt">${b.sales.length}</span>`), 'Sales Actions tab (JBAP, 26 Oct 2026), marked New, with the number of actions');
   for (const h of ['Auction Month', 'Auction No.', 'Lot', 'Plate', 'Make/Model', 'Result Price', 'Notarial', 'Commission', 'Total', 'Step', 'Date of Release / Return']) assert.ok(html.includes(`>${h}<`), h);
   const lotTable = html.slice(html.indexOf('aria-label="Lot lists"'));
   assert.strictEqual((lotTable.match(/<tr data-lot=/g) || []).length, b.sold.length, 'one row per sold lot');
@@ -136,11 +136,12 @@ test('buyer names and Buyer IDs link to the customer page when the lot has a Buy
   assert.doesNotMatch(unknown, /blink/, 'unknown Buyer ID: plain text');
 });
 
-test('sidebar: Customer is active with Customer Inquiry; Sales Actions stays disabled', () => {
+test('sidebar: Customer is active with Customer Inquiry; Sales Actions is an enabled item (JBAP, 26 Oct 2026)', () => {
   const P = load(), side = P.sideHtml('customer-inquiry');
   assert.match(side, /data-group="Customer"/);
   assert.match(side, /<a class="mis is-active" href="#\/customer-inquiry" aria-current="page">Customer Inquiry<span class="cnt">\d+<\/span><\/a>/);
-  assert.match(side, /data-disabled="Sales Actions"/);
+  assert.doesNotMatch(side, /data-disabled="Sales Actions"/, 'no longer a disabled item');
+  assert.match(side, /<a class="mis " href="#\/customer\/sales-actions" >Sales Actions<span class="ptag mini new"[^>]*>New<\/span><span class="cnt">\d+<\/span><\/a>/);
   assert.doesNotMatch(side, /data-disabled="Customer"/, 'Customer is no longer a disabled menu');
   assert.match(P.sideHtml('customer/B0313'), /<a class="mis is-active" href="#\/customer-inquiry" aria-current="page">/, 'a customer page keeps Customer Inquiry highlighted');
   assert.match(P.pageHead(P.byId[P.CUST_ID]), /Home<\/a>›<span>Customer<\/span>›<b>Customer Inquiry<\/b>/);

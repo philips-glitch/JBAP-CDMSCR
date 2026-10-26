@@ -117,7 +117,7 @@ test('sidebar: Approval is a top menu right after Report and before FAD, with Re
   assert.match(s, /<button type="button" class="mi" data-group="Approval" aria-expanded="false" aria-controls="grp-Approval"><svg/);
   assert.match(s, new RegExp(`<a class="mis is-active" href="#/approval/rebate-approval" aria-current="page">Rebate Approval<span class="ptag mini new"[^>]*>New</span><span class="cnt">${pend}</span></a>`));
   assert.ok(pend >= 2 && pend < ap(P).rows().length);
-  assert.match(s, /only Customer Inquiry, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active/);
+  assert.match(s, /only Customer Inquiry, Sales Actions, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active/);
   assert.strictEqual(P.routeOf('approval/rebate-approval'), 'approval/rebate-approval');
   P.setProposed(true); assert.strictEqual(P.routeOf('approval/rebate-approval'), 'approval/rebate-approval'); assert.ok(P.shown(ap(P)));
   assert.match(P.pageHead(ap(P)), /Home<\/a>›<span>Approval<\/span>›<b>Rebate Approval<\/b>/);
