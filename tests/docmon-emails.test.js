@@ -1,4 +1,4 @@
-const test = require('node:test'), assert = require('node:assert');
+const test = require('node:test'), assert = require('node:assert'), fs = require('fs');
 const { load } = require('./harness');
 test('Email DOAS for signature: JBAP-signed DOAS lots, sets Receipt of DOAS', () => {
   const P = load(), scr = P.byId['FAD/document-monitoring'];
@@ -48,7 +48,9 @@ test('DOAS for signature email: From Finance, To the buyer, CC Sales, JBAP wordi
   const t = txt(mail.body);
   for (const s of ['Dear Client,', 'Please be informed that the DOAS for the following units are available in our main office for your signature. You may sign from Monday to Friday, 9am to 5pm. Unit details are as follows:',
     "*Please note that original documents will be processed upon the seller's receipt of the signed DOAS.", 'Thank you.', 'JBAP Finance and Admin']) assert.ok(t.includes(s), s);
-  assert.match(mail.body, /<th>Seller<\/th><th>Buyer<\/th><th>Year<\/th><th>Make<\/th><th>Model<\/th><th>Plate Number<\/th><\/tr>/); assert.doesNotMatch(mail.body, /Color/);
+  assert.match(mail.body, /<th scope="col">Seller<\/th><th scope="col">Buyer<\/th><th scope="col">Year<\/th><th scope="col">Make<\/th><th scope="col">Model<\/th><th scope="col">Plate Number<\/th><\/tr>/); assert.doesNotMatch(mail.body, /Color/);
+  assert.match(mail.body, /<div class="utbl" tabindex="0" role="region" aria-label="Units"><table>/, 'the scrolling table wrapper is a focusable region');
+  assert.doesNotMatch(mail.body, /<th>/, 'every header cell has a scope');
   const mm = P.makeModel(v.model);
   assert.ok(mail.body.includes(`<td>${v.seller_full}</td>`) && mail.body.includes(`<td>${v.year}</td><td>${mm.make}</td><td>${mm.model}</td><td>${v.plate}</td></tr>`), 'one row per lot with Year, Make, Model, Plate');
   assert.strictEqual((mail.body.match(/<tbody>[^]*<\/tbody>/)[0].match(/<tr>/g) || []).length, 2);
@@ -64,7 +66,7 @@ test('Documents release email: JBAP wording, unit table with Color, Year and Col
   for (const s of ['Dear Client,', 'This is to inform you that the original documents for the following units are readily available for pick up in our Main Office. You may pick up the documents from Monday through Friday, 9 a.m. to 5 p.m.',
     '*If through a representative, please provide a hard copy of the signed Authorization Letter together with a copy of your valid ID and your representative. Kindly note that the documents will not be released without the submission of the original authorization letter.',
     'Thank you.', 'JBAP Finance and Admin']) assert.ok(t.includes(s), s);
-  assert.match(mail.body, /<th>Plate Number<\/th><th>Color<\/th><\/tr>/);
+  assert.match(mail.body, /<th scope="col">Plate Number<\/th><th scope="col">Color<\/th><\/tr>/); assert.match(mail.body, /<div class="utbl" tabindex="0" role="region" aria-label="Units">/); assert.doesNotMatch(mail.body, /<th>/);
   assert.ok(mail.body.includes(`<td></td><td>${mm.make}</td><td>${mm.model}</td><td>${v.plate}</td><td></td></tr>`), 'blank Year and Color');
 });
 test('makeModel: Make = first word, Model = the rest', () => {
@@ -109,16 +111,76 @@ test('Print Transmittal: records JBAP Receipt of Documents once (logged), drops 
   assert.strictEqual(scr.rows().find(r => r.id === v.id).doc_status, 'For Releasing');
   w._raw.orig_docs = '2026-10-05'; P.recordDocTransmittal(scr, w, [], ''); assert.strictEqual(w._raw.orig_docs, '2026-10-05', 'a recorded date is never replaced');
 });
-test('Print Transmittal? tick: allowed on Pending Documents or For Releasing with no ATF No.', () => {
+test('Print Transmittal? tick: first print (Pending Documents or For Releasing, no ATF No.) or a reprint (any lot with an ATF No.)', () => {
   const P = load(), scr = docmon(P), col = scr.cols.find(c => c.key === 'print_doc_trans'), rows = scr.rows();
-  const ok = rows.filter(r => ['Pending Documents', 'For Releasing'].includes(r.doc_status) && !r.atf_no);
-  assert.ok(ok.some(r => r.doc_status === 'Pending Documents') && ok.some(r => r.doc_status === 'For Releasing'));
-  assert.ok(ok.every(r => P.printTransOk(r) && !col.disabledWhen(r)));
-  const no = rows.filter(r => !ok.includes(r)); assert.ok(no.some(r => r.doc_status === 'Pending DOAS') && no.some(r => r.doc_status === 'Complete'));
-  assert.ok(no.every(r => !P.printTransOk(r) && col.disabledWhen(r) && !scr.ready.when(r)));   // nothing outside the tick rule is ready either
-  const atf = rows.find(r => r.doc_status === 'Pending Documents'); atf._raw.atf_no = 'HRAD-ATF-1'; assert.ok(!P.printTransOk(P.enrichV(atf._raw)), 'an ATF No. ends it');
+  const first = rows.filter(r => ['Pending Documents', 'For Releasing'].includes(r.doc_status) && !r.atf_no);
+  assert.ok(first.some(r => r.doc_status === 'Pending Documents') && first.some(r => r.doc_status === 'For Releasing'));
+  assert.ok(first.every(r => P.printTransOk(r) && P.printFirst(r) && !col.disabledWhen(r)));
+  const no = rows.filter(r => !first.includes(r)); assert.ok(no.some(r => r.doc_status === 'Pending DOAS') && no.some(r => r.doc_status === 'DOAS for Signing') && no.some(r => r.doc_status === 'Complete'));
+  assert.ok(no.every(r => !P.printTransOk(r) && col.disabledWhen(r) && !scr.ready.when(r)));   // no ATF and not at the document steps: not tickable, not ready
+  // a lot with an ATF No. stays tickable in every status (reprint), but is a reprint, not a first print, and is never pre-ticked
+  for (const st of ['Pending DOAS', 'Pending Documents', 'For Releasing', 'Complete']) {
+    const r = rows.find(x => x.doc_status === st); r._raw.atf_no = 'HRAD-ATF-1'; const v = P.enrichV(r._raw);
+    assert.ok(P.printTransOk(v) && !P.printFirst(v) && !col.disabledWhen(v) && !scr.ready.when(v), st);
+  }
   assert.strictEqual(scr.ready.key, 'print_doc_trans'); assert.strictEqual(typeof P.ACTIONS.printDocTrans, 'function');
   assert.strictEqual(scr.buttons.find(b => b.act === 'printDocTrans').count, 'print_doc_trans');
+});
+test('Reprint (the lot has an ATF No.): same ATF No., no JBAP Receipt of Documents change, no receipt logged, documents still saved', () => {
+  const P = load(), scr = docmon(P), v = scr.rows().find(r => r.doc_status === 'Pending Documents' && !r.orig_docs); v._raw.atf_no = 'HRAD-ATF-0042';
+  const n0 = P.S.log.length, next = P.D.meta.company.next.atf;
+  const atf = P.recordDocTransmittal(scr, v, ['Spare Key'], '', 'reprint');
+  assert.strictEqual(atf, 'HRAD-ATF-0042'); assert.strictEqual(P.D.meta.company.next.atf, next, 'no new number is used');
+  assert.ok(!v._raw.orig_docs, 'JBAP Receipt of Documents is untouched'); assert.strictEqual(scr.rows().find(r => r.id === v.id).doc_status, 'Pending Documents');
+  const added = P.S.log.slice(n0).map(l => l.field); assert.ok(!added.includes('JBAP Receipt of Documents') && added.includes('Documents Received'), added.join());
+});
+test('Print dialog: a first print of a lot with JBAP Receipt of Documents blank needs a document ticked or Others typed', () => {
+  const P = load(), scr = docmon(P), blank = scr.rows().find(r => r.doc_status === 'Pending Documents' && !r.orig_docs), done = scr.rows().find(r => r.doc_status === 'For Releasing');
+  assert.match(P.docsNeededError(blank, [], '') || '', /^Tick at least one document received, or type Others/);
+  assert.strictEqual(P.docsNeededError(blank, ['Spare Key'], ''), null); assert.strictEqual(P.docsNeededError(blank, [], 'Extra key'), null);
+  assert.ok(done.orig_docs); assert.strictEqual(P.docsNeededError(done, [], ''), null, 'the date is already recorded: nothing is needed');
+  const re = P.enrichV(Object.assign({}, blank._raw, { atf_no: 'HRAD-ATF-0042' })); assert.strictEqual(P.docsNeededError(re, [], ''), null, 'a reprint records no receipt');
+  const src = fs.readFileSync(require('path').join(__dirname, '..', 'app.js'), 'utf8');
+  assert.match(src, /id="dt-err-\$\{n\}" role="alert" hidden/); assert.match(src, /<fieldset class="dt-lot" aria-describedby="dt-err-\$\{n\}">/);
+  assert.match(src, /if \(bad\) \{ \$\(`#dt-\$\{bad\.n\}-0`\)\.focus\(\); return; \}/, 'the dialog stays open on the error');
+});
+test('Stale saved ticks (the lot is not eligible any more) are not ticks: not counted, not acted on, shown unticked, dropped and logged on save', () => {
+  const P = load(), scr = docmon(P), rows = scr.rows(), doasCol = scr.cols.find(c => c.key === 'for_doas_email'), printCol = scr.cols.find(c => c.key === 'print_doc_trans');
+  const signed = rows.find(r => P.doasOf(r) === 'jbap' && r.rcv_doas), pendDoas = rows.find(r => r.doc_status === 'Pending DOAS' && P.doasOf(r) === 'jbap');
+  signed._raw.for_doas_email = true; pendDoas._raw.print_doc_trans = true;   // saved ticks on lots that cannot use them
+  assert.ok(!P.selectedRows(scr, 'for_doas_email').some(r => r.id === signed.id)); assert.ok(!P.selectedRows(scr, 'print_doc_trans').some(r => r.id === pendDoas.id));
+  assert.strictEqual(P.effectiveCount(scr, 'for_doas_email'), 0); assert.strictEqual(P.effectiveCount(scr, 'print_doc_trans'), 0);
+  assert.doesNotMatch(P.cellHtml(scr, scr.rows().find(r => r.id === signed.id), doasCol, true), /checked/); assert.match(P.cellHtml(scr, scr.rows().find(r => r.id === signed.id), doasCol, true), /disabled/);
+  assert.doesNotMatch(P.cellHtml(scr, scr.rows().find(r => r.id === pendDoas.id), printCol, true), /checked/);
+  // a good tick still counts
+  const ok = rows.find(r => r.doc_status === 'Pending DOAS' && P.doasOf(r) === 'jbap' && r.id !== pendDoas.id); P.U(scr.id).edits[ok.id] = { for_doas_email: true };
+  assert.strictEqual(P.effectiveCount(scr, 'for_doas_email'), 1); assert.deepStrictEqual(P.selectedRows(scr, 'for_doas_email').map(r => r.id), [ok.id]);
+  // tick and date saved together: the tick is dropped in the same save and both steps are logged
+  delete P.U(scr.id).edits[ok.id]; const n0 = P.S.log.length;
+  P.U(scr.id).edits[ok.id] = { for_doas_email: true, rcv_doas: P.TODAY }; P.applyEdits(scr, [ok.id]);
+  assert.strictEqual(ok._raw.rcv_doas, P.TODAY); assert.strictEqual(ok._raw.for_doas_email, false);
+  assert.deepStrictEqual(P.S.log.slice(n0).filter(l => l.field === 'For DOAS Email?').map(l => [l.old, l.new]), [['No', 'Yes'], ['Yes', 'No']]);
+  // a tick on an eligible lot survives a save of another field
+  const keep = rows.find(r => r.doc_status === 'Pending DOAS' && P.doasOf(r) === 'jbap' && r.id !== ok.id && r.id !== pendDoas.id);
+  P.U(scr.id).edits[keep.id] = { for_doas_email: true, doc_remarks: 'x' }; P.applyEdits(scr, [keep.id]); assert.strictEqual(keep._raw.for_doas_email, true);
+  // Print Transmittal? saved on a lot outside its statuses (Pending DOAS) is dropped on save
+  P.U(scr.id).edits[pendDoas.id] = { print_doc_trans: true, doc_remarks: 'y' }; P.applyEdits(scr, [pendDoas.id]);
+  assert.strictEqual(pendDoas._raw.print_doc_trans, false, 'a Pending DOAS lot cannot keep a Print Transmittal? tick');
+});
+test('Email DOAS eligibility: only Pending DOAS (JBAP-signed DOAS, no Receipt of DOAS, no signed DOAS yet)', () => {
+  const P = load(), scr = docmon(P), rows = scr.rows(), col = scr.cols.find(c => c.key === 'for_doas_email');
+  const ok = rows.filter(r => P.doasOf(r) === 'jbap' && !r.rcv_doas && r.doc_status === 'Pending DOAS'); assert.ok(ok.length);
+  assert.ok(ok.every(r => P.doasEmailOk(r) && !col.disabledWhen(r)));
+  const v = ok[0]; v._raw.buyer_doas = P.TODAY;   // a signed DOAS is already back (JBAP sheet data), Receipt of DOAS blank
+  const signed = P.enrichV(v._raw); assert.strictEqual(signed.doc_status, 'Pending Documents'); assert.ok(!signed.rcv_doas);
+  assert.ok(!P.doasEmailOk(signed) && col.disabledWhen(signed), 'not Pending DOAS: not eligible');
+  const n0 = P.S.log.length; P.recordDoasEmail(scr, [signed]); assert.ok(!v._raw.rcv_doas && P.S.log.length === n0, 'recordDoasEmail leaves it alone');
+  const orig = ok[1]; orig._raw.orig_docs = P.TODAY; assert.ok(!P.doasEmailOk(P.enrichV(orig._raw)), 'documents already at JBAP: For Releasing');
+});
+test('Rule text: Email DOAS for signature and the Print transmittal email are explained', () => {
+  const P = load(), rule = docmon(P).rule;
+  assert.match(rule, /Email DOAS for signature emails the buyer for lots whose DOAS is signed at JBAP \(Pending DOAS\) and records Receipt of DOAS as today\./);
+  assert.match(rule, /Print document transmittal also emails the buyer the Documents Release notice and records JBAP Receipt of Documents as today; printing a lot that already has an ATF No\. is a reprint and sends no email\./);
 });
 test('P4 pre-tick for Print Transmittal? covers only For Releasing lots without an ATF No.; a Pending Documents lot is never pre-ticked', () => {
   const P = load(), scr = docmon(P), rows = scr.rows();
@@ -126,7 +188,8 @@ test('P4 pre-tick for Print Transmittal? covers only For Releasing lots without 
   assert.ok(pending.length && releasing.length, 'sample has both');
   assert.ok(pending.every(r => !scr.ready.when(r) && !P.printReady(r) && P.printTransOk(r)), 'a Pending Documents lot may be ticked by hand, but is not ready');
   assert.ok(releasing.every(r => scr.ready.when(r) && P.printReady(r)));
-  assert.match(scr.ruleP[1], /For Releasing/); assert.doesNotMatch(scr.ruleP[1], /arrive pre-ticked.?$|waiting for the documents or holding/, 'the rule text names only For Releasing');
+  assert.match(scr.ruleP[1], /^Lots whose documents are at JBAP \(For Releasing\) and have no ATF No\. yet arrive pre-ticked\./); assert.match(scr.ruleP[1], /A Pending Documents lot is ticked by hand/);
+  assert.doesNotMatch(scr.ruleP[1], /waiting for the documents or holding/, 'the old scope (Pending Documents arrive pre-ticked) is gone from the rule text');
   const ids = list => list.map(r => r.id).sort();
   assert.deepStrictEqual(ids(P.selectedRows(scr, 'print_doc_trans')), [], 'switch off: nothing is pre-ticked');
   P.setProposed(true);

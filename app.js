@@ -430,12 +430,21 @@ const EWB_NA = r => r.doas !== 'branch', NO_DOAS = r => r.doas === 'none';   // 
 // A Document Monitoring date column: editable while the date is blank, read-only once a date is saved (Change date corrects it); the label comes from DOC_DATE_FIELDS
 const docDate = (key, na) => C(docDateLabel(key), key, 'date', { edit: 'date', na, lockWhen: r => !!r._raw[key] });
 // [BEHAVIOR] JBAP feedback (26 Oct 2026): Email DOAS for signature is for lots whose DOAS is signed at JBAP and whose Receipt of DOAS is blank (EWB and TFS cannot be ticked).
-// Print Transmittal? may be ticked on lots waiting for the documents or holding them (Pending Documents, For Releasing) that have no ATF No. yet: FAD ticks it when the documents arrive.
-// The P4 pre-tick (printReady) covers only For Releasing lots without an ATF No. (documents already recorded as received): printing records JBAP Receipt of Documents and emails the buyer,
-// so it must never be one click on lots whose documents have not arrived (controller ruling, 26 Oct 2026).
-const doasEmailOk = r => doasOf(r) === 'jbap' && !r.rcv_doas;
-const printTransOk = r => ['Pending Documents', 'For Releasing'].includes(r.doc_status) && !r.atf_no;
+// Print Transmittal? may be ticked on lots waiting for the documents or holding them (Pending Documents, For Releasing) that have no ATF No. yet (first print: records JBAP Receipt of Documents and emails the buyer;
+// FAD ticks it when the documents arrive), and on any lot that already has an ATF No. (a reprint: same ATF No., no email, no date change).
+// The P4 pre-tick (printReady) covers only For Releasing lots without an ATF No. (documents already recorded as received): a first print must never be one click on lots whose documents have not arrived.
+// Email DOAS for signature: only lots still at Pending DOAS whose DOAS is signed at JBAP (no Receipt of DOAS, no signed DOAS yet).
+const doasEmailOk = r => doasOf(r) === 'jbap' && !r.rcv_doas && r.doc_status === 'Pending DOAS';
+const printFirst = r => !r.atf_no && ['Pending Documents', 'For Releasing'].includes(r.doc_status);
+const printTransOk = r => printFirst(r) || !!r.atf_no;
 const printReady = r => r.doc_status === 'For Releasing' && !r.atf_no;
+// A print that records JBAP Receipt of Documents (a first print of a lot with the date blank) needs a document ticked or Others typed: the problem as text, or null
+const docsNeededError = (r, docs, others) => !r.atf_no && !r.orig_docs && !docs.length && !others ? 'Tick at least one document received, or type Others, before recording JBAP Receipt of Documents.' : null;
+function dropStaleTicks(r) {   // r: a row of the list whose raw lot was just saved
+  const v = enrichV(r._raw), out = [];
+  [['for_doas_email', 'For DOAS Email?', doasEmailOk], ['print_doc_trans', 'Print Transmittal?', printTransOk]].forEach(([k, label, ok]) => { if (r._raw[k] && !ok(v)) { r._raw[k] = false; out.push([label, 'check', true, false]); } });
+  return out;
+}
 const AM_COLS = [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 150 }),
   C('Seller', 'seller', 'code'), C('Status', 'status', 'status'), C('Result Price', 'price', 'money'), C('Awarding Date', 'awarding', 'date'), C('Buyer Paid', 'buyer_paid', 'date'),
   C('Payment to Seller', 'pay_seller', 'date'), C('Seller Acknowl\u00adedgement', 'seller_ack', 'date'), C('Dispatch Date', 'dispatch', 'date'), C('Release Date', 'release', 'date'),
@@ -524,7 +533,7 @@ const SCREENS = [
     validate: (r, e) => ({ rts_fad_ok: notFuture(e.rts_fad_ok) || notBefore(e.rts_fad_ok, r.rts_smd_ok, 'the SMD Manager approval') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Approved units moved to VWD › For Return to Seller.' },
   { dept: 'FAD', slug: 'document-monitoring', title: 'Document Monitoring', actions: VFSU, isNew: true,
-    rule: `Sold lots that JBAP has paid to the seller (Payment to Seller filled in); for EWB, whose buyers sign the DOAS at EWB's HO or store, lots the buyer has paid. Cancelled lots are not listed (JBAP, 26 Oct 2026). Columns follow JBAP's Documents Monitoring sheet. Status is the furthest step reached: Pending DOAS, DOAS for Signing (JBAP has the DOAS; EWB: the buyer was called out to sign, to confirm), Pending Documents (signed DOAS back), For Releasing (documents at JBAP) or Complete (documents with the buyer). TFS has no DOAS (n/a). A date that is filled in is read-only: use Change date, with a reason, to correct it. Aging counts working days while a step waits: DOAS Aging from Seller Payment (EWB: from Buyer Paid), Docs Aging from the signed DOAS (TFS: from Seller Payment). The Open view hides Complete lots.`,
+    rule: `Sold lots that JBAP has paid to the seller (Payment to Seller filled in); for EWB, whose buyers sign the DOAS at EWB's HO or store, lots the buyer has paid. Cancelled lots are not listed (JBAP, 26 Oct 2026). Columns follow JBAP's Documents Monitoring sheet. Status is the furthest step reached: Pending DOAS, DOAS for Signing (JBAP has the DOAS; EWB: the buyer was called out to sign, to confirm), Pending Documents (signed DOAS back), For Releasing (documents at JBAP) or Complete (documents with the buyer). TFS has no DOAS (n/a). A date that is filled in is read-only: use Change date, with a reason, to correct it. Aging counts working days while a step waits: DOAS Aging from Seller Payment (EWB: from Buyer Paid), Docs Aging from the signed DOAS (TFS: from Seller Payment). The Open view hides Complete lots. Email DOAS for signature emails the buyer for lots whose DOAS is signed at JBAP (Pending DOAS) and records Receipt of DOAS as today. Print document transmittal also emails the buyer the Documents Release notice and records JBAP Receipt of Documents as today; printing a lot that already has an ATF No. is a reprint and sends no email.`,
     rows: () => V().filter(v => v.status === 'Sold' && (doasOf(v) === 'branch' ? !!v.buyer_paid : !!v.pay_seller)), sort: ['auction_lot', 'asc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 190 }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
       C('Seller Payment', 'pay_seller', 'date'),
@@ -533,13 +542,14 @@ const SCREENS = [
       docDate('buyer_doas', NO_DOAS), docDate('seller_doas', NO_DOAS),
       docDate('orig_docs'), docDate('to_buyer'), C('Docs Aging', 'docs_aging', 'int'),
       C('Status', 'doc_status', 'text', { w: 130 }), C('Remarks', 'doc_remarks', 'text', { edit: 'text' }),
-      C('For DOAS Email?', 'for_doas_email', 'check', { edit: 'check', isNew: true, disabledWhen: r => !doasEmailOk(r) }),   // after JBAP's sheet columns, next to the other tick
-      C('ATF No.', 'atf_no', 'code'), C('Print Transmittal?', 'print_doc_trans', 'check', { edit: 'check', disabledWhen: r => !printTransOk(r) }),
+      C('For DOAS Email?', 'for_doas_email', 'check', { edit: 'check', isNew: true, dropStale: true, disabledWhen: r => !doasEmailOk(r) }),   // after JBAP's sheet columns, next to the other tick
+      C('ATF No.', 'atf_no', 'code'), C('Print Transmittal?', 'print_doc_trans', 'check', { edit: 'check', dropStale: true, disabledWhen: r => !printTransOk(r) }),
       C('Change Date', 'change_date', 'rowbtn', { act: 'changeDate', btn: 'Change date', isNew: true, aria: r => `of ${r.plate || r.customer}`, showWhen: r => DOC_DATE_FIELDS.some(([k]) => r._raw[k]) })],
     filters: [{ key: 'doc_status', label: 'Status', type: 'select', options: () => ['Open', ...DOC_STATUSES], match: (r, v) => (v === 'Open' ? r.doc_status !== 'Complete' : r.doc_status === v) },
       AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     initial: { doc_status: 'Open' },
     validate: docValidate,
+    onSave: r => dropStaleTicks(r),   // a tick saved on a lot that is not eligible any more is cleared and logged, so nobody is left with a disabled ticked box
     buttons: [{ label: 'Email DOAS for signature', kind: 'ol', icon: 'mail', act: 'emailDoas', count: 'for_doas_email', isNew: true },
       { label: 'Print document transmittal', kind: 'ol', icon: 'print', act: 'printDocTrans', count: 'print_doc_trans', isNew: true }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Complete lots leave the Open view.',
     queue: true, ready: { key: 'print_doc_trans', when: printReady },
@@ -975,7 +985,7 @@ function cellHtml(scr, r, c, upd) {
     const aria = `${c.label}, lot ${r.lot || ''} ${r.plate || ''}`.trim();
     const common = `data-row="${esc(r.id)}" data-key="${c.key}" aria-label="${esc(aria)}" ${err ? `aria-invalid="true" title="${esc(c.label + errSep(err) + err)}"` : ''}`;
     const st = `${has ? 'is-dirty' : ''} ${err ? 'is-invalid' : ''}`;
-    if (c.edit === 'check') return `<td class="c"><input type="checkbox" class="chk ${st}" ${val ? 'checked' : ''} ${c.disabledWhen?.(r) ? 'disabled' : ''} ${common}></td>`;
+    if (c.edit === 'check') return `<td class="c"><input type="checkbox" class="chk ${st}" ${val && !(c.dropStale && c.disabledWhen?.(r)) ? 'checked' : ''} ${c.disabledWhen?.(r) ? 'disabled' : ''} ${common}></td>`;   // dropStale: a disabled tick shows unticked (a stale one is not a tick)
     if (c.edit === 'date') return `<td>${dateBox(`cell-in dt ${st}`, val, common)}</td>`;
     if (c.edit === 'money') return `<td><input type="number" min="0" step="0.01" class="cell-in num ${st}" value="${val ?? ''}" ${common}></td>`;
     if (c.edit === 'select') return `<td><select class="cell-in ${st}" ${common}><option value=""></option>${c.options.map(o => `<option${o === val ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></td>`;
@@ -1031,7 +1041,7 @@ function dataCard(scr, title) {
 const hasFilter = scr => Object.values(U(scr.id).applied).some(v => Array.isArray(v) ? v.length : v);
 function effectiveCount(scr, key) {   // ticks: unsaved edit, else saved value or the P4 default
   if (!key) return 0;
-  return tickRows(scr, key).filter(r => tickValue(scr, r, key)).length;
+  return tickRows(scr, key).filter(r => tickValue(scr, r, key) && tickAllowed(scr, r, key)).length;
 }
 
 // ─── Special layouts ──────────────────────────────────────────────────
@@ -1178,7 +1188,9 @@ window.addEventListener('afterprint', () => document.body.classList.remove('prin
 
 // ─── Actions ──────────────────────────────────────────────────────────
 function currentScr() { return byId[route()]; }
-function selectedRows(scr, key) { return sortRows(scr, tickRows(scr, key)).filter(r => tickValue(scr, r, key)); }
+// A tick column marked dropStale (Document Monitoring's two ticks): a tick on a lot where the column is disabled (disabledWhen) is not a tick, so a stale saved one is neither counted nor acted on
+const tickAllowed = (scr, r, key) => { const c = scr.cols.find(x => x.key === key); return !(c?.dropStale && c.disabledWhen?.(r)); };
+function selectedRows(scr, key) { return sortRows(scr, tickRows(scr, key)).filter(r => tickValue(scr, r, key) && tickAllowed(scr, r, key)); }
 function setMsg(scr, type, html) { U(scr.id).msg = type ? { type, html } : null; }
 // A message that starts with a capital is a sentence of its own ("No rebate to approve"): the column name and a colon come first; the others continue the column name ("cannot be after today")
 const errSep = m => /^[A-Z]/.test(m) ? ': ' : ' ';
@@ -1315,23 +1327,24 @@ const RELEASE_ITEMS = ['No. of Keys', 'Copy of OR/CR', "Owner's Manual", 'Warran
 const cancelLetterGroups = rows => { const g = {}; rows.forEach(r => (g[r.customer] ||= []).push(r)); return Object.values(g); };
 // Removes one tick from a row's unsaved edits; other unsaved edits on the row stay pending
 const clearTick = (scr, id, key) => { const ed = U(scr.id).edits; if (ed[id]) { delete ed[id][key]; if (!Object.keys(ed[id]).length) delete ed[id]; } };
-// [BEHAVIOR] Saves the documents received and returns the ATF control number (HRAD-ATF-<running no.>); a reprint keeps the existing number.
-// JBAP feedback (26 Oct 2026): printing the transmittal also records JBAP Receipt of Documents = today when it is blank (the Documents Release email goes with it, see ACTIONS.printDocTrans);
+// [BEHAVIOR] Saves the documents received and returns the ATF control number (HRAD-ATF-<running no.>); a reprint (the lot already has an ATF No.) keeps the number.
+// JBAP feedback (26 Oct 2026): a first print also records JBAP Receipt of Documents = today when it is blank (the Documents Release email goes with it, see ACTIONS.printDocTrans);
 // an unsaved date typed on the row for it is dropped, so it cannot overwrite the recorded one on the next Save. Other unsaved date edits on the row stay pending.
+// A reprint never touches JBAP Receipt of Documents and logs no receipt.
 function recordDocTransmittal(scr, v, docs, others, remarks = '') {
-  const co = D.meta.company, atf = v._raw.atf_no || `HRAD-ATF-${co.next.atf++}`, first = !v._raw.orig_docs;
+  const co = D.meta.company, reprint = !!v._raw.atf_no, atf = v._raw.atf_no || `HRAD-ATF-${co.next.atf++}`, receipt = !reprint && !v._raw.orig_docs;
   logChange(scr, 'Update', v, [['Documents Received', 'text', (v._raw.docs_received || []).join(', '), docs.join(', ')], ['Documents Others', 'text', v._raw.docs_others, others], ['Documents Remarks', 'text', v._raw.docs_remarks, remarks],
-    ['ATF Control No.', 'text', v._raw.atf_no, atf], ['Print Transmittal?', 'check', v._raw.print_doc_trans, false], ...(first ? [['JBAP Receipt of Documents', 'date', null, TODAY]] : [])]);
+    ['ATF Control No.', 'text', v._raw.atf_no, atf], ['Print Transmittal?', 'check', v._raw.print_doc_trans, false], ...(receipt ? [['JBAP Receipt of Documents', 'date', null, TODAY]] : [])]);
   Object.assign(v._raw, { docs_received: docs, docs_others: others, docs_remarks: remarks, atf_no: atf, print_doc_trans: false });
   clearTick(scr, v.id, 'print_doc_trans');
-  if (first) { v._raw.orig_docs = TODAY; clearTick(scr, v.id, 'orig_docs'); }
+  if (receipt) { v._raw.orig_docs = TODAY; clearTick(scr, v.id, 'orig_docs'); }
   return atf;
 }
 // [BEHAVIOR] JBAP feedback (26 Oct 2026): sending the DOAS for signature email sets Receipt of DOAS = today on its lots (the status becomes DOAS for Signing) and clears the tick.
-// A lot that already has a Receipt of DOAS is left alone (a filled date is locked); an unsaved date typed on the row for it is dropped, so it cannot overwrite the recorded one on the next Save.
+// A lot that is not eligible (it already has a Receipt of DOAS, or is not at Pending DOAS) is left alone (a filled date is locked); an unsaved date typed on the row for it is dropped, so it cannot overwrite the recorded one on the next Save.
 function recordDoasEmail(scr, rows) {
   rows.forEach(r => {
-    if (r._raw.rcv_doas) return;
+    if (!doasEmailOk(enrichV(r._raw))) return;
     logChange(scr, 'Update', r, [['Receipt of DOAS', 'date', r._raw.rcv_doas, TODAY], ['For DOAS Email?', 'check', r._raw.for_doas_email, false]]);
     r._raw.rcv_doas = TODAY; r._raw.for_doas_email = false;
     clearTick(scr, r.id, 'for_doas_email'); clearTick(scr, r.id, 'rcv_doas');
@@ -1535,37 +1548,40 @@ const ACTIONS = {
       } }] });
   },
   printDocTrans(scr) {
-    const ticked = selectedRows(scr, 'print_doc_trans');
-    if (!ticked.length) { setMsg(scr, 'error', 'Tick <b>Print Transmittal?</b> on at least one lot first.'); render(); return; }
-    // [BEHAVIOR] JBAP feedback (26 Oct 2026): Print Transmittal records JBAP Receipt of Documents itself, so it no longer waits for that date. A stale tick on a lot that cannot print now (not Pending Documents or For Releasing, or an ATF No. already) is left out and never blocks the others
-    const rows = ticked.filter(printTransOk), left = ticked.filter(r => !printTransOk(r));
-    const leftMsg = left.length ? `${left.length} lot(s) not printed: only lots in <b>Pending Documents</b> or <b>For Releasing</b> with no ATF No. yet can be printed (${left.map(r => esc(r.plate || r.customer)).join(', ')}).` : null;
-    if (!rows.length) { setMsg(scr, 'error', leftMsg); render(); return; }
-    setMsg(scr, leftMsg ? 'error' : null, leftMsg); render();
-    const groups = byBuyer(rows);   // one Documents Release email per buyer goes with the transmittal
-    const form = rows.map((r, n) => `<fieldset class="dt-lot"><legend><b>${esc(r.plate)}</b> · ${esc(r.customer)}</legend><div class="cols2">${DOC_TYPES.map((t, i) => `<label class="chkline"><input type="checkbox" class="chk" id="dt-${n}-${i}" ${(r.docs_received || []).includes(t) ? 'checked' : ''}>${esc(t)}</label>`).join('')}</div>
+    const rows = selectedRows(scr, 'print_doc_trans');   // ineligible (stale) ticks are not in it
+    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Print Transmittal?</b> on at least one lot first.'); render(); return; }
+    setMsg(scr, null); render();
+    // [BEHAVIOR] JBAP feedback (26 Oct 2026): a first print (no ATF No. yet) records JBAP Receipt of Documents and emails the buyer the Documents Release notice (one email per buyer);
+    // a lot that already has an ATF No. is only reprinted: same ATF No., no email, no date change.
+    const first = rows.filter(r => !r.atf_no), groups = byBuyer(first), reprints = rows.length - first.length;
+    const form = rows.map((r, n) => `<fieldset class="dt-lot" aria-describedby="dt-err-${n}"><legend><b>${esc(r.plate)}</b> · ${esc(r.customer)}${r.atf_no ? ` · Reprint of ${esc(r.atf_no)}` : ''}</legend><div class="cols2">${DOC_TYPES.map((t, i) => `<label class="chkline"><input type="checkbox" class="chk" id="dt-${n}-${i}" ${(r.docs_received || []).includes(t) ? 'checked' : ''}>${esc(t)}</label>`).join('')}</div>
       <div class="fld"><label for="dt-${n}-o">Others</label><input class="ctl" id="dt-${n}-o" value="${esc(r.docs_others || '')}"></div>
-      <div class="fld"><label for="dt-${n}-r">Remarks</label><input class="ctl" id="dt-${n}-r" value="${esc(r.docs_remarks || '')}"></div></fieldset>`).join('');
+      <div class="fld"><label for="dt-${n}-r">Remarks</label><input class="ctl" id="dt-${n}-r" value="${esc(r.docs_remarks || '')}"></div>
+      <div class="err" id="dt-err-${n}" role="alert" hidden></div></fieldset>`).join('');
     const mails = groups.map(g => REPORTS.email(REPORTS.documentsReleaseEmail(g.buyer, g.lots))).join('');
     openModal({ title: `Document transmittal: ${rows.length} lot(s)`, icon: 'print', wide: true,
-      body: `<h3 class="dlg-h">Auction transmittal form: tick the documents received from the seller</h3>${form}<h3 class="dlg-h">Email to the buyer (one per buyer): Documents Release</h3>${mails}`,
-      note: 'Simulated: no email is actually sent. Recording sets JBAP Receipt of Documents to today.',
-      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record, email & print', kind: 'pr', icon: 'print', onClick: () => {
-        const pages = rows.map((r, n) => { const docs = DOC_TYPES.filter((_, i) => $(`#dt-${n}-${i}`).checked), others = $(`#dt-${n}-o`).value.trim(), remarks = $(`#dt-${n}-r`).value.trim();
+      body: `<h3 class="dlg-h">Auction transmittal form: tick the documents received from the seller</h3>${form}${groups.length ? `<h3 class="dlg-h">Email to the buyer (one per buyer): Documents Release</h3>${mails}` : ''}`,
+      note: groups.length ? 'Simulated: no email is actually sent. Recording sets JBAP Receipt of Documents to today where it is blank.' : 'Reprint: the same ATF No. is kept; no email is sent and no date changes.',
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: groups.length ? 'Record, email & print' : 'Reprint', kind: 'pr', icon: 'print', onClick: () => {
+        const picks = rows.map((r, n) => ({ r, n, docs: DOC_TYPES.filter((_, i) => $(`#dt-${n}-${i}`).checked), others: $(`#dt-${n}-o`).value.trim(), remarks: $(`#dt-${n}-r`).value.trim() }));
+        // [BEHAVIOR] a lot whose JBAP Receipt of Documents this print records needs a document ticked or Others typed: the error shows under that lot and the dialog stays open
+        let bad = null;
+        picks.forEach(p => { const msg = docsNeededError(p.r, p.docs, p.others), el = $(`#dt-err-${p.n}`);
+          el.textContent = msg || ''; el.hidden = !msg; if (msg && !bad) bad = p; });
+        if (bad) { $(`#dt-${bad.n}-0`).focus(); return; }
+        const pages = picks.map(({ r, docs, others, remarks }) => {
           if (others && !docs.includes('Others')) docs.push('Others');   // [BEHAVIOR] typed Others text counts as the Others document being received
           const atf = recordDocTransmittal(scr, r, docs, others, remarks); return REPORTS.documentTransmittal(enrichV(r._raw), docs, others, atf, remarks); }).join('');
         render(); openModal({ title: 'Auction transmittal form', icon: 'print', wide: true, body: pages, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
-        printModal(); toast(`Transmittal recorded for ${rows.length} lot(s); ${groups.length} Documents Release email(s) sent.`);
+        printModal();
+        toast(groups.length ? `Transmittal recorded for ${first.length} lot(s); ${groups.length} Documents Release email(s) sent.${reprints ? ` ${reprints} reprinted with the same ATF No.` : ''}` : `Transmittal reprinted for ${reprints} lot(s) with the same ATF No.; no email sent.`);
       } }] });
   },
-  // [BEHAVIOR] JBAP feedback (26 Oct 2026): Email DOAS for signature. One email per buyer for the ticked lots (DOAS signed at JBAP, Receipt of DOAS blank); Send sets Receipt of DOAS = today on them
+  // [BEHAVIOR] JBAP feedback (26 Oct 2026): Email DOAS for signature. One email per buyer for the ticked lots (Pending DOAS, DOAS signed at JBAP); Send sets Receipt of DOAS = today on them
   emailDoas(scr) {
-    const ticked = selectedRows(scr, 'for_doas_email');
-    if (!ticked.length) { setMsg(scr, 'error', 'Tick <b>For DOAS Email?</b> on at least one lot first.'); render(); return; }
-    const rows = ticked.filter(doasEmailOk), left = ticked.filter(r => !doasEmailOk(r));   // a stale tick on a lot that cannot be emailed now never blocks the others
-    const leftMsg = left.length ? `${left.length} lot(s) not emailed: the DOAS is not signed at JBAP, or Receipt of DOAS is already filled in (${left.map(r => esc(r.plate || r.customer)).join(', ')}).` : null;
-    if (!rows.length) { setMsg(scr, 'error', leftMsg); render(); return; }
-    setMsg(scr, leftMsg ? 'error' : null, leftMsg); render();
+    const rows = selectedRows(scr, 'for_doas_email');   // ineligible (stale) ticks are not in it
+    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For DOAS Email?</b> on at least one lot first.'); render(); return; }
+    setMsg(scr, null); render();
     const groups = byBuyer(rows), n = groups.length;
     const mails = groups.map(g => REPORTS.email(REPORTS.doasForSignatureEmail(g.buyer, g.lots))).join('');
     openModal({ title: `Email DOAS for signature: ${n} buyer(s), ${rows.length} lot(s)`, icon: 'mail', wide: true, body: mails,

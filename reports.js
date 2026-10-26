@@ -29,7 +29,7 @@ const rebateLotsIn = (lots, from, to) => lots.filter(v => +v.auction >= from && 
 const makeModel = m => { const s = String(m ?? '').trim(), i = s.search(/\s/); return i < 0 ? { make: s, model: '' } : { make: s.slice(0, i), model: s.slice(i).trim() }; };
 const mailTo = b => b.email ? `${b.customer} <${b.email}>` : (b.customer || '');   // name and email, as the other buyer emails; a buyer with no email on file shows the name only
 // Unit table of JBAP's DOAS for signature and Documents release emails (Seller, Buyer, Year, Make, Model, Plate Number; the release email adds Color). Year and Color are blank when unknown.
-const unitTable = (lots, buyer, withColor) => `<div class="utbl"><table><thead><tr><th>Seller</th><th>Buyer</th><th>Year</th><th>Make</th><th>Model</th><th>Plate Number</th>${withColor ? '<th>Color</th>' : ''}</tr></thead><tbody>${lots.map(v => {
+const unitTable = (lots, buyer, withColor) => `<div class="utbl" tabindex="0" role="region" aria-label="Units"><table><thead><tr>${['Seller', 'Buyer', 'Year', 'Make', 'Model', 'Plate Number', ...(withColor ? ['Color'] : [])].map(h => `<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${lots.map(v => {
   const mm = makeModel(v.model);
   return `<tr><td>${esc(v.seller_full || v.seller || '')}</td><td>${esc(v.customer || buyer.customer)}</td><td>${esc(v.year || '')}</td><td>${esc(mm.make)}</td><td>${esc(mm.model)}</td><td>${esc(v.plate || '')}</td>${withColor ? `<td>${esc(v.color || '')}</td>` : ''}</tr>`; }).join('')}</tbody></table></div>`;
 const REPORTS = {
