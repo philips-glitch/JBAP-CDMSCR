@@ -137,10 +137,11 @@ function docStatus(v) {
   return 'Pending DOAS';
 }
 // [BEHAVIOR] Aging counts working days to today only while a step waits (JBAP's sheet shows 0 once done; CDMS shows blank).
-// DOAS Aging: from Seller Payment while the DOAS is awaited (branch sellers: until it is signed). Docs Aging: from the signed DOAS (no DOAS: Seller Payment) until JBAP has the documents.
+// DOAS Aging: from Seller Payment while the DOAS is awaited; branch sellers (EWB): from Buyer Paid, the date the lot enters Document Monitoring (JBAP, 26 Oct 2026), until the DOAS is signed.
+// Docs Aging: from the signed DOAS (no DOAS: Seller Payment) until JBAP has the documents.
 function docAging(v, status, doas) {
   const start = doas === 'none' ? v.pay_seller : v.seller_doas || (doas === 'branch' ? v.ewb_signed : null);
-  return { doas_aging: status === 'Pending DOAS' || (doas === 'branch' && status === 'DOAS for Signing') ? workdaysBetween(v.pay_seller, TODAY) : null,
+  return { doas_aging: status === 'Pending DOAS' || (doas === 'branch' && status === 'DOAS for Signing') ? workdaysBetween(doas === 'branch' ? v.buyer_paid : v.pay_seller, TODAY) : null,
     docs_aging: status === 'Pending Documents' ? workdaysBetween(start, TODAY) : null };
 }
 // [BEHAVIOR] JBAP feedback (15 Oct 2026): Security Bond per vehicle, billed to the buyer with the vehicle. Seller setting security_bond; the lot keeps its own
@@ -398,12 +399,17 @@ const DOC_DATE_FIELDS = [['ewb_callout', 'EWB Call Out'], ['ewb_signed', 'Date D
   ['seller_doas', 'Seller Receipt of Signed DOAS'], ['orig_docs', 'JBAP Receipt of Documents'], ['to_buyer', 'Buyer Receipt of Documents']];
 const docDateLabel = key => (DOC_DATE_FIELDS.find(f => f[0] === key) || [])[1] || key;
 const CHANGE_REASON_ERR = 'A reason is required.';
-// The first problem with a Change date entry, or null when it can be saved (iso: ISO date, '' = blank, null = not a date)
+// The first problem with a Change date entry, or null when it can be saved (iso: ISO date, '' = blank, null = not a date).
+// docValidate runs on the row with the new value merged in. It checks the new date itself (not in the future, not before Buyer Paid, in order with the earlier dates) and the later dates
+// that depend on it (e.g. JBAP Receipt of Signed DOAS must not end up before Receipt of DOAS); a later date is named in the message. A problem the row already had that the change does not
+// alter (JBAP's own out-of-order dates, e.g. V110) is not blamed on the change, so such a row can still be corrected one date at a time.
 function changeDateError(v, key, iso, reason) {
   if (!String(reason ?? '').trim()) return CHANGE_REASON_ERR;
   if (!iso) return 'Type the new date as mm/dd/yyyy.';
-  const msg = docValidate(v, { [key]: iso })[key];
-  if (msg) return `New date ${msg}.`;
+  const after = docValidate(v, { [key]: iso }), before = docValidate(v, { [key]: v._raw[key] });
+  if (after[key]) return `New date ${after[key]}.`;
+  const dep = Object.keys(after).find(k => k !== key && after[k] && after[k] !== before[k]);
+  if (dep) return `${docDateLabel(dep)} (${fmtDate(v._raw[dep])}) ${after[dep]}.`;
   if (iso === v._raw[key]) return `The new date is the same as the current date (${fmtDate(iso)}).`;
   return null;
 }
@@ -511,7 +517,7 @@ const SCREENS = [
     validate: (r, e) => ({ rts_fad_ok: notFuture(e.rts_fad_ok) || notBefore(e.rts_fad_ok, r.rts_smd_ok, 'the SMD Manager approval') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Approved units moved to VWD › For Return to Seller.' },
   { dept: 'FAD', slug: 'document-monitoring', title: 'Document Monitoring', actions: VFSU, isNew: true,
-    rule: `Sold lots that JBAP has paid to the seller (Payment to Seller filled in); for EWB, whose buyers sign the DOAS at EWB's HO or store, lots the buyer has paid. Cancelled lots are not listed (JBAP, 26 Oct 2026). Columns follow JBAP's Documents Monitoring sheet. Status is the furthest step reached: Pending DOAS, DOAS for Signing (JBAP has the DOAS; EWB: the buyer was called out to sign, to confirm), Pending Documents (signed DOAS back), For Releasing (documents at JBAP) or Complete (documents with the buyer). TFS has no DOAS (n/a). A date that is filled in is read-only: use Change date, with a reason, to correct it. Aging counts working days while a step waits. The Open view hides Complete lots.`,
+    rule: `Sold lots that JBAP has paid to the seller (Payment to Seller filled in); for EWB, whose buyers sign the DOAS at EWB's HO or store, lots the buyer has paid. Cancelled lots are not listed (JBAP, 26 Oct 2026). Columns follow JBAP's Documents Monitoring sheet. Status is the furthest step reached: Pending DOAS, DOAS for Signing (JBAP has the DOAS; EWB: the buyer was called out to sign, to confirm), Pending Documents (signed DOAS back), For Releasing (documents at JBAP) or Complete (documents with the buyer). TFS has no DOAS (n/a). A date that is filled in is read-only: use Change date, with a reason, to correct it. Aging counts working days while a step waits: DOAS Aging from Seller Payment (EWB: from Buyer Paid), Docs Aging from the signed DOAS (TFS: from Seller Payment). The Open view hides Complete lots.`,
     rows: () => V().filter(v => v.status === 'Sold' && (doasOf(v) === 'branch' ? !!v.buyer_paid : !!v.pay_seller)), sort: ['auction_lot', 'asc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 190 }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
       C('Seller Payment', 'pay_seller', 'date'),
@@ -1682,7 +1688,7 @@ const ACTIONS = {
         <div class="fld"><label for="cd-date">New date</label>${dateField('cd-date', '', 'aria-required="true" aria-describedby="cd-err"')}</div>
         <div class="fld full"><label for="cd-reason">Reason</label><textarea class="ctl" id="cd-reason" aria-required="true" aria-describedby="cd-err" placeholder="Required: why the date is changed"></textarea></div>
         <div class="fld full"><span class="err" id="cd-err" role="alert"></span></div></div>
-        <p class="note">The new date gets the same checks as the list. The change and the reason are saved in the Activity Log. Status and aging follow the dates.</p>`,
+        <p class="note">The new date gets the same checks as the list, and the dates after it must stay in order. The change and the reason are saved in the Activity Log. Status and aging follow the dates.</p>`,
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Save change', kind: 'pr', icon: 'save', onClick: () => {
         const key = $('#cd-field').value, iso = parseDateInput($('#cd-date').value, TODAY), reason = $('#cd-reason').value.trim(), err = changeDateError(v, key, iso, reason);
         const bad = !err ? null : err === CHANGE_REASON_ERR ? 'reason' : 'date';

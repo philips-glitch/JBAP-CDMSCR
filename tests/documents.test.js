@@ -34,8 +34,8 @@ test('aging counts working days to the demo day while a step waits, blank once d
   const v = (seller, f) => P.enrichV(lot(seller, f));
   assert.strictEqual(v('SBC', { pay_seller: '2026-10-02' }).doas_aging, 5, 'Pending DOAS');
   assert.strictEqual(v('SBC', { pay_seller: '2026-10-02', rcv_doas: '2026-10-05' }).doas_aging, null, 'DOAS received');
-  assert.strictEqual(v('EWB', { pay_seller: '2026-10-02' }).doas_aging, 5, 'EWB: until the DOAS is signed');
-  assert.strictEqual(v('EWB', { pay_seller: '2026-10-02', ewb_signed: '2026-10-06' }).doas_aging, null);
+  assert.strictEqual(v('EWB', { buyer_paid: '2026-10-02' }).doas_aging, 5, 'EWB: from Buyer Paid, until the DOAS is signed (JBAP, 26 Oct 2026)');
+  assert.strictEqual(v('EWB', { buyer_paid: '2026-10-02', ewb_signed: '2026-10-06' }).doas_aging, null);
   assert.strictEqual(v('TFS', { pay_seller: '2026-10-02' }).doas_aging, null, 'no DOAS');
   assert.strictEqual(v('SBC', { pay_seller: '2026-09-01', seller_doas: '2026-10-02' }).docs_aging, 5);
   assert.strictEqual(v('EWB', { pay_seller: '2026-09-01', ewb_signed: '2026-10-02' }).docs_aging, 5);

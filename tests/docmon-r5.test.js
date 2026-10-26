@@ -16,12 +16,14 @@ test('Filled dates are read-only; blank ones editable', () => {
 });
 test('Change date: reason required, same checks, logged with the reason', () => {
   const P = load(), scr = dm(P), r = scr.rows().find(x => x.rcv_doas && x.pay_seller);
-  assert.match(P.changeDateError(r, 'rcv_doas', P.TODAY, '') || '', /reason/i);
+  // the new date must keep the order with the later dates of the row (fix round 1): Buyer Paid is before every date of the row, so it keeps the order
+  const keep = r.buyer_paid; assert.ok(keep && keep !== r.rcv_doas && keep < r._raw.rcv_doas);
+  assert.match(P.changeDateError(r, 'rcv_doas', keep, '') || '', /reason/i);
   assert.match(P.changeDateError(r, 'rcv_doas', '2999-01-01', 'typo') || '', /after today/);
   assert.ok(P.changeDateError(r, 'rcv_doas', '2000-01-01', 'typo'));
-  assert.strictEqual(P.changeDateError(r, 'rcv_doas', P.TODAY, 'Typed the wrong day'), null);
-  P.recordDateChange(scr, r, 'rcv_doas', P.TODAY, 'Typed the wrong day');
-  assert.strictEqual(r._raw.rcv_doas, P.TODAY);
+  assert.strictEqual(P.changeDateError(r, 'rcv_doas', keep, 'Typed the wrong day'), null);
+  P.recordDateChange(scr, r, 'rcv_doas', keep, 'Typed the wrong day');
+  assert.strictEqual(r._raw.rcv_doas, keep);
   const top = P.S.log.slice(-2).map(l => l.field); assert.ok(top.includes('Receipt of DOAS') && top.includes('Change reason'));
 });
 test('DOC_DATE_FIELDS are the date columns of the screen, in the screen order; each of them locks when filled', () => {
@@ -76,7 +78,7 @@ test('Change date: saves the date, logs old to new and the reason as the newest 
     ['FAD', 'Document Monitoring', 'Update', 'Change reason', '', 'Called on the right day']]);
   assert.strictEqual(P.S.log.at(-1).field, 'Change reason'); assert.strictEqual(P.S.log.at(-1).record, rows[0].record);
   const after = scr.rows().find(x => x.id === r.id); assert.strictEqual(after.ewb_callout, ni); assert.strictEqual(after.doc_status, 'DOAS for Signing');
-  assert.strictEqual(after.doas_aging, P.workdaysBetween(after.pay_seller, P.TODAY), 'aging is recalculated from the lot as it is now');
+  assert.strictEqual(after.doas_aging, P.workdaysBetween(after.buyer_paid, P.TODAY), 'EWB: aging counts from Buyer Paid');
 });
 test('Status of EWB lots: the call-out starts DOAS for Signing, a buyer-paid EWB lot with no seller payment is listed', () => {
   const P = load(), rows = dm(P).rows(), ewb = rows.filter(r => r.doas === 'branch');
@@ -84,4 +86,48 @@ test('Status of EWB lots: the call-out starts DOAS for Signing, a buyer-paid EWB
   assert.ok(ewb.every(r => !(r.doc_status === 'DOAS for Signing') || r.ewb_callout || r.rcv_doas), 'DOAS for Signing: a call-out (or a receipt of DOAS)');
   assert.ok(ewb.some(r => !r.pay_seller), 'sample: EWB lot listed on Buyer Paid alone');
   assert.ok(rows.filter(r => r.doas !== 'branch').every(r => r.pay_seller));
+});
+// Fix round 1 (controller ruling, 26 Oct 2026): Change date also checks the later dates that depend on the changed one
+test('Change date: a change that puts a later date out of order is refused, names that date, and saves and logs nothing', () => {
+  const P = load(), scr = dm(P), r = scr.rows().find(x => x.rcv_doas && x.buyer_doas && x.pay_seller), n = P.S.log.length, before = JSON.stringify(P.DOC_DATE_FIELDS.map(([k]) => r._raw[k]));
+  const late = P.TODAY; assert.ok(r._raw.buyer_doas < late, 'sample: JBAP Receipt of Signed DOAS is before today');
+  const err = P.changeDateError(r, 'rcv_doas', late, 'Typed the wrong day');
+  assert.strictEqual(err, `JBAP Receipt of Signed DOAS (${P.fmtDate(r._raw.buyer_doas)}) cannot be before Receipt of DOAS (${P.fmtDate(late)}).`);
+  assert.strictEqual(P.S.log.length, n, 'nothing is logged'); assert.strictEqual(JSON.stringify(P.DOC_DATE_FIELDS.map(([k]) => r._raw[k])), before, 'no date is changed');
+  // the change that keeps the order is fine: the day the later date has
+  assert.strictEqual(P.changeDateError(r, 'rcv_doas', r._raw.buyer_doas, 'Typed the wrong day'), null);
+  // the other chains: JBAP receipt past the seller receipt, JBAP documents past the buyer's, EWB call-out past the signing
+  const lot = (seller, f) => P.enrichV(Object.assign({ status: 'Sold', seller, buyer_paid: '2026-09-01' }, f));
+  const sbc = lot('SBC', { rcv_doas: '2026-09-05', buyer_doas: '2026-09-10', seller_doas: '2026-09-12', orig_docs: '2026-09-15', to_buyer: '2026-09-20' });
+  assert.strictEqual(P.changeDateError(sbc, 'buyer_doas', '2026-09-13', 'x'), 'Seller Receipt of Signed DOAS (09/12/2026) cannot be before JBAP Receipt of Signed DOAS (09/13/2026).');
+  assert.strictEqual(P.changeDateError(sbc, 'orig_docs', '2026-09-21', 'x'), 'Buyer Receipt of Documents (09/20/2026) cannot be before JBAP Receipt of Documents (09/21/2026).');
+  assert.strictEqual(P.changeDateError(sbc, 'orig_docs', '2026-09-20', 'x'), null, 'the same day is in order');
+  const ewb = lot('EWB', { ewb_callout: '2026-09-05', ewb_signed: '2026-09-10' });
+  assert.strictEqual(P.changeDateError(ewb, 'ewb_callout', '2026-09-11', 'x'), 'Date DOAS Signed (EWB) (09/10/2026) cannot be before EWB Call Out (09/11/2026).');
+  assert.strictEqual(P.changeDateError(ewb, 'ewb_callout', '2026-09-10', 'x'), null);
+  // the date itself is still checked first, and a change to the latest date has no later date to break
+  assert.match(P.changeDateError(sbc, 'rcv_doas', '2026-08-01', 'x'), /^New date cannot be before Buyer Paid/);
+  assert.strictEqual(P.changeDateError(sbc, 'to_buyer', '2026-09-30', 'x'), null);
+});
+test('Change date: dates the row already had out of order (JBAP sheet) are not blamed on an unrelated change', () => {
+  const P = load(), lot = f => P.enrichV(Object.assign({ status: 'Sold', seller: 'SBC', buyer_paid: '2026-09-01' }, f));
+  const v = lot({ rcv_doas: '2026-10-05', buyer_doas: '2026-10-01', seller_doas: '2026-10-02' });   // JBAP's own order: the JBAP receipt is before Receipt of DOAS
+  assert.strictEqual(P.changeDateError(v, 'orig_docs', '2026-10-06', 'x'), null, 'a document date is fine');
+  assert.strictEqual(P.changeDateError(v, 'seller_doas', '2026-10-03', 'x'), null, 'the seller date is in order with the JBAP date');
+  assert.match(P.changeDateError(v, 'rcv_doas', '2026-10-06', 'x'), /^JBAP Receipt of Signed DOAS \(10\/01\/2026\) cannot be before Receipt of DOAS \(10\/06\/2026\)\.$/, 'still broken after the change: refused');
+  assert.strictEqual(P.changeDateError(v, 'rcv_doas', '2026-09-30', 'x'), null, 'the change that repairs the order is allowed');
+});
+// Fix round 1: DOAS Aging of an EWB lot counts from Buyer Paid, the date the lot enters the list
+test('DOAS Aging for EWB counts from Buyer Paid (not Seller Payment); other sellers still from Seller Payment', () => {
+  const P = load(), v = (seller, f) => P.enrichV(Object.assign({ status: 'Sold', seller, buyer_paid: '2026-10-02' }, f));
+  assert.strictEqual(v('EWB', {}).doas_aging, P.workdaysBetween('2026-10-02', P.TODAY), 'EWB, no Seller Payment yet: counted');
+  assert.strictEqual(v('EWB', { pay_seller: '2026-10-06' }).doas_aging, P.workdaysBetween('2026-10-02', P.TODAY), 'Seller Payment does not move the start');
+  assert.strictEqual(v('EWB', { ewb_callout: '2026-10-05' }).doas_aging, P.workdaysBetween('2026-10-02', P.TODAY), 'DOAS for Signing: still counting until signed');
+  assert.strictEqual(v('EWB', { ewb_callout: '2026-10-05', ewb_signed: '2026-10-06' }).doas_aging, null, 'signed: blank');
+  assert.strictEqual(v('SBC', { pay_seller: '2026-10-06' }).doas_aging, P.workdaysBetween('2026-10-06', P.TODAY), 'JBAP sellers: from Seller Payment');
+  assert.strictEqual(v('SBC', {}).doas_aging, null, 'no Seller Payment: nothing to count from');
+  const rows = dm(P).rows().filter(r => r.doas === 'branch' && ['Pending DOAS', 'DOAS for Signing'].includes(r.doc_status));
+  assert.ok(rows.length > 10 && rows.some(r => !r.pay_seller), 'sample: waiting EWB lots, some with no Seller Payment');
+  assert.ok(rows.every(r => r.doas_aging === P.workdaysBetween(r.buyer_paid, P.TODAY) && r.doas_aging !== null));
+  assert.match(dm(P).rule, /DOAS Aging from Seller Payment \(EWB: from Buyer Paid\)/);
 });
