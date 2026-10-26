@@ -452,7 +452,7 @@ const SCREENS = [
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ seller_ack: notFuture(e.seller_ack) || notBefore(e.seller_ack, r.pay_seller, 'Payment to Seller') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Acknowledged vehicles removed from the list.' },
-  { dept: 'FAD', slug: 'for-dispatch', title: 'For Dispatch', actions: VFSU,
+  { dept: 'FAD', slug: 'for-dispatch', title: 'For Dispatch', group: 'Vehicle Dispatch', actions: VFSU, isNew: true,
     rule: 'Vehicles with status SOLD and a blank Dispatch Date whose seller condition is met: Buyer Payment and DOAS sellers after Buyer Paid, other sellers after Seller Acknowledgement (Dispatch Condition per seller). DOAS sellers need the signed DOAS before release. Buyer must release within 3 working days after dispatch.',
     rows: () => sold().filter(v => !v.dispatch && dispatchReady(v)), sort: ['auction_lot', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction No.', 'auction', 'code'),
@@ -463,6 +463,15 @@ const SCREENS = [
     buttons: [{ label: 'Email dispatch form', kind: 'ol', icon: 'mail', act: 'emailDispatch', count: 'for_dispatch_email' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Dispatched vehicles moved to Unreleased Unit (FAD and VWD).',
     queue: true, ready: { key: 'for_dispatch_email', when: () => true },
     ruleP: ['P4', 'Every lot arrives pre-ticked for the dispatch email; untick a lot to hold it back. The email is copied to Finance only (P5): VWD sees the lot in its own list.'] },
+  // JBAP feedback (19 Oct 2026) / proposal Q76: the FAD Manager approves what the SMD Manager approved; VWD then records the return
+  { dept: 'FAD', slug: 'return-approval', title: 'Return to Seller Approval', group: 'Vehicle Dispatch', actions: VFSU, isNew: true, queue: true,
+    rule: 'Units the SMD Manager approved for return to the seller. The FAD Manager enters the approval date and saves; VWD then records the return (proposal, Q76).',
+    rows: () => V().filter(v => v.rts_cleared && v.rts_smd_ok && !v.rts_fad_ok && !v.release).map(v => Object.assign(v, { listings: listingsOf(v) })), sort: ['rts_smd_ok', 'asc'],
+    cols: [C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Status', 'status', 'status'), C('Last Auction', 'auction', 'code'),
+      C('Number of Listing', 'listings', 'int'), C('Cleared by SMD', 'rts_cleared', 'date'), C('SMD Manager Approved', 'rts_smd_ok', 'date'), C('FAD Manager Approved', 'rts_fad_ok', 'date', { edit: 'date' })],
+    filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }],
+    validate: (r, e) => ({ rts_fad_ok: notFuture(e.rts_fad_ok) || notBefore(e.rts_fad_ok, r.rts_smd_ok, 'the SMD Manager approval') }),
+    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Approved units moved to VWD › For Return to Seller.' },
   { dept: 'FAD', slug: 'document-monitoring', title: 'Document Monitoring', actions: VFSU,
     rule: `Every sold or cancelled lot, in the columns of JBAP's Documents Monitoring sheet. Status is the furthest step reached: Pending Payment (seller not paid yet), Pending DOAS, DOAS for Signing, Pending Documents (signed DOAS back), For Releasing (documents at JBAP), Complete (documents with the buyer) or Cancelled. EWB buyers sign the DOAS at EWB's HO or store; TFS has no DOAS (n/a). Aging counts working days while a step waits. The Open view hides Complete and Cancelled lots.`,
     rows: () => V().filter(v => v.status === 'Sold' || v.status === 'Cancelled'), sort: ['auction_lot', 'asc'],
@@ -563,15 +572,6 @@ const SCREENS = [
     savedNote: 'Paid cancellations removed from the list.',
     queue: true, ready: { key: 'for_print', when: r => !r.bill_date },
     ruleP: ['P4', 'Lots not billed yet arrive pre-ticked for billing.'] },
-  // JBAP feedback (19 Oct 2026) / proposal Q76: the FAD Manager approves what the SMD Manager approved; VWD then records the return
-  { dept: 'FAD', slug: 'return-approval', title: 'Return to Seller Approval', actions: VFSU, queue: true,
-    rule: 'Units the SMD Manager approved for return to the seller. The FAD Manager enters the approval date and saves; VWD then records the return (proposal, Q76).',
-    rows: () => V().filter(v => v.rts_cleared && v.rts_smd_ok && !v.rts_fad_ok && !v.release).map(v => Object.assign(v, { listings: listingsOf(v) })), sort: ['rts_smd_ok', 'asc'],
-    cols: [C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Status', 'status', 'status'), C('Last Auction', 'auction', 'code'),
-      C('Number of Listing', 'listings', 'int'), C('Cleared by SMD', 'rts_cleared', 'date'), C('SMD Manager Approved', 'rts_smd_ok', 'date'), C('FAD Manager Approved', 'rts_fad_ok', 'date', { edit: 'date' })],
-    filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }],
-    validate: (r, e) => ({ rts_fad_ok: notFuture(e.rts_fad_ok) || notBefore(e.rts_fad_ok, r.rts_smd_ok, 'the SMD Manager approval') }),
-    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Approved units moved to VWD › For Return to Seller.' },
 
   // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch; live data on SAAF, Unreleased Unit, Return to Seller and SMD Manager Approval) =====================
   // JBAP answer Q11 (20 Oct 2026): SMD's update screen for the SAAF is standard (it was proposal P5); live data, unlike SMD's four legacy-sample screens
@@ -630,7 +630,7 @@ const SCREENS = [
       C('Number of Listing', 'listings', 'int'), C('Cleared by SMD', 'rts_cleared', 'date'), C('SMD Manager Approved', 'rts_smd_ok', 'date', { edit: 'date' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ rts_smd_ok: notFuture(e.rts_smd_ok) || notBefore(e.rts_smd_ok, r.rts_cleared, 'the clearance date') }),
-    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Approved units moved to FAD › Return to Seller Approval.' },
+    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Approved units moved to FAD › Vehicle Dispatch › Return to Seller Approval.' },
 
   // ===================== VWD (live data shared with FAD; the Unreleased screens release vehicles) =====================
   { dept: 'VWD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFSU, queue: true, rule: 'Dispatched vehicles with no penalty yet (still within the dispatch deadline). VWD releases a vehicle with Release vehicle (JBAP Q9).',
