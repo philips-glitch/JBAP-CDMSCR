@@ -33,9 +33,15 @@ const unitTable = (lots, buyer, withColor) => `<div class="utbl" tabindex="0" ro
   const mm = makeModel(v.model);
   return `<tr><td>${esc(v.seller_full || v.seller || '')}</td><td>${esc(v.customer || buyer.customer)}</td><td>${esc(v.year || '')}</td><td>${esc(mm.make)}</td><td>${esc(mm.model)}</td><td>${esc(v.plate || '')}</td>${withColor ? `<td>${esc(v.color || '')}</td>` : ''}</tr>`; }).join('')}</tbody></table></div>`;
 const REPORTS = {
+  // [BEHAVIOR] JBAP feedback (26 Oct 2026, later): the body of every email can be edited before it is sent (Edit / Done, Reset to standard text). From, To, CC, Subject and the attachments stay as they are.
+  // The standard HTML is kept in data-std; app.js handles the two buttons (emailToolbarClick) and reads the body back when the email is sent (editedEmails). The buttons are named by recipient and subject
+  // so that several emails in one dialog (e.g. one Return to Seller email per seller, all to the same people) have different names. Callers pass `body` as HTML they built and escaped themselves.
   email({ from, to, cc, subject, body, atts = [] }) {
+    const who = `${to} (${subject})`;
     return `<article class="mail"><div class="mail-h"><b>From</b><span>${esc(from)}</span><b>To</b><span>${esc(to)}</span>${cc ? `<b>CC</b><span>${esc(cc)}</span>` : ''}<b>Subject</b><span>${esc(subject)}</span>
-      ${atts.length ? `<b>Attached</b><span>${atts.map(a => `<button type="button" class="att" data-att="${esc(a.key)}">${IC.clip}${esc(a.name)}</button>`).join(' ')}</span>` : ''}</div><div class="mail-b">${body}</div></article>`;
+      ${atts.length ? `<b>Attached</b><span>${atts.map(a => `<button type="button" class="att" data-att="${esc(a.key)}">${IC.clip}${esc(a.name)}</button>`).join(' ')}</span>` : ''}</div>
+      <div class="mail-tools no-print" data-who="${esc(who)}"><button type="button" class="em-btn" data-em-edit aria-label="Edit email to ${esc(who)}">Edit</button><button type="button" class="em-btn gh" data-em-reset aria-label="Reset to standard text, email to ${esc(who)}">Reset to standard text</button><span class="em-state" role="status"></span></div>
+      <div class="mail-b"><div class="em-body" data-em-body data-std="${esc(body)}" role="group" aria-label="Email body">${body}</div></div></article>`;
   },
   // JBAP feedback (26 Oct 2026): Email DOAS for signature (FAD › Document Monitoring). From Finance, To the buyer, CC Sales; JBAP's wording, the lots' own data. Returns what REPORTS.email takes (no attachment).
   doasForSignatureEmail(buyer, lots) {

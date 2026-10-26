@@ -1174,17 +1174,70 @@ function openModal({ title, icon = 'info', body, footer = [], note = '', wide = 
   bg.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="modal-t"><div class="modal-h">${IC[icon] || ''}<span id="modal-t">${esc(title)}</span><button type="button" class="x" data-close aria-label="Close">×</button></div>
     <div class="modal-b">${body}</div><div class="modal-f"><span class="left">${note}</span>${footer.map((f, i) => `<button type="button" class="btn ${f.kind}" data-mbtn="${i}">${f.icon ? IC[f.icon] : ''}${esc(f.label)}</button>`).join('')}</div></div>`;
   document.body.appendChild(bg);
+  if (emailBack) restoreEmailEdits(bg);
+  // The backdrop closes the dialog only when the press also started on it: selecting text in an edited email body and letting go outside the dialog must not throw the edit away
+  let downOn = null; bg.addEventListener('pointerdown', ev => { downOn = ev.target; });
   bg.addEventListener('click', ev => {
-    if (ev.target === bg || ev.target.closest('[data-close]')) closeModal();
+    if (emailToolbarClick(ev)) return;
+    if ((ev.target === bg && downOn === bg) || ev.target.closest('[data-close]')) closeModal();
     const b = ev.target.closest('[data-mbtn]'); if (b) footer[+b.dataset.mbtn].onClick();
-    const a = ev.target.closest('[data-att]'); if (a && onAtt) onAtt(a.dataset.att);
+    const a = ev.target.closest('[data-att]'); if (a && onAtt) { keepEmailEdits(bg); onAtt(a.dataset.att); }
   });
-  modalKeyHandler = ev => { if (ev.key === 'Escape') closeModal(); }; document.addEventListener('keydown', modalKeyHandler);
+  bg.addEventListener('paste', pasteAsText);
+  bg.addEventListener('input', ev => { const eb = ev.target.closest?.('[data-em-body]'); if (eb) showEmailState(eb.closest('.mail')); });
+  // Escape inside an email body being edited ends the editing (like Done); it does not close the dialog and lose the edit
+  modalKeyHandler = ev => { if (ev.key !== 'Escape') return; const eb = ev.target.closest?.('[data-em-body][contenteditable]'); if (eb) { setEmailEditing(eb.closest('.mail'), false); $('[data-em-edit]', eb.closest('.mail')).focus(); } else closeModal(); }; document.addEventListener('keydown', modalKeyHandler);
   (bg.querySelector('input,button.btn') || bg).focus();
 }
 function closeModal() { const m = $('#modal'); if (m) m.remove(); if (modalKeyHandler) document.removeEventListener('keydown', modalKeyHandler); modalKeyHandler = null; }
 function printModal() { document.body.classList.add('printing'); window.print(); }
 window.addEventListener('afterprint', () => document.body.classList.remove('printing'));
+
+// ─── Editable email body (JBAP feedback, 26 Oct 2026, later) ──────────
+// Every email preview (REPORTS.email) has Edit / Done and Reset to standard text. What is in the body when Send is pressed is what is "sent", for that email only: the standard wording is never changed,
+// so the next preview starts from it again. From, To, CC, Subject and the attachments are not editable.
+// [BEHAVIOR] "Edited" = the sent body differs from the standard one with whitespace collapsed (runs of spaces, tabs and line breaks, and the &nbsp; an editor types, count as one space; the ends are trimmed).
+const normMail = h => String(h ?? '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+const editedFlag = (stdHtml, sentHtml) => normMail(stdHtml) !== normMail(sentHtml);
+// [BEHAVIOR] An email sent with an edited body is logged on each lot of that email: field "Email body edited", No → Yes (the log's Screen column says which screen sent it)
+function logEmailEdit(scr, rows) { rows.forEach(r => logChange(scr, 'Update', r, [['Email body edited', 'check', false, true]])); }
+const emailBodyEdited = el => { const t = document.createElement('div'); t.innerHTML = el.dataset.std; return editedFlag(t.innerHTML, el.innerHTML); };   // the standard text goes through the same HTML parser, so both sides are written alike
+// One flag per email of the open dialog, in the order they are shown: was its body edited?
+const editedEmails = () => [...document.querySelectorAll('#modal [data-em-body]')].map(emailBodyEdited);
+// Send handlers: lists[i] = the lots of the i-th email shown. Call it before the lots are recorded.
+function logEmailEdits(scr, lists) { editedEmails().forEach((edited, i) => { if (edited && lists[i]) logEmailEdit(scr, lists[i]); }); }
+function showEmailState(mail, msg) {
+  const body = $('[data-em-body]', mail), editing = body.hasAttribute('contenteditable'), edited = emailBodyEdited(body), el = $('.em-state', mail);
+  const text = msg ?? (editing ? 'Editing. Press Done when you finish.' : edited ? 'Edited: this email is sent with your changes.' : '');
+  if (el.textContent !== text) el.textContent = text;
+  mail.classList.toggle('edited', edited);
+}
+function setEmailEditing(mail, on) {
+  const body = $('[data-em-body]', mail), btn = $('[data-em-edit]', mail), who = $('.mail-tools', mail).dataset.who;
+  if (on) { body.setAttribute('contenteditable', 'true'); body.setAttribute('role', 'textbox'); body.setAttribute('aria-multiline', 'true'); }
+  else { body.removeAttribute('contenteditable'); body.setAttribute('role', 'group'); body.removeAttribute('aria-multiline'); }
+  btn.textContent = on ? 'Done' : 'Edit'; btn.setAttribute('aria-label', `${on ? 'Done editing' : 'Edit'} email to ${who}`);
+  showEmailState(mail);
+}
+function emailToolbarClick(ev) {   // true when the click was on an email's Edit / Done or Reset button
+  const e = ev.target.closest('[data-em-edit]'), r = ev.target.closest('[data-em-reset]'); if (!e && !r) return false;
+  const mail = (e || r).closest('.mail'), body = $('[data-em-body]', mail);
+  if (e) { const on = !body.hasAttribute('contenteditable'); setEmailEditing(mail, on); if (on) body.focus(); }
+  else { body.innerHTML = body.dataset.std; showEmailState(mail, 'Reset to the standard text.'); }
+  return true;
+}
+// Text pasted into an email body goes in as plain text: the body stays the standard layout plus the words typed, never markup from another page or program
+function pasteAsText(ev) {
+  if (!ev.target.closest?.('[data-em-body]')) return;
+  ev.preventDefault(); document.execCommand('insertText', false, (ev.clipboardData || window.clipboardData).getData('text/plain'));
+}
+// An attachment preview replaces the email dialog; "Back to email" opens the email again, so the edited bodies are kept for that one return (the standard text still starts every other preview)
+let emailDraft = null, emailBack = false;
+function keepEmailEdits(root) { emailDraft = [...root.querySelectorAll('[data-em-body]')].map(el => ({ std: el.dataset.std, html: el.innerHTML })); }
+function restoreEmailEdits(root) {
+  const d = emailDraft; emailDraft = null;
+  root.querySelectorAll('[data-em-body]').forEach((el, i) => { if (d?.[i] && d[i].std === el.dataset.std) { el.innerHTML = d[i].html; showEmailState(el.closest('.mail')); } });
+}
 
 // ─── Actions ──────────────────────────────────────────────────────────
 function currentScr() { return byId[route()]; }
@@ -1232,7 +1285,7 @@ const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.s
 // Opens one report from an email preview; "Back" returns to the emails
 function openReport(title, html, back) {
   openModal({ title, icon: 'print', wide: true, body: html, note: 'Preview of the attached PDF.',
-    footer: [{ label: 'Back to email', kind: 'gh', onClick: back }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
+    footer: [{ label: 'Back to email', kind: 'gh', onClick: () => { emailBack = true; try { back(); } finally { emailBack = false; emailDraft = null; } } }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
 }
 // [BEHAVIOR] Printing the billing transmittal records today's date as Transmittal Date on each billing
 function recordBillingTransmittal(scr, rows) {
@@ -1427,7 +1480,8 @@ const ACTIONS = {
       rebate: approvedRebate(r) }));   // the BAAF rebate attachment lists the approved rebate only (a rejected one is no rebate)
     const buyerOf = list => ({ customer: list[0].customer, cid: list[0].cid, email: list[0].email });
     const docs = {};
-    const mails = Object.values(groups).map(list => {
+    const lists = Object.values(groups);   // one email per buyer, in the order shown
+    const mails = lists.map(list => {
       const b = buyerOf(list), award = eff(list[0], 'awarding') || TODAY, lots = lotsOf(list), withRebate = lots.filter(r => r.rebate);
       docs[`aw:${b.cid}`] = ['JBAP AWARDING.pdf', () => REPORTS.awarding(b, lots, award)];
       const atts = [{ key: `aw:${b.cid}`, name: 'JBAP AWARDING.pdf' }];
@@ -1439,7 +1493,7 @@ const ACTIONS = {
     openModal({ title: `Email BAAF: ${Object.keys(groups).length} buyer(s), ${rows.length} vehicle(s)`, icon: 'mail', wide: true, body: mails,
       note: `Simulated: no email is actually sent. Click an attachment to preview it.${held.length ? ` ${held.length} vehicle(s) held back: the rebate is waiting for the President's approval.` : ''}`, onAtt: key => openReport(docs[key][0], docs[key][1](), () => ACTIONS.emailBaaf(scr)),
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Send ${Object.keys(groups).length} email(s)`, kind: 'pr', icon: 'mail', onClick: () => {
-        recordAwarding(scr, rows);
+        logEmailEdits(scr, lists); recordAwarding(scr, rows);
         closeModal(); render(); toast(`BAAF sent to ${Object.keys(groups).length} buyer(s). ${rows.length} vehicle(s) moved to Unpaid.${held.length ? ` ${held.length} held back (rebate waiting for the President).` : ''}`);
       } }] });
   },
@@ -1449,13 +1503,14 @@ const ACTIONS = {
     setMsg(scr, null); render();
     const groups = {}; rows.forEach(r => (groups[r.seller] ||= []).push(r));
     const co = D.meta.company, n = Object.keys(groups).length;
+    const lists = Object.values(groups);   // one email per seller, in the order shown
     const mails = Object.entries(groups).map(([code, list]) => REPORTS.email({ from: co.emails.sales, to: `${SELLER[code]?.name || code} <${code.toLowerCase()}@sellers.example.com>`, cc: '',
       subject: `SELLER AWARDING ACKNOWLEDGEMENT - ${fmtDate(TODAY)}`, atts: [{ key: code, name: 'SAAF.pdf' }],
       body: `Please review the ${list.length} awarded lot(s) in the attached Seller Awarding Acknowledgement Form and reply to confirm, so we can send the notice of awarding to the buyers.` })).join('');
     openModal({ title: `Email SAAF: ${n} seller(s), ${rows.length} lot(s)`, icon: 'mail', wide: true, body: mails,
       note: 'Simulated: no email is actually sent. The SAAF layout is a placeholder until JBAP shares a sample.', onAtt: code => openReport('SAAF.pdf', REPORTS.saaf(code, groups[code], TODAY), () => ACTIONS.emailSaaf(scr)),
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Send ${n} email(s)`, kind: 'pr', icon: 'mail', onClick: () => {
-        recordSaafSent(scr, rows); closeModal(); render(); toast(`SAAF sent to ${n} seller(s). Enter Seller Approved when the seller replies.`);
+        logEmailEdits(scr, lists); recordSaafSent(scr, rows); closeModal(); render(); toast(`SAAF sent to ${n} seller(s). Enter Seller Approved when the seller replies.`);
       } }] });
   },
   printSeller(scr) {
@@ -1569,6 +1624,7 @@ const ACTIONS = {
         picks.forEach(p => { const msg = docsNeededError(p.r, p.docs, p.others), el = $(`#dt-err-${p.n}`);
           el.textContent = msg || ''; el.hidden = !msg; if (msg && !bad) bad = p; });
         if (bad) { $(`#dt-${bad.n}-0`).focus(); return; }
+        logEmailEdits(scr, groups.map(g => g.lots));
         const pages = picks.map(({ r, docs, others, remarks }) => {
           if (others && !docs.includes('Others')) docs.push('Others');   // [BEHAVIOR] typed Others text counts as the Others document being received
           const atf = recordDocTransmittal(scr, r, docs, others, remarks); return REPORTS.documentTransmittal(enrichV(r._raw), docs, others, atf, remarks); }).join('');
@@ -1587,7 +1643,7 @@ const ACTIONS = {
     openModal({ title: `Email DOAS for signature: ${n} buyer(s), ${rows.length} lot(s)`, icon: 'mail', wide: true, body: mails,
       note: 'Simulated: no email is actually sent. Sending sets Receipt of DOAS to today.',
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Send ${n} email(s)`, kind: 'pr', icon: 'mail', onClick: () => {
-        recordDoasEmail(scr, rows); closeModal(); render(); toast(`${n} email(s) sent; Receipt of DOAS recorded on ${rows.length} lot(s).`);
+        logEmailEdits(scr, groups.map(g => g.lots)); recordDoasEmail(scr, rows); closeModal(); render(); toast(`${n} email(s) sent; Receipt of DOAS recorded on ${rows.length} lot(s).`);
       } }] });
   },
   emailDispatch(scr) {
@@ -1598,7 +1654,8 @@ const ACTIONS = {
     setMsg(scr, null); render();
     const dateFor = r => (ui.edits[r.id] || {}).dispatch || TODAY, groups = {}; rows.forEach(r => (groups[r.cid] ||= []).push(r));
     const docs = {}, co = D.meta.company;
-    const mails = Object.values(groups).map(list => {
+    const lists = Object.values(groups);   // one email per buyer, in the order shown
+    const mails = lists.map(list => {
       const b = { customer: list[0].customer, cid: list[0].cid, email: list[0].email };
       docs[b.cid] = () => REPORTS.dispatchForm(b, list, dateFor(list[0]));
       return REPORTS.email({ from: co.emails.finance, to: `${b.customer} <${b.email}>`, cc: dispatchCc(), subject: 'JBAP VEHICLE FOR RELEASE',
@@ -1608,7 +1665,7 @@ const ACTIONS = {
     openModal({ title: `Email dispatch form: ${Object.keys(groups).length} buyer(s), ${rows.length} vehicle(s)`, icon: 'mail', wide: true, body: mails,
       note: 'Simulated: no email is actually sent. Click the attachment to preview it.', onAtt: key => openReport('VEHICLE DISPATCH.pdf', docs[key](), () => ACTIONS.emailDispatch(scr)),
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Send ${Object.keys(groups).length} email(s)`, kind: 'pr', icon: 'mail', onClick: () => {
-        recordDispatch(scr, rows, dateFor); closeModal(); render(); toast(`Dispatch form sent to ${Object.keys(groups).length} buyer(s). ${rows.length} vehicle(s) moved to Unreleased Unit.`);
+        logEmailEdits(scr, lists); recordDispatch(scr, rows, dateFor); closeModal(); render(); toast(`Dispatch form sent to ${Object.keys(groups).length} buyer(s). ${rows.length} vehicle(s) moved to Unreleased Unit.`);
       } }] });
   },
   printReturn(scr) {
@@ -1618,13 +1675,14 @@ const ACTIONS = {
     const groups = {}; rows.forEach(r => (groups[r.seller] ||= []).push(r));
     const co = D.meta.company, n = Object.keys(groups).length, name = code => SELLER[code]?.name || code;
     const forms = () => Object.entries(groups).map(([code, list]) => REPORTS.returnClearance(code, list, TODAY)).join('');
+    const lists = Object.values(groups);   // one email per seller, in the order shown
     const mails = Object.entries(groups).map(([code, list]) => REPORTS.email({ from: co.emails.sales, to: `${co.emails.finance}; ${co.emails.vwd}`, cc: '', subject: `RETURN TO SELLER - ${name(code)}`,
       atts: [{ key: code, name: 'RETURN TO SELLER CLEARANCE.pdf' }],
       body: `Please see the attached Vehicle Dispatch Clearance Form (Return to Seller) for ${list.length} unit(s) of ${esc(name(code))}. The units go to VWD after the SMD and FAD Managers approve them in CDMS; VWD then records the return when each unit leaves the yard.` })).join('');
     openModal({ title: `Return to seller: ${n} seller(s), ${rows.length} unit(s)`, icon: 'mail', wide: true, body: mails,
       note: 'Simulated: no email is actually sent. Click the attachment to preview the form.', onAtt: code => openReport('RETURN TO SELLER CLEARANCE.pdf', REPORTS.returnClearance(code, groups[code], TODAY), () => ACTIONS.printReturn(scr)),
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Send & print', kind: 'pr', icon: 'print', onClick: () => {
-        recordReturnClearance(scr, rows); render();
+        logEmailEdits(scr, lists); recordReturnClearance(scr, rows); render();
         openModal({ title: 'Return to seller clearance', icon: 'print', wide: true, body: forms(), footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
         printModal(); toast(`${rows.length} unit(s) cleared for return. They wait for the SMD Manager in Return to Seller › SMD Manager Approval.`);
       } }] });

@@ -200,6 +200,14 @@ tfoot td{font-weight:700;background:#eef1f8;border-top:2px solid var(--line-2);b
 .mail-b .utbl th{background:#eef1f8;color:var(--text);border:1px solid #b9bfcc;padding:5px 8px;text-align:left;font-weight:600;white-space:nowrap}
 .mail-b .utbl td{border:1px solid #b9bfcc;padding:4px 8px;height:auto;white-space:normal;background:#fff}
 .mail-b .utbl td:nth-child(3),.mail-b .utbl td:nth-child(6){white-space:nowrap}
+/* editable email body (JBAP, 26 Oct 2026, later): Edit / Done and Reset to standard text above the body; the body gets an outline while it can be typed in */
+.mail-tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:8px 12px 0}
+.em-btn{min-height:30px;padding:3px 11px;border-radius:3px;font-size:12px;font-weight:600;border:1px solid var(--navy);background:#fff;color:var(--navy);cursor:pointer}
+.em-btn:hover{background:#f2f4fb}.em-btn.gh{border-color:#cfd6e6;color:var(--muted)}
+.em-btn:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+.em-state{font-size:12px;color:var(--faint)}.mail.edited .em-state{color:var(--navy);font-weight:600}
+.em-body[contenteditable]{outline:2px solid var(--navy);outline-offset:4px;border-radius:2px;background:#fffef6;cursor:text}
+@media (max-width:480px){.em-btn{min-height:40px;padding:6px 12px}.em-state{flex:1 1 100%}}
 .dlg-h{font-size:13.5px;color:var(--navy);margin:0 0 8px}.modal-b .dlg-h:not(:first-child){margin-top:18px}
 @media (max-width:480px){.modal-f{flex-wrap:wrap}.modal-f .left{flex:1 1 100%;margin-right:0}}   /* phone: the note takes its own line above the buttons */
 .att{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);border-radius:3px;padding:3px 8px;font-size:12px;background:#fff}
