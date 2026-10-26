@@ -13,8 +13,8 @@ test('Inventory Summary: units in the yard per seller and status; parking narrow
 test('Cancellation Monitoring report: every cancellation; old links open it', () => {
   const P = load(), scr = P.byId['report/cancellation-monitoring'];
   assert.ok(!scr.isNew, 'the 19 Oct New mark is gone'); assert.strictEqual(scr.rows().length, P.CX().length); assert.deepStrictEqual(scr.actions, ['View', 'Filter', 'Sort']);
-  assert.ok(P.byId['FAD/cancellation-entry'], 'Cancellation Entry keeps its list');
-  for (const id of ['FAD/cancellation-monitoring', 'SMD/cancellation-monitoring']) assert.strictEqual(P.routeOf(id), 'report/cancellation-monitoring');
+  assert.strictEqual(P.byId['FAD/cancellation-entry'], undefined, 'Cancellation Entry is gone (JBAP, 26 Oct 2026)');
+  for (const id of ['FAD/cancellation-monitoring', 'SMD/cancellation-monitoring', 'FAD/cancellation-entry']) assert.strictEqual(P.routeOf(id), 'report/cancellation-monitoring');
 });
 
 test('Inventory Summary: one row per seller with Not recorded for units without one; every status counted against the Inventory Monitoring rows', () => {
@@ -70,7 +70,7 @@ test('Cancellation Monitoring columns, sort, filters and totals', () => {
   assert.deepStrictEqual(scr.filters.map(f => f.key), ['auction', 'customer', 'plate', 'seller', 'waived']);
   const t = scr.totals(rows); assert.strictEqual(t.customer, `${rows.length} cancellations`);
   assert.strictEqual(t.penalty, P.CX().reduce((a, r) => a + r.penalty, 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
-  assert.ok(P.byId['FAD/cancellation-entry'].rows().length === rows.length, 'same rows as Cancellation Entry');
+  assert.strictEqual(rows.length, P.CX().length, 'every cancellation');
 });
 test('Cancellation Monitoring filters: Waived and Seller are multi-select, Customer / Buyer ID searches both', () => {
   const P = load(), scr = P.byId['report/cancellation-monitoring'], rows = scr.rows(), ui = P.U(scr.id);

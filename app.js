@@ -95,7 +95,7 @@ const UI = {};          // per-screen UI state: filters, sort, page, edits, erro
 const OPEN = { Customer: false, Report: false, FAD: false, SMD: false, VWD: false, Settings: false };
 
 // ─── Proposed improvements switch (spec 2026-10-15) ──────────────────
-// [BEHAVIOR] Off = the CR scope exactly; on = LOGIQUE's proposals P2–P6 (P1 withdrawn after JBAP's feedback of 15 Oct 2026). A link with ?proposed=1 opens with the switch on.
+// [BEHAVIOR] Off = the CR scope exactly; on = LOGIQUE's proposals P3–P6 (P1 withdrawn after JBAP's feedback of 15 Oct 2026; P2 withdrawn after JBAP's feedback of 26 Oct 2026). A link with ?proposed=1 opens with the switch on.
 // Screens, columns and buttons marked `proposed` show only with the switch on; `tag` adds "Proposed P#" (switch on) or "Wish list" (always).
 let PROPOSED = /[?&]proposed=1(&|$)/.test((typeof location !== 'undefined' && location.search) || '');
 const isProposed = () => PROPOSED;
@@ -357,6 +357,23 @@ function rebateApprovedError(r, e) {
     || (e.awarding && ap && ap > e.awarding ? `cannot be after the Awarding Date (${fmtDate(e.awarding)})` : null)
     || ('rebate' in e || 'rebate_approved' in e || e.awarding ? rebateApprovalError('rebate' in e ? e.rebate : r.rebate, ap, e.awarding) : null);
 }
+// [BEHAVIOR] JBAP feedback (26 Oct 2026): SMD types the rebate in Result Price and it waits for the President. The fields a saved amount sets on the lot:
+// a rebate (not blank, not 0) is Pending approval as of today, with any earlier approval or rejection cleared; no rebate clears all five. rebate_status: 'Pending approval' | 'Approved' | 'Rejected' | blank.
+function rebateRequestFields(raw, amount, today) {
+  if (amount === null || amount === 0) return { rebate_status: null, rebate_requested: null, rebate_approved: null, rebate_rejected: null, rebate_reject_reason: null };
+  return { rebate_status: 'Pending approval', rebate_requested: today, rebate_approved: null, rebate_rejected: null, rebate_reject_reason: null };
+}
+const REBATE_REQUEST_LOG = { rebate_status: ['Rebate Status', 'text'], rebate_requested: ['Rebate Requested', 'date'], rebate_approved: ['Rebate Approved', 'date'], rebate_rejected: ['Rebate Rejected', 'date'], rebate_reject_reason: ['Reject Reason', 'text'] };
+// Sets the request fields on a lot whose rebate amount was just saved (r._raw.rebate is the new amount; prev holds the amounts before the save) and returns the extra log rows [label, type, old, new].
+// The same amount typed again (e.g. 5000.00 for 5000) is not a change: the President's decision stands.
+function applyRebateRequest(r, prev) {
+  if (prev && (prev.rebate ?? null) === (r._raw.rebate ?? null)) return [];
+  const f = rebateRequestFields(r._raw, r._raw.rebate ?? null, TODAY);
+  const rows = Object.entries(f).filter(([k, v]) => (r._raw[k] ?? null) !== v).map(([k, v]) => [...REBATE_REQUEST_LOG[k], r._raw[k] ?? null, v]);
+  Object.assign(r._raw, f); return rows;
+}
+// The rebate amount typed in Result Price: 0 or more, not above the result price; blank = none (the same checks as round 4's Pending Awarding column)
+const rebateAmountError = (r, e) => 'rebate' in e && e.rebate !== '' ? (Number(e.rebate) < 0 ? 'must be 0 or more' : r.price != null && Number(e.rebate) > r.price ? 'cannot be more than the result price' : null) : null;
 
 // [BEHAVIOR] Document dates: not in the future, not before Buyer Paid, steps in order (EWB call out → signed; receipt → JBAP signed → seller receipt),
 // documents to the buyer only after JBAP has them. EWB columns only for sellers who sign at their branch; DOAS columns not for sellers without a DOAS.
@@ -547,16 +564,6 @@ const SCREENS = [
       return { pay: notFuture(p) || notBefore(p, r.bdate, 'the Billing Date') || (!p && cr ? 'is required with a Collection Receipt' : null), cr: p && !cr ? 'is required with a Payment Date' : null }; },
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid billings removed from the list.',
     ruleP: ['P3', 'Collection Receipt is typed for now; it will come through JBAP\'s existing NOAH integration once it is re-routed from Access to CDMS.'] },
-  // JBAP feedback (16 Oct 2026, #14): the list under the entry form replaces the FAD and SMD Cancellation Monitoring; Report › Cancellation Monitoring (19 Oct 2026) lists the same cancellations for everyone
-  { dept: 'FAD', slug: 'cancellation-entry', title: 'Cancellation Entry', actions: VFSU, layout: 'entry', queue: () => cdmsCancelsPending().length,
-    rule: 'Enter the Auction No. and Lot to find the transaction, then record the cancellation. The list below shows every cancellation with its billing and payment dates.',
-    ruleP: ['P2', 'Lots already cancelled in CDMS wait at the top: add the waiver decision and Confirm. The record and the penalty billing are the same as for a cancellation entered here.'],
-    rows: CX, sort: ['dcancel', 'desc'],
-    cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Buyer ID', 'cid', 'code'), C('Plate Number', 'plate', 'code'),
-      C('Date Cancelled', 'dcancel', 'date'), C('Waived?', 'waived', 'rocheck'), C('Justification', 'just', 'text', { w: 260 }), C('Billing Date', 'bill_date', 'date'),
-      C('Date Paid', 'paid_date', 'date'), C('Cancellation Fee Remitted', 'remitted', 'date')],
-    filters: [AUCTION_FILTER, { key: 'customer', keys: ['customer', 'cid'], label: 'Customer Name / Buyer ID', w: 'w2' }, { key: 'plate', label: 'Plate Number' },
-      { key: 'waived', label: 'Waived', type: 'select', w: 'w1', options: () => ['Yes', 'No'], match: (r, v) => (v === 'Yes') === !!r.waived }] },
   // JBAP feedback (16 Oct 2026, #13): Cancellation Billing and Cancellation Payment in one screen
   { dept: 'FAD', slug: 'cancellation-billing', title: 'Cancellation Billing & Payment', actions: VSU,
     rule: 'Cancelled lots with the fee not waived and no Date Paid. Penalty PHP 10,000 per lot: PHP 5,000 to the seller and PHP 5,000 to JBAP (EWB: all to JBAP). Tick For Print? and print to bill: printing records the Billing Date and the amount due. When the buyer pays, enter Date Paid (and Amount) and save; paid lots leave the list.',
@@ -574,6 +581,17 @@ const SCREENS = [
     ruleP: ['P4', 'Lots not billed yet arrive pre-ticked for billing.'] },
 
   // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch; live data on SAAF, Unreleased Unit, Return to Seller and SMD Manager Approval) =====================
+  // JBAP feedback (26 Oct 2026): SMD › Result Price stands in for the Result Price module that CDMS already has. SMD types the rebate before awarding (the President decides it in Approval › Rebate Approval) and cancels a sold lot with Cancel sale
+  { dept: 'SMD', slug: 'result-price', title: 'Result Price', actions: VFSU, isNew: true,
+    rule: 'Stands in for the existing CDMS Result Price module (JBAP, 26 Oct 2026). SMD types the rebate of a sold lot before awarding; it then waits for the President in Approval › Rebate Approval. Cancel sale cancels a sold lot that is not released, with Waived? and a justification.',
+    rows: () => sold().filter(v => !v.release), sort: ['auction_lot', 'desc'],
+    cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 210 }), C('Seller', 'seller', 'code'),
+      C('Customer Name', 'customer', 'text', { w: 220 }), C('Result Price', 'price', 'money'), C('Rebate', 'rebate', 'money', { edit: 'money', lockWhen: r => !!r.awarding }),
+      C('Rebate Status', 'rebate_status', 'text'), C('Awarding Date', 'awarding', 'date'), C('Cancel', 'cancel', 'rowbtn', { act: 'cancelSale', btn: 'Cancel sale' })],
+    filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', keys: ['customer', 'cid'], label: 'Customer Name / Buyer ID', w: 'w2' }, { key: 'plate', label: 'Plate Number' }],
+    validate: (r, e) => ({ rebate: rebateAmountError(r, e) }),
+    onSave: (r, keys, prev) => keys.includes('rebate') ? applyRebateRequest(r, prev) : [],   // a saved amount goes to the President: status, request date and the cleared decision are logged with it
+    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Rebates sent to the President for approval.' },
   // JBAP answer Q11 (20 Oct 2026): SMD's update screen for the SAAF is standard (it was proposal P5); live data, unlike SMD's four legacy-sample screens
   { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU,
     rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch in SMD still show the legacy sample). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; the date shows in FAD Pending Awarding (JBAP answer Q11).',
@@ -694,9 +712,9 @@ const SCREENS = [
     cols: [C('Seller', 'seller', 'code'), C('In Yard', 'in_yard', 'int'), C('Listed', 'listed', 'int'), C('Not Listed', 'not_listed', 'int'), C('Awarded', 'awarded', 'int'), C('For Release', 'for_release', 'int'), C('For Return', 'for_return', 'int')],
     filters: [{ key: 'parking', label: 'Parking Location', type: 'select', options: () => ['OPEN PARKING', 'STEEL PARKING', 'IMET PARKING', 'Not recorded'], match: () => true }],   // rows() applies the pick (it chooses the units, not the rows), so the generic filter lets every row through
     totals: rows => Object.fromEntries([['seller', 'Total'], ...['in_yard', 'listed', 'not_listed', 'awarded', 'for_release', 'for_return'].map(k => [k, intf(sumBy(rows, k))])]) },
-  // JBAP feedback (19 Oct 2026, Q69): the list of every cancellation for FAD and SMD (the old FAD and SMD Cancellation Monitoring links open it); Cancellation Entry keeps its own list under the entry form
+  // JBAP feedback (19 Oct 2026, Q69): the list of every cancellation for FAD and SMD (the old FAD and SMD Cancellation Monitoring links open it, and so does the old FAD Cancellation Entry link: JBAP, 26 Oct 2026, cancellations are made in SMD › Result Price)
   { id: 'report/cancellation-monitoring', dept: 'Report', title: 'Cancellation Monitoring', actions: VFS,
-    rule: 'Every cancellation, view only, for FAD and SMD (proposal, Q69). Cancellation Entry keeps its own list for recording. Prototype: Seller is blank for cancellations whose lot is not in the sample data.',
+    rule: 'Every cancellation, view only, for FAD and SMD (proposal, Q69). New cancellations are made with Cancel sale in SMD › Result Price. Prototype: Seller is blank for cancellations whose lot is not in the sample data.',
     rows: CX, sort: ['dcancel', 'desc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 220 }), C('Buyer ID', 'cid', 'code'), C('Plate Number', 'plate', 'code'), C('Seller', 'seller', 'code'),
       C('Date Cancelled', 'dcancel', 'date'), C('Waived?', 'waived', 'rocheck'), C('Justification', 'just', 'text', { w: 240 }), C('Penalty', 'penalty', 'money'), C('Billing Date', 'bill_date', 'date'),
@@ -737,14 +755,14 @@ const SCREENS = [
 
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
-    rule: 'Every data change made in FAD, SMD and VWD, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals and the SAAF; FAD entries include Rebate Paid.',
+    rule: 'Every data change made in FAD, SMD and VWD, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals, the SAAF and Result Price (saved rebates and cancelled sales); FAD entries include Rebate Paid.',
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
       { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD', 'Settings'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Delete'] },
       { key: 'record', label: 'Record / Plate' }],
-    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them or sends a SAAF.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : null; } },
+    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them, sends a SAAF, saves a rebate or cancels a sale in Result Price.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -888,8 +906,7 @@ function queueCounts(scr) {
   const ready = typeof scr.queue === 'function' ? scr.queue() : scr.ready ? rows.filter(r => tickDefault(scr, r, scr.ready.key)).length : rows.length;
   return { ready, late: rows.filter(r => cols.some(c => c.late && r[c.key] && r[c.key] < TODAY)).length };
 }
-const PROPOSALS = [['P2', 'Cancellations made in CDMS wait for FAD to confirm', 'FAD/cancellation-entry'],
-  ['P3', 'NOAH numbers stay typed for now; JBAP\'s existing NOAH integration will be re-routed from Access to CDMS. Optional Payment Voucher No.', 'FAD/payment-seller'],
+const PROPOSALS = [['P3','NOAH numbers stay typed for now; JBAP\'s existing NOAH integration will be re-routed from Access to CDMS. Optional Payment Voucher No.', 'FAD/payment-seller'],
   ['P4', 'Ready lots arrive pre-ticked on 6 lists; Commission Billing bills several sellers at once', 'FAD/commission-billing'],
   ['P5', 'Lots the seller approved in the SAAF arrive pre-ticked for the BAAF; the dispatch email is copied to Finance only', 'FAD/pending-awarding'],
   ['P6', 'Counts on the menu and "Waiting for you" on this page', '']];
@@ -928,7 +945,7 @@ function cellHtml(scr, r, c, upd) {
 }
 
 function dataCard(scr, title) {
-  const ui = U(scr.id), cols = colsOf(scr), upd = scr.actions.includes('Update') && scr.layout !== 'entry', anyEdit = upd && cols.some(c => c.edit);   // VWD lists: Update (row button) but no editable column
+  const ui = U(scr.id), cols = colsOf(scr), upd = scr.actions.includes('Update'), anyEdit = upd && cols.some(c => c.edit);   // VWD lists: Update (row button) but no editable column
   const all = sortRows(scr, applyFilters(scr, scr.rows()));
   const pages = Math.max(1, Math.ceil(all.length / ui.size)); ui.page = Math.min(ui.page, pages);
   const rows = all.slice((ui.page - 1) * ui.size, ui.page * ui.size);
@@ -973,17 +990,6 @@ function queryCard(scr) {
     <p style="font-size:12.5px;color:var(--faint);margin:0 0 9px;max-width:620px">Buyer payment date has no filter. A unit is listed when Payment to Seller is blank, or falls after the date entered.</p>
     <div class="btns"><button type="submit" class="btn pr">${IC.play}Generate</button></div></form></section>`;
 }
-// [BEHAVIOR] P2 (switch on): lots cancelled in CDMS, each with the waiver decision and a Confirm button; what FAD types stays in ccDraft
-function cdmsCancelPanel(scr) {
-  const list = cdmsCancelsPending(), draft = U(scr.id).ccDraft || {};
-  const rows = list.map(({ c, v }, i) => `<tr><td class="c">${esc(v.plate)}</td><td class="c">${esc(v.auction)} / ${esc(v.lot)}</td><td>${esc(v.customer)}</td><td class="c">${fmtDate(c.date)}</td><td>${esc(c.reason)}</td>
-    <td class="c"><input type="checkbox" class="chk" id="cc-w-${i}" aria-label="Waive fee, ${esc(v.plate)}"${draft[v.id]?.waived ? ' checked' : ''}></td><td><input class="cell-in" id="cc-j-${i}" aria-label="Justification, ${esc(v.plate)}" value="${esc(draft[v.id]?.just || '')}"></td>
-    <td class="c"><button type="button" class="btn ol" data-act="confirmCdmsCancel" data-rid="${esc(v.id)}" data-i="${i}" aria-label="Confirm cancellation ${esc(v.plate)}">Confirm</button></td></tr>`).join('');
-  return `<section class="card" aria-label="Cancelled in CDMS, to confirm"><div class="card-h"><div class="ico">${IC.ban}</div>Cancelled in CDMS, to confirm${tagHtml({ tag: 'P2' })}<span class="bdg">${list.length}</span></div>
-    <div class="msg error" id="cc-err" role="alert" hidden>${IC.info}<div id="cc-err-t"></div></div>
-    <div class="tw"><table><thead><tr><th scope="col">Plate</th><th scope="col">Auction / Lot</th><th scope="col">Customer Name</th><th scope="col">Cancelled in CDMS</th><th scope="col">CDMS Reason</th><th scope="col">Waive fee?</th><th scope="col">Justification</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
-    <tbody>${rows || `<tr><td colspan="8"><div class="empty">${IC.inbox}<b>Nothing to confirm</b>Every CDMS cancellation is recorded.</div></td></tr>`}</tbody></table></div></section>`;
-}
 // [BEHAVIOR] Settings › Holiday List: the Add holiday form above the list; what was typed stays, with the message, when it is refused
 function holidayForm(scr) {
   const ui = U(scr.id), f = ui.hf || (ui.hf = { date: '', name: '', type: '', errors: {} }), er = k => f.errors[k] ? `<span class="err" id="hl-${k}-err">${esc(f.errors[k])}</span>` : '';
@@ -999,33 +1005,6 @@ function holidayAdd(scr) {
   if (bad) { ui.hf = { date: date === null ? raw : date, name: f.name, type: f.type, errors: Object.fromEntries(Object.entries(errors).filter(([, m]) => m)) }; render(); $(`#hl-${bad}`)?.focus(); return; }
   recordHolidayAdd(scr, f); ui.hf = null; render(); $('#hl-date')?.focus();   // back to the first field, ready for the next holiday
   toast(`Holiday added: ${fmtDate(f.date)}, ${esc(f.name.trim())}. Deadlines and aging now skip that date.`);
-}
-function entryLayout(scr) {
-  const ui = U(scr.id), e = ui.entry || (ui.entry = { auction: '', lot: '', found: null, errors: {}, form: null });
-  const ferr = k => e.errors[k] ? `<span class="err" id="err-${k}">${esc(e.errors[k])}</span>` : '';
-  const find = `<section class="card" style="width:430px;flex:none"><div class="card-h"><div class="ico">${IC.search}</div>Find transaction</div>
-    <form data-form="find" novalidate><div class="fgrid two">
-      <div class="fld"><label for="ce-auction">Auction No.</label><input class="ctl ${e.errors.auction ? 'is-invalid' : ''}" id="ce-auction" inputmode="numeric" value="${esc(e.auction)}" aria-describedby="err-auction" placeholder="e.g. 220">${ferr('auction')}</div>
-      <div class="fld"><label for="ce-lot">Lot</label><input class="ctl ${e.errors.lot ? 'is-invalid' : ''}" id="ce-lot" inputmode="numeric" value="${esc(e.lot)}" aria-describedby="err-lot" placeholder="e.g. 105">${ferr('lot')}</div></div>
-      <div class="fact"><button type="button" class="btn gh" data-act="entryClear">${IC.reset}Clear</button><button type="submit" class="btn pr">${IC.search}Find</button></div>
-      <p class="note">${e.note ? esc(e.note) : 'Tip: try Auction 220, Lot from the Unpaid list.'}</p></form></section>`;
-  let det;
-  const v = e.found, f = e.form;
-  if (!v) det = `<section class="card" style="flex:1"><div class="card-h"><div class="ico">${IC.ban}</div>Transaction details</div><div class="empty">${IC.inbox}<b>No transaction selected</b>Find a transaction by Auction No. and Lot.</div></section>`;
-  else {
-    const lk = (l, val) => `<div class="fld"><label>${l}</label><input class="ctl" value="${esc(val)}" readonly></div>`;
-    const ro = v.status !== 'Sold';
-    det = `<section class="card" style="flex:1"><div class="card-h"><div class="ico">${IC.ban}</div>Transaction details<span class="sp"></span><span class="hint"><span>${IC.lock} Locked</span><span>${IC.pen} Editable</span></span></div>
-      <form data-form="cancel" novalidate><div class="fgrid">
-      ${lk('Lot', v.lot)}${lk('Auction No.', v.auction)}${lk('Customer Name', v.customer)}${lk('Plate Number', v.plate)}
-      <div class="fld"><label for="ce-status">Status</label><select class="ctl ${e.errors.status ? 'is-invalid' : ''}" id="ce-status" ${ro ? 'disabled' : ''}>${['Sold', 'Cancelled'].map(s => `<option ${f.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select>${ferr('status')}</div>
-      <div class="fld"><label for="ce-date">Date Cancelled</label>${dateField('ce-date', f.date, ro ? 'disabled' : '', e.errors.date ? 'is-invalid' : '')}${ferr('date')}</div>
-      <div class="fld"><span class="lbl">Cancellation Fee Waived</span><label class="chkline"><input type="checkbox" class="chk" id="ce-waived" ${f.waived ? 'checked' : ''} ${ro ? 'disabled' : ''}>Waive the cancellation fee</label></div><div></div>
-      <div class="fld full"><label for="ce-just">Justification of Waiver</label><textarea class="ctl ${e.errors.just ? 'is-invalid' : ''}" id="ce-just" ${ro ? 'disabled' : ''} placeholder="Reason, e.g. Did not pay within the buyer deadline">${esc(f.just)}</textarea>${ferr('just')}</div>
-      </div>${ro ? `<p class="note">This lot is already <b>${esc(v.status)}</b>. Only SOLD transactions can be cancelled.</p>` : ''}
-      <div class="fact"><button type="button" class="btn gh" data-act="entryClear">Discard</button><button type="submit" class="btn dg" ${ro ? 'disabled' : ''}>${IC.ban}Cancel transaction</button></div></form></section>`;
-  }
-  return `${PROPOSED ? cdmsCancelPanel(scr) : ''}<div class="row2">${find}${det}</div>${scr.filters && scr.actions.includes('Filter') ? filterCard(scr) : ''}${dataCard(scr, 'Cancellations')}`;
 }
 // Read-only table for the customer page (no sorting, paging or editing)
 function plainTable(cols, rows, totals, empty) {
@@ -1084,7 +1063,7 @@ function proposedPanels() {
 function homeLayout() {
   const card = d => {
     const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}${newMini(s)}<span class="cnt">${countOf(s).toLocaleString()}</span></a></li>`).join('');
-    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch. Live data: Seller Awarding Acknowledgement, Unreleased Unit, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Monitoring and summary reports for FAD, SMD and VWD: results, auctions, inventory, cancellations, rebates, liability to sellers' }[d];
+    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch. Live data: Result Price, Seller Awarding Acknowledgement, Unreleased Unit, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Monitoring and summary reports for FAD, SMD and VWD: results, auctions, inventory, cancellations, rebates, liability to sellers' }[d];
     const icon = d === 'Report' ? '<img src="assets/ic-report.png" alt="" width="20" height="20">' : deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox');
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
@@ -1100,7 +1079,9 @@ const MOVED = { 'FAD/result-summary': 'report/result-summary', 'SMD/result-summa
   'VWD/inventory': 'report/inventory-monitoring', 'SMD/inventory': 'report/inventory-monitoring',
   'FAD/cancellation-monitoring': 'report/cancellation-monitoring', 'SMD/cancellation-monitoring': 'report/cancellation-monitoring', 'FAD/cancellation-payment': 'FAD/cancellation-billing',
   // JBAP feedback (26 Oct 2026): Rebate Monitoring and Liability to Seller moved to Report; Rebate Payable is back in FAD (the SMD link opens it)
-  'FAD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-payable': 'FAD/rebate-payable', 'FAD/liability-to-seller': 'report/liability-to-seller' };
+  'FAD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-payable': 'FAD/rebate-payable', 'FAD/liability-to-seller': 'report/liability-to-seller',
+  // JBAP feedback (26 Oct 2026): cancellations are made with Cancel sale in SMD › Result Price; every cancellation is listed in Report › Cancellation Monitoring
+  'FAD/cancellation-entry': 'report/cancellation-monitoring' };
 const moved = h => Object.hasOwn(MOVED, h) ? MOVED[h] : null;   // own keys only: '#/constructor' is neither a moved nor a known screen
 const routeOf = h => { const t = moved(h) || h, scr = Object.hasOwn(byId, t) ? byId[t] : null; return scr && shown(scr) ? t : custRoute(t) ? t : ''; };   // a proposed screen opens only with the switch on
 function route() {
@@ -1118,8 +1099,7 @@ function render() {
   if (!scr) { c.innerHTML = homeLayout(); document.title = 'CDMS Prototype | Post-Auction Menus'; return; }
   document.title = `${scr.title} | ${scr.top ? '' : `${scr.dept} | `}CDMS Prototype`;
   let html = pageHead(scr);
-  if (scr.layout === 'entry') html += entryLayout(scr);
-  else { if (scr.layout === 'query') html += queryCard(scr); if (scr.layout === 'holidays') html += holidayForm(scr); if (scr.filters && scr.actions.includes('Filter')) html += filterCard(scr); html += dataCard(scr, scr.listTitle || scr.title + ' list'); }
+  if (scr.layout === 'query') html += queryCard(scr); if (scr.layout === 'holidays') html += holidayForm(scr); if (scr.filters && scr.actions.includes('Filter')) html += filterCard(scr); html += dataCard(scr, scr.listTitle || scr.title + ' list');
   c.innerHTML = html;
 }
 
@@ -1168,10 +1148,12 @@ function applyEdits(scr, ids) {
   (ids || Object.keys(ui.edits)).forEach(id => {
     const r = map[id], e = ui.edits[id]; if (!r || !e) return;
     const keys = Object.keys(e).filter(k => k !== hold); if (!keys.length) return;   // a hold-back alone is not saved: no write, no log, no count
+    const prev = Object.fromEntries(keys.map(k => [k, r._raw[k]]));
     const changes = keys.map(k => {
       const val = e[k], col = scr.cols.find(c => c.key === k), nv = val === '' ? null : (col?.edit === 'money' && val !== null ? Number(val) : val);
       const ch = [col?.label || k, col?.edit, r._raw[k], nv]; r._raw[k] = nv; return ch;
     });
+    if (scr.onSave) changes.push(...(scr.onSave(r, keys, prev) || []));   // [BEHAVIOR] a screen can set more fields on the lot when its edit is saved (SMD › Result Price: a saved rebate goes to the President) and gives the extra log rows
     logChange(scr, 'Update', r, changes);
     keys.forEach(k => delete e[k]); if (!Object.keys(e).length) delete ui.edits[id]; n++;
   });
@@ -1290,9 +1272,18 @@ function recordDocTransmittal(scr, v, docs, others, remarks = '') {
   clearTick(scr, v.id, 'print_doc_trans');   // unsaved date edits on the row stay pending
   return atf;
 }
-// [BEHAVIOR] Records a cancellation: Cancellation Entry, and P2 confirmations of cancellations made in CDMS
+// [BEHAVIOR] JBAP feedback (26 Oct 2026): the first problem with a Cancel sale entry in SMD › Result Price, or null when it can be recorded.
+// f.date: ISO date, '' = blank, null = not a date; f.waived: the Waived? choice; f.just: the justification (required when the fee is waived).
+function cancelSaleError(v, f) {
+  if (!f.date) return 'Date Cancelled is required.';
+  if (f.date > TODAY) return 'Date Cancelled cannot be after today.';
+  if (v.auction_end && f.date < v.auction_end) return `Date Cancelled cannot be before the auction end (${fmtDate(v.auction_end)}).`;
+  if (f.waived && !String(f.just || '').trim()) return 'Justification is required when the fee is waived.';
+  return null;
+}
+// [BEHAVIOR] Records a cancellation made with Cancel sale in SMD › Result Price (the penalty billing and the lists that show it are unchanged)
 function recordCancellation(scr, v, f) {
-  if (v._raw.status !== 'Sold') return false;   // [BEHAVIOR] a lot is cancelled once (Cancellation Entry and P2 share this guard)
+  if (v._raw.status !== 'Sold') return false;   // [BEHAVIOR] a lot is cancelled once
   logChange(scr, 'Cancel', v, [['Status', 'text', v._raw.status, 'Cancelled'], ['Date Cancelled', 'date', null, f.date],
     ['Cancellation Fee Waived', null, null, f.waived], ['Justification of Waiver', 'text', null, f.just]]);
   v._raw.status = 'Cancelled';
@@ -1300,8 +1291,6 @@ function recordCancellation(scr, v, f) {
     waived: f.waived, just: f.just, seller: v.seller, remitted: null, bill_date: null, paid_date: null, amount: null, for_print: false });
   return true;
 }
-// [MOCK] P2: lots cancelled in CDMS (data-extra.js > cdmsCancels) that FAD has not recorded yet (the vehicle is still Sold)
-const cdmsCancelsPending = () => (D.cdmsCancels || []).map(c => ({ c, v: V().find(x => x.id === c.vid) })).filter(x => x.v && x.v.status === 'Sold');
 // [BEHAVIOR] One commission billing per seller: adds the billing (Billing › Billing Monitoring and Unpaid Billing), marks the lots billed, logs both
 function recordCommissionBilling(scr, code, no, bd, rows) {
   const bill = { no, customer: SELLER[code]?.name || code, particular: [...new Set(rows.map(r => r.adate))].join('; '), bdate: bd, total: Math.round(sumBy(rows, 'ctotal') * 100) / 100, trans: null, pay: null, cr: '' };
@@ -1338,20 +1327,6 @@ const ACTIONS = {
     if (errs.length) { setMsg(scr, 'error', `Please fix ${errs.length} item(s) before saving:<br>${errs.slice(0, 6).join('<br>')}${errs.length > 6 ? '<br>…' : ''}`); render(); return; }
     const n = applyEdits(scr); setMsg(scr, null); ui.errors = {}; render();
     toast(`${n} record(s) saved. ${scr.savedNote || ''}`);
-  },
-  confirmCdmsCancel(scr, el) {
-    const item = cdmsCancelsPending().find(x => x.v.id === el.dataset.rid), ui = U(scr.id); if (!item) return;
-    cdmsCancelsPending().forEach(({ v }, n) => { const w = $(`#cc-w-${n}`), j = $(`#cc-j-${n}`); if (w && j) (ui.ccDraft ||= {})[v.id] = { waived: w.checked, just: j.value }; });
-    const i = el.dataset.i, d = (ui.ccDraft || {})[item.v.id] || {}, waived = !!d.waived, just = (d.just || '').trim();
-    // [BEHAVIOR] errors show in place (no re-render) so the ticked box and the typed text stay
-    const fail = (msg, focus) => { $('#cc-err-t').textContent = msg; $('#cc-err').hidden = false; if (focus) $(focus)?.focus(); };
-    if (waived && !just) { fail(`Enter the justification to waive the fee for ${item.v.plate}.`, `#cc-j-${i}`); return; }
-    if (item.c.date > TODAY) { fail(`The CDMS cancellation date for ${item.v.plate} is after today.`); return; }
-    if (item.v.awarding && item.c.date < item.v.awarding) { fail(`The CDMS cancellation date for ${item.v.plate} is before the Awarding Date (${fmtDate(item.v.awarding)}).`); return; }
-    const done = recordCancellation(scr, item.v, { date: item.c.date, waived, just: just || item.c.reason });
-    delete (ui.ccDraft || {})[item.v.id];
-    if (ui.entry?.found?.id === item.v.id) ui.entry = null;   // the Find card must not offer a second cancellation of the same lot
-    render(); toast(done ? `Cancellation of ${esc(item.v.plate)} confirmed from CDMS.` : `Lot ${esc(item.v.lot)} of Auction ${item.v.auction} is already cancelled.`, done ? '' : 'warn');
   },
   emailBaaf(scr) {
     const ticked = selectedRows(scr, 'for_baaf'), ui = U(scr.id);
@@ -1610,8 +1585,28 @@ const ACTIONS = {
         recordHolidayRemove(scr, h.date); closeModal(); render(); $('#content')?.focus(); toast(`Holiday removed: ${fmtDate(h.date)}, ${esc(h.name)}.`);
       } }] });
   },
+  // [BEHAVIOR] JBAP feedback (26 Oct 2026): SMD › Result Price › Cancel sale. Date Cancelled (typed, default today), Waived? (Yes / No, default No) and a Justification (required when waived); the checks are cancelSaleError's
+  cancelSale(scr, el) {
+    const v = scr.rows().find(r => r.id === el.dataset.rid); if (!v) return;
+    openModal({ title: `Cancel sale: ${v.plate}`, icon: 'ban',
+      body: `<div class="fgrid two">${roField('Auction No.', v.auction)}${roField('Lot', v.lot)}${roField('Plate Number', v.plate)}${roField('Make/Model', v.model)}${roField('Customer Name', v.customer)}${roField('Seller', v.seller)}
+        <div class="fld"><label for="cs-date">Date Cancelled</label>${dateField('cs-date', TODAY)}</div>
+        <div class="fld"><span class="lbl" id="cs-w-l">Waived?</span><div role="radiogroup" aria-labelledby="cs-w-l" style="display:flex;gap:22px"><label class="chkline"><input type="radio" class="chk" name="cs-waived" id="cs-w-yes" value="yes">Yes</label><label class="chkline"><input type="radio" class="chk" name="cs-waived" id="cs-w-no" value="no" checked>No</label></div></div>
+        <div class="fld full"><label for="cs-just">Justification</label><textarea class="ctl" id="cs-just" placeholder="Required when the fee is waived"></textarea></div>
+        <div class="fld full"><span class="err" id="cs-err" role="alert"></span></div></div>
+        <p class="note">The lot leaves Result Price and shows in Report › Cancellation Monitoring. If the fee is not waived, the penalty of PHP ${money(CANCEL_PENALTY)} is billed in FAD › Cancellation Billing & Payment.</p>`,
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Cancel sale', kind: 'dg', icon: 'ban', onClick: () => {
+        const f = { date: parseDateInput($('#cs-date').value, TODAY), waived: $('#cs-w-yes').checked, just: $('#cs-just').value.trim() }, err = cancelSaleError(v, f);
+        const bad = !err ? null : /^Justification/.test(err) ? 'just' : 'date';
+        $('#cs-date').classList.toggle('is-invalid', bad === 'date'); $('#cs-just').classList.toggle('is-invalid', bad === 'just');
+        $('#cs-err').textContent = err || '';
+        if (err) { $(`#cs-${bad}`).focus(); return; }
+        const done = recordCancellation(scr, v, f); closeModal(); render();
+        toast(done ? `Sale of ${esc(v.plate)} cancelled.${f.waived ? ' The fee is waived.' : ' The penalty is in Cancellation Billing & Payment.'}` : `Lot ${esc(v.lot)} of Auction ${v.auction} is already cancelled.`, done ? '' : 'warn');
+      } }] });
+    $('#cs-date')?.focus();   // openModal focuses the first input (a read-only field)
+  },
   resetFilter(scr) { const ui = U(scr.id), key = filterFocusKey(document.activeElement); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); refocusFilter($('#content'), key); },
-  entryClear(scr) { U(scr.id).entry = null; render(); },
 };
 
 // ─── Events (delegated) ───────────────────────────────────────────────
@@ -1672,9 +1667,7 @@ function bind() {
       err.textContent = ''; box.classList.remove('is-invalid');
       ui.asOf = iso || TODAY; ui.page = 1; render(); toast(`Liability generated as of ${fmtDate(ui.asOf)}.`);
     }
-    if (form === 'find') entryFind(scr);
     if (form === 'holiday') holidayAdd(scr);
-    if (form === 'cancel') entryCancel(scr);
   });
   content.addEventListener('click', ev => {
     const scr = currentScr(); if (!scr) return; const ui = U(scr.id);
@@ -1685,7 +1678,7 @@ function bind() {
   $('#burger').addEventListener('click', () => document.body.classList.toggle('nav-open'));
   $('#home-logo').addEventListener('click', () => { location.hash = '#/'; });
   const sw = $('#proposed-switch');
-  if (sw) { sw.checked = PROPOSED; sw.addEventListener('change', () => { setProposed(sw.checked); if (!PROPOSED) dropHolds(); closeModal(); render(); toast(PROPOSED ? 'Proposed improvements on: changes are tagged "Proposed P2" to "P6".' : 'Proposed improvements off: the prototype follows the CR form.'); }); }
+  if (sw) { sw.checked = PROPOSED; sw.addEventListener('change', () => { setProposed(sw.checked); if (!PROPOSED) dropHolds(); closeModal(); render(); toast(PROPOSED ? 'Proposed improvements on: changes are tagged "Proposed P3" to "P6".' : 'Proposed improvements off: the prototype follows the CR form.'); }); }
   window.addEventListener('hashchange', ev => {   // switching lot lists on the same customer page keeps the scroll position
     closeModal(); render();
     const was = custRoute((ev.oldURL || '').split('#')[1]?.replace(/^\/?/, '')), now = custRoute(route());
@@ -1713,40 +1706,6 @@ function bind() {
     try { picker.showPicker(); } catch { picker.focus(); }
   });
   picker.addEventListener('change', () => { if (!pickFor) return; pickFor.value = dateText(picker.value); pickFor.dispatchEvent(new Event('change', { bubbles: true })); });
-}
-
-// ─── Cancellation Entry behaviour ─────────────────────────────────────
-function entryFind(scr) {
-  const ui = U(scr.id), e = ui.entry || (ui.entry = {});
-  e.auction = $('#ce-auction').value.trim(); e.lot = $('#ce-lot').value.trim(); e.errors = {}; e.found = null; e.note = '';
-  if (!/^\d+$/.test(e.auction)) e.errors.auction = 'Enter a numeric Auction No.';
-  if (!/^\d+$/.test(e.lot)) e.errors.lot = 'Enter a numeric Lot.';
-  if (!Object.keys(e.errors).length) {
-    const lot = e.lot.padStart(3, '0'), v = V().find(x => String(x.auction) === e.auction && x.lot === lot);
-    if (!v) e.note = `No transaction found for Auction ${e.auction}, Lot ${lot}.`;
-    else { e.found = v; e.form = { status: v.status === 'Sold' ? 'Sold' : v.status, date: TODAY, waived: false, just: '' }; e.note = `1 transaction found: Lot ${lot} of Auction ${e.auction}.`; }
-  }
-  render();
-}
-function entryCancel(scr) {
-  const e = U(scr.id).entry, v = e.found;
-  const dr = $('#ce-date').value.trim(), dd = parseDateInput(dr, TODAY);
-  e.form = { status: $('#ce-status').value, date: dd === null ? dr : dd, waived: $('#ce-waived').checked, just: $('#ce-just').value.trim() };
-  e.errors = {};
-  if (e.form.status !== 'Cancelled') e.errors.status = 'Change Status to Cancelled.';
-  if (!e.form.date) e.errors.date = 'Date Cancelled is required.';
-  else if (!ISO_RE.test(e.form.date)) e.errors.date = 'Type the date as mm/dd/yyyy, or t for today.';
-  else if (e.form.date > TODAY) e.errors.date = 'Cannot be after today.';
-  else if (v.awarding && e.form.date < v.awarding) e.errors.date = `Cannot be before the Awarding Date (${fmtDate(v.awarding)}).`;
-  if (!e.form.just) e.errors.just = e.form.waived ? 'Justification is required when the fee is waived.' : 'Enter the reason for cancellation.';
-  if (Object.keys(e.errors).length) { render(); return; }
-  openModal({ title: 'Cancel this transaction?', icon: 'ban',
-    body: `<p>Lot <b>${esc(v.lot)}</b> of Auction <b>${v.auction}</b> (${esc(v.plate)}, ${esc(v.customer)}) will be set to <b>Cancelled</b> on ${fmtDate(e.form.date)}.</p>
-      <p>Cancellation fee: <b>${e.form.waived ? 'waived' : 'to be billed'}</b>. The vehicle leaves all FAD work lists${e.form.waived ? '' : ' and appears in Cancellation Billing & Payment'}.</p>`,
-    footer: [{ label: 'Keep transaction', kind: 'gh', onClick: closeModal }, { label: 'Cancel transaction', kind: 'dg', icon: 'ban', onClick: () => {
-      if (!recordCancellation(scr, v, e.form)) { U(scr.id).entry = null; closeModal(); render(); toast(`Lot ${esc(v.lot)} of Auction ${v.auction} is already cancelled.`, 'warn'); return; }
-      U(scr.id).entry = null; closeModal(); render(); toast(`Lot ${esc(v.lot)} of Auction ${v.auction} cancelled.`);
-    } }] });
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────

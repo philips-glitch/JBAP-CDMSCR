@@ -23,9 +23,9 @@ test('Report holds Rebate Monitoring (Download report kept) and Liability to Sel
   assert.match(home, /href="#\/report\/rebate-monitoring">Rebate Monitoring<span class="ptag mini new"/); assert.match(home, /href="#\/report\/liability-to-seller">Liability to Seller<span class="ptag mini new"/);
   assert.match(home, /href="#\/FAD\/rebate-payable">Rebate Payable<span class="ptag mini new"/); assert.doesNotMatch(home, /Rebate ›/);
 });
-test('screens per department: Report 7, FAD 15, SMD 8 (total 37, with the switch off and on)', () => {
+test('screens per department: Report 7, FAD 14, SMD 9 (total 37, with the switch off and on)', () => {
   const P = load();
-  assert.deepStrictEqual(perDept(P), { Customer: 1, Report: 7, FAD: 15, SMD: 8, VWD: 4, Settings: 1, LOG: 1 });
+  assert.deepStrictEqual(perDept(P), { Customer: 1, Report: 7, FAD: 14, SMD: 9, VWD: 4, Settings: 1, LOG: 1 });
   assert.strictEqual(P.SCREENS.length, 37); assert.strictEqual(P.SCREENS.filter(P.shown).length, 37);
   P.setProposed(true); assert.strictEqual(P.SCREENS.filter(P.shown).length, 37);
 });
@@ -91,7 +91,7 @@ test('texts: SMD no longer lists Rebate screens; Home Report names rebates and l
   assert.match(sub('Report'), /rebates/); assert.match(sub('Report'), /liability to sellers/);
   const saaf = P.byId['SMD/saaf'].rule;
   assert.match(saaf, /Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch in SMD still show the legacy sample/); assert.doesNotMatch(saaf, /Rebate/);
-  const log = P.byId['log-activity']; assert.match(log.rule, /SMD entries come from Return to Seller clearances and approvals and the SAAF; FAD entries include Rebate Paid/); assert.doesNotMatch(log.rule, /SAAF and Rebate Paid/);
+  const log = P.byId['log-activity']; assert.match(log.rule, /SMD entries come from Return to Seller clearances and approvals, the SAAF and Result Price \(saved rebates and cancelled sales\); FAD entries include Rebate Paid/); assert.doesNotMatch(log.rule, /SAAF and Rebate Paid/);
   P.U('log-activity').applied.module = 'SMD'; assert.doesNotMatch(log.emptyNote(), /Rebate Paid/); assert.match(log.emptyNote(), /Return to Seller[^]*SAAF/);
   for (const id of ['SMD/pending-awarding', 'SMD/unpaid', 'SMD/seller-acknowledgement', 'SMD/for-dispatch']) assert.ok(P.byId[id].rows().length > 0, `${id} is still the legacy sample`);
   assert.match(P.byId['FAD/rebate-payable'].rule, /FAD records Rebate Paid/); assert.match(P.byId['FAD/rebate-payable'].rule, /Report › Rebate Monitoring/);

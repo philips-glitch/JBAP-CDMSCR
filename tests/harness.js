@@ -8,7 +8,7 @@ const EXPORTS = ['D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enric
   'addWorkdays', 'fmtDate',
   // proposed improvements and wishes 4–5 (spec 2026-10-15)
   'isProposed', 'setProposed', 'shown', 'colsOf', 'tagHtml', 'SCREENS', 'selectedRows', 'applyEdits', 'tickDefault', 'tickValue',
-  'dirtyCount', 'cdmsCancelsPending', 'recordCancellation', 'recordCommissionBilling', 'recordSaafSent',
+  'dirtyCount', 'recordCancellation', 'recordCommissionBilling', 'recordSaafSent',
   'dropHolds', 'dispatchCc', 'queueCounts', 'PROPOSALS', 'LATEST_AUCTION', 'rtsEligible', 'recordReturnClearance',
   // JBAP feedback round 1 (spec 2026-10-15)
   'doasOf', 'docStatus', 'DOC_STATUSES', 'workdaysBetween', 'cellHtml', 'applyFilters', 'bondOf', 'recordAwarding',
@@ -17,7 +17,7 @@ const EXPORTS = ['D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enric
   // Customer Inquiry and customer page (16 Oct 2026)
   'CUST_ID', 'buyerRows', 'buyerOf', 'stepOf', 'custRoute', 'customerPage',
   // JBAP feedback round 2 (16 Oct 2026)
-  'routeOf', 'route', 'location', 'MOVED', 'validateEdits', 'entryLayout', 'recordPenaltyPayment', 'parseDateInput', 'dateField', 'queryCard', 'listedAhead', 'newHtml', 'newMini', 'sellerCode', 'filterCard', 'recordSellerPayment', 'recordDeadlineExtension', 'extendError', 'listingsOf', 'releaseDateError', 'paymentDateError', 'roField', 'filterFocusKey', 'refocusFilter', 'baafSplit', 'rebateApprovalError', 'recordHolidayAdd', 'recordHolidayRemove', 'holidayError', 'holidayForm',
+  'routeOf', 'route', 'location', 'MOVED', 'validateEdits', 'recordPenaltyPayment', 'parseDateInput', 'dateField', 'queryCard', 'listedAhead', 'newHtml', 'newMini', 'sellerCode', 'filterCard', 'recordSellerPayment', 'recordDeadlineExtension', 'extendError', 'listingsOf', 'releaseDateError', 'paymentDateError', 'roField', 'filterFocusKey', 'refocusFilter', 'baafSplit', 'rebateApprovalError', 'recordHolidayAdd', 'recordHolidayRemove', 'holidayError', 'holidayForm', 'rebateRequestFields', 'cancelSaleError',
   // Report > Inventory Monitoring (19 Oct 2026)
   'inventoryRows', 'sortRows', 'countOf'];
 function load() {

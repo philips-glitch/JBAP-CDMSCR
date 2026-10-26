@@ -1,6 +1,6 @@
 const test = require('node:test'), assert = require('node:assert');
 const { load } = require('./harness');
-// JBAP feedback of 16 Oct 2026: #13 combine Cancellation Billing and Payment, #14 Cancellation Entry replaces Cancellation Monitoring
+// JBAP feedback of 16 Oct 2026: #13 combine Cancellation Billing and Payment, #14 Cancellation Entry replaces Cancellation Monitoring (Cancellation Entry itself was removed on 26 Oct 2026: cancellations are made in SMD › Result Price)
 test('Cancellation Billing & Payment: one screen for every unpaid fee, billed or not', () => {
   const P = load(), scr = P.byId['FAD/cancellation-billing'], col = k => scr.cols.find(c => c.key === k);
   assert.strictEqual(scr.title, 'Cancellation Billing & Payment'); assert.strictEqual(P.byId['FAD/cancellation-payment'], undefined);
@@ -35,15 +35,15 @@ test('Date Paid: not before the Billing Date; Amount more than 0', () => {
   assert.match(scr.validate(b, { paid_date: '2000-01-01' }).paid_date, /before/);
   assert.match(scr.validate(b, { paid_date: P.TODAY, amount: '0' }).amount, /more than 0/);
 });
-test('Cancellation Entry lists every cancellation with filters; FAD and SMD no longer have their own Cancellation Monitoring', () => {
-  const P = load(), scr = P.byId['FAD/cancellation-entry'];
+test('Cancellation Entry is gone (JBAP, 26 Oct 2026): every cancellation is in Report › Cancellation Monitoring, with filters; FAD and SMD have no Cancellation Monitoring of their own', () => {
+  const P = load(), scr = P.byId['report/cancellation-monitoring'];
+  assert.strictEqual(P.byId['FAD/cancellation-entry'], undefined); assert.strictEqual(P.routeOf('FAD/cancellation-entry'), 'report/cancellation-monitoring');
   assert.strictEqual(P.byId['FAD/cancellation-monitoring'], undefined); assert.strictEqual(P.byId['SMD/cancellation-monitoring'], undefined);
-  assert.deepStrictEqual(scr.cols.map(c => c.key), ['auction', 'lot', 'customer', 'cid', 'plate', 'dcancel', 'waived', 'just', 'bill_date', 'paid_date', 'remitted']);
   assert.strictEqual(scr.rows().length, P.CX().length); assert.ok(scr.actions.includes('Filter'));
-  assert.deepStrictEqual(scr.filters.map(f => f.key), ['auction', 'customer', 'plate', 'waived']);
-  P.U(scr.id).applied = { waived: 'Yes' }; const y = P.applyFilters(scr, scr.rows()); assert.ok(y.length && y.every(r => r.waived));
-  P.U(scr.id).applied = { waived: 'No' }; const n = P.applyFilters(scr, scr.rows()); assert.ok(n.length && n.every(r => !r.waived));
-  P.U(scr.id).applied = {}; const h = P.entryLayout(scr); assert.match(h, /data-form="filter"/); assert.match(h, /aria-label="Cancellations"/);
+  assert.deepStrictEqual(scr.filters.map(f => f.key), ['auction', 'customer', 'plate', 'seller', 'waived']);
+  P.U(scr.id).applied = { waived: ['Yes'] }; const y = P.applyFilters(scr, scr.rows()); assert.ok(y.length && y.every(r => r.waived));
+  P.U(scr.id).applied = { waived: ['No'] }; const n = P.applyFilters(scr, scr.rows()); assert.ok(n.length && n.every(r => !r.waived));
+  assert.match(scr.rule, /Cancel sale in SMD › Result Price/); assert.doesNotMatch(scr.rule, /Cancellation Entry/);
 });
 test('37 screens (37 with the Proposed improvements switch off: the SAAF screen is standard since JBAP answer Q11)', () => {
   const P = load(); assert.strictEqual(P.SCREENS.length, 37); assert.strictEqual(P.SCREENS.filter(P.shown).length, 37);

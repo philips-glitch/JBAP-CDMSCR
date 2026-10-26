@@ -1,4 +1,4 @@
-// data-extra.js — [MOCK] sample data for the proposed improvements (P2–P6) and JBAP's wishes 4–5 (spec 2026-10-15). Not from MS Access.
+// data-extra.js — [MOCK] sample data for the proposed improvements (P3–P6) and JBAP's wishes 4–5 (spec 2026-10-15). Not from MS Access.
 // Loaded after data.js and before app.js. It only adds to window.MOCK_DATA, so data.js stays the Access-merged dataset.
 (function (D) {
   if (!D) return;
@@ -39,12 +39,6 @@
     { date: '2026-12-25', name: 'Christmas Day', type: 'Regular holiday' },
     { date: '2026-12-30', name: 'Rizal Day', type: 'Regular holiday' },
     { date: '2026-12-31', name: 'Last Day of the Year', type: 'Special non-working day' },
-  ];
-  // [MOCK] P2: lots cancelled in CDMS that FAD has not recorded yet (FAD confirms them on Cancellation Entry)
-  D.cdmsCancels = [
-    { vid: 'V107', date: '2026-09-29', reason: 'Buyer did not pay within the buyer deadline' },
-    { vid: 'V109', date: '2026-09-30', reason: 'Buyer withdrew the bid' },
-    { vid: 'V112', date: '2026-10-05', reason: 'Buyer did not pay within the buyer deadline' },
   ];
   // [MOCK] Q11: SAAF state on Pending Awarding lots: 4 approved by the seller (ready for FAD), 3 sent and awaiting the seller, the rest not sent
   const saaf = { V102: ['2026-08-20', '2026-08-24'], V103: ['2026-08-27', '2026-08-31'], V092: ['2026-09-03', '2026-09-07'], V096: ['2026-09-10', '2026-09-14'],
