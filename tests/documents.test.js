@@ -5,21 +5,24 @@ const lot = (seller, f = {}) => Object.assign({ status: 'Sold', seller, buyer_pa
 test('doasOf: seller setting, sellers released on Buyer Payment, default', () => {
   assert.deepStrictEqual(['EWB', 'TFS', 'JACCS', 'SBC', undefined].map(s => P.doasOf(lot(s))), ['branch', 'none', 'jbap', 'jbap', 'jbap']);
 });
-test('docStatus: the furthest step reached, per DOAS signing type', () => {
+test('docStatus: the furthest step reached, per DOAS signing type (no Pending Payment or Cancelled since 26 Oct 2026)', () => {
   const s = (seller, f) => P.docStatus(lot(seller, f));
-  assert.strictEqual(s('SBC', { status: 'Cancelled', to_buyer: '2026-09-20' }), 'Cancelled');
   assert.strictEqual(s('SBC', { orig_docs: '2026-09-15', to_buyer: '2026-09-20' }), 'Complete');
   assert.strictEqual(s('SBC', { orig_docs: '2026-09-15' }), 'For Releasing');
   assert.strictEqual(s('SBC', { seller_doas: '2026-09-10' }), 'Pending Documents', 'signed DOAS back even with no Seller Payment (JBAP sheet: SBC R0 T1 U1)');
   assert.strictEqual(s('SBC', { pay_seller: '2026-09-03', buyer_doas: '2026-09-08' }), 'Pending Documents');
   assert.strictEqual(s('SBC', { pay_seller: '2026-09-03', rcv_doas: '2026-09-05' }), 'DOAS for Signing');
   assert.strictEqual(s('SBC', { pay_seller: '2026-09-03' }), 'Pending DOAS');
-  assert.strictEqual(s('SBC', {}), 'Pending Payment');
-  assert.strictEqual(s('EWB', { pay_seller: '2026-09-03' }), 'DOAS for Signing', 'EWB buyers sign at EWB once the seller is paid');
+  assert.strictEqual(s('SBC', {}), 'Pending DOAS', 'only paid lots are listed, so a lot with no date at all is Pending DOAS');
+  assert.strictEqual(s('EWB', { pay_seller: '2026-09-03' }), 'Pending DOAS', 'EWB: the seller being paid no longer starts DOAS for Signing');
+  assert.strictEqual(s('EWB', { ewb_callout: '2026-09-05' }), 'DOAS for Signing', 'EWB: DOAS for Signing starts at the EWB Call Out (to confirm)');
+  assert.strictEqual(s('JACCS', { ewb_callout: '2026-09-05' }), 'Pending DOAS', 'the call-out counts only for branch sellers');
+  assert.strictEqual(s('EWB', { ewb_callout: '2026-09-05', ewb_signed: '2026-09-10' }), 'Pending Documents');
   assert.strictEqual(s('EWB', { pay_seller: '2026-09-03', ewb_signed: '2026-09-10' }), 'Pending Documents');
   assert.strictEqual(s('JACCS', { pay_seller: '2026-09-03', ewb_signed: '2026-09-10' }), 'Pending DOAS', 'the EWB date counts only for branch sellers');
   assert.strictEqual(s('TFS', { pay_seller: '2026-09-03' }), 'Pending Documents', 'no DOAS: documents are next once the seller is paid');
-  assert.strictEqual(s('TFS', {}), 'Pending Payment');
+  assert.strictEqual(s('TFS', {}), 'Pending Documents', 'no DOAS: documents are the only step');
+  assert.ok(P.docStatus(lot('SBC', { status: 'Cancelled' })) !== 'Cancelled' && !P.DOC_STATUSES.includes('Cancelled'), 'Cancelled is no document status: cancelled lots are not listed');
 });
 test('workdaysBetween counts Monday to Friday, both days included', () => {
   assert.strictEqual(P.workdaysBetween('2026-10-08', '2026-10-08'), 1, 'Thursday');
@@ -62,16 +65,18 @@ test('validation: a row with out-of-order dates from the JBAP sheet still saves 
   assert.match(P.docValidate(r, { seller_doas: '2026-09-30' }).seller_doas, /JBAP Receipt of Signed DOAS/, 'seller date against the stored JBAP date');
   assert.match(P.docValidate(r, { doc_remarks: 'x', orig_docs: '2026-12-01' }).orig_docs, /after today/, 'an edited date is still checked');
 });
-test('rows: every sold or cancelled lot, TFS included; the Open view hides Complete and Cancelled', () => {
+test('rows: sold lots paid to the seller (EWB: buyer paid), TFS included; the Open view hides Complete lots', () => {
   const s = scr(), rows = s.rows(), f = s.filters.find(x => x.key === 'doc_status');
-  assert.strictEqual(rows.length, P.V().filter(v => ['Sold', 'Cancelled'].includes(v.status)).length);
-  assert.ok(rows.some(r => r.seller === 'TFS') && rows.some(r => r.status === 'Cancelled'));
+  assert.strictEqual(rows.length, P.V().filter(v => v.status === 'Sold' && (P.doasOf(v) === 'branch' ? v.buyer_paid : v.pay_seller)).length);
+  assert.ok(rows.some(r => r.seller === 'TFS') && rows.some(r => r.doas === 'branch') && !rows.some(r => r.status === 'Cancelled'));
+  assert.ok(P.V().some(v => v.status === 'Sold' && P.doasOf(v) !== 'branch' && !v.pay_seller), 'sample: a sold lot not paid to the seller is not listed');
   assert.deepStrictEqual(s.initial, { doc_status: 'Open' });
-  assert.ok(P.applyFilters(s, rows).every(r => !['Complete', 'Cancelled'].includes(r.doc_status)), 'Open view');
+  assert.ok(P.applyFilters(s, rows).every(r => r.doc_status !== 'Complete'), 'Open view');
   const done = rows.filter(r => r.doc_status === 'Complete'), open = new Set(P.applyFilters(s, rows).map(r => r.id));
   assert.ok(done.length > 0, 'the merged data has Complete lots'); assert.ok(done.every(r => !open.has(r.id)), 'none of them is in the Open view');
-  assert.ok(rows.filter(r => f.match(r, 'Cancelled')).every(r => r.doc_status === 'Cancelled'));
-  assert.deepStrictEqual(f.options(), ['Open', 'Pending Payment', 'Pending DOAS', 'DOAS for Signing', 'Pending Documents', 'For Releasing', 'Complete', 'Cancelled']);
+  assert.deepStrictEqual(f.options(), ['Open', 'Pending DOAS', 'DOAS for Signing', 'Pending Documents', 'For Releasing', 'Complete']);
+  for (const st of P.DOC_STATUSES) assert.ok(rows.filter(r => f.match(r, st)).every(r => r.doc_status === st), st);
+  assert.match(s.rule, /to confirm/, 'the EWB reading is flagged'); assert.doesNotMatch(s.rule, /Pending Payment|or Cancelled/);
 });
 test('JBAP column order, the editable fields and n/a cells', () => {
   const s = scr();

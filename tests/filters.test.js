@@ -12,8 +12,8 @@ test('a dropdown filter takes several values (any of them passes); a single stri
 });
 test('filters with their own rule run per picked value', () => {
   const P = load(), scr = P.byId['FAD/document-monitoring'], rows = scr.rows();
-  P.U(scr.id).applied = { doc_status: ['Complete', 'Cancelled'] };
-  assert.ok(P.applyFilters(scr, rows).every(r => ['Complete', 'Cancelled'].includes(r.doc_status)));
+  P.U(scr.id).applied = { doc_status: ['Complete', 'For Releasing'] };
+  assert.ok(P.applyFilters(scr, rows).every(r => ['Complete', 'For Releasing'].includes(r.doc_status)));
 });
 test('the filter card renders tick boxes for dropdown filters, with the picked values checked', () => {
   const P = load(), scr = P.byId['FAD/unpaid']; P.U(scr.id).filters = { seller: ['EWB'] };
@@ -25,10 +25,10 @@ test('the filter card renders tick boxes for dropdown filters, with the picked v
 test('a rule filter with 2 picks gives the rows of both picks, and an empty tick list is not treated as a filter', () => {
   const P = load(), scr = P.byId['FAD/document-monitoring'], rows = scr.rows(), all = r => P.applyFilters(scr, rows).map(x => x.id).sort();
   const of = st => rows.filter(r => r.doc_status === st).map(r => r.id);
-  P.U(scr.id).applied = { doc_status: ['Complete', 'Cancelled'] };
-  assert.deepStrictEqual(all(), [...of('Complete'), ...of('Cancelled')].sort()); assert.ok(all().length > 0, 'not an empty list');
+  P.U(scr.id).applied = { doc_status: ['Complete', 'For Releasing'] };
+  assert.deepStrictEqual(all(), [...of('Complete'), ...of('For Releasing')].sort()); assert.ok(all().length > 0, 'not an empty list');
   P.U(scr.id).applied = { doc_status: ['Open', 'Complete'] };
-  assert.ok(all().length > rows.filter(r => !['Complete', 'Cancelled'].includes(r.doc_status)).length, 'Open or Complete');
+  assert.ok(all().length > rows.filter(r => r.doc_status !== 'Complete').length, 'Open or Complete');
   scr.rows = () => []; P.U(scr.id).applied = { doc_status: [] };
   assert.match(P.dataCard(scr, 'x'), /Nothing is waiting/, 'an empty list is not a filter'); P.U(scr.id).applied = { doc_status: ['Complete'] };
   assert.match(P.dataCard(scr, 'x'), /No records match the filter/);

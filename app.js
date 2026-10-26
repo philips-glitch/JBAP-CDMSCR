@@ -124,17 +124,17 @@ const dispatchReady = v => releaseOf(v) === 'ack' ? !!v.seller_ack : !!v.buyer_p
 // [BEHAVIOR] JBAP feedback (15 Oct 2026): how the seller's DOAS is signed, separate from the release condition. 'jbap' = at JBAP (default),
 // 'branch' = at the seller's HO or store (EWB), 'none' = no DOAS (sellers released on Buyer Payment: TFS). In JBAP's sheet JACCS and SAFC sign a DOAS too.
 const doasOf = v => SELLER[v.seller]?.doas_signing || (releaseOf(v) === 'payment' ? 'none' : 'jbap');
-const DOC_STATUSES = ['Pending Payment', 'Pending DOAS', 'DOAS for Signing', 'Pending Documents', 'For Releasing', 'Complete', 'Cancelled'];
-// [BEHAVIOR] Document status = the furthest step reached (JBAP's 2026 Documents Monitoring sheet: same as the typed status on 1,644 of 1,674 lots)
+// [BEHAVIOR] JBAP feedback (26 Oct 2026): Document Monitoring lists paid lots only, so there is no Pending Payment; cancelled lots are not listed, so there is no Cancelled
+const DOC_STATUSES = ['Pending DOAS', 'DOAS for Signing', 'Pending Documents', 'For Releasing', 'Complete'];
+// [BEHAVIOR] Document status = the furthest step reached (JBAP's 2026 Documents Monitoring sheet). EWB: DOAS for Signing starts at its EWB Call Out (our reading of JBAP's text, to confirm)
 function docStatus(v) {
   const doas = doasOf(v);
-  if (v.status === 'Cancelled') return 'Cancelled';
   if (v.to_buyer) return 'Complete';
   if (v.orig_docs) return 'For Releasing';
-  if (doas === 'none') return v.pay_seller ? 'Pending Documents' : 'Pending Payment';
+  if (doas === 'none') return 'Pending Documents';
   if (v.buyer_doas || v.seller_doas || (doas === 'branch' && v.ewb_signed)) return 'Pending Documents';
-  if (v.rcv_doas || (doas === 'branch' && v.pay_seller)) return 'DOAS for Signing';
-  return v.pay_seller ? 'Pending DOAS' : 'Pending Payment';
+  if (v.rcv_doas || (doas === 'branch' && v.ewb_callout)) return 'DOAS for Signing';
+  return 'Pending DOAS';
 }
 // [BEHAVIOR] Aging counts working days to today only while a step waits (JBAP's sheet shows 0 once done; CDMS shows blank).
 // DOAS Aging: from Seller Payment while the DOAS is awaited (branch sellers: until it is signed). Docs Aging: from the signed DOAS (no DOAS: Seller Payment) until JBAP has the documents.
@@ -392,6 +392,26 @@ function docValidate(r, e) {
   ['rcv_doas', 'buyer_doas', 'seller_doas'].forEach(k => { if (doas === 'none' && e[k]) out[k] = 'does not apply: this seller has no DOAS'; });
   return out;
 }
+// [BEHAVIOR] JBAP feedback (26 Oct 2026): a date that is filled in on Document Monitoring is read-only. Change date (with a required reason) is the way to correct it:
+// the new date gets the screen's own checks (docValidate) and the date and the reason are logged. DOC_DATE_FIELDS = the date columns, [key, label].
+const DOC_DATE_FIELDS = [['ewb_callout', 'EWB Call Out'], ['ewb_signed', 'Date DOAS Signed (EWB)'], ['rcv_doas', 'Receipt of DOAS'], ['buyer_doas', 'JBAP Receipt of Signed DOAS'],
+  ['seller_doas', 'Seller Receipt of Signed DOAS'], ['orig_docs', 'JBAP Receipt of Documents'], ['to_buyer', 'Buyer Receipt of Documents']];
+const docDateLabel = key => (DOC_DATE_FIELDS.find(f => f[0] === key) || [])[1] || key;
+const CHANGE_REASON_ERR = 'A reason is required.';
+// The first problem with a Change date entry, or null when it can be saved (iso: ISO date, '' = blank, null = not a date)
+function changeDateError(v, key, iso, reason) {
+  if (!String(reason ?? '').trim()) return CHANGE_REASON_ERR;
+  if (!iso) return 'Type the new date as mm/dd/yyyy.';
+  const msg = docValidate(v, { [key]: iso })[key];
+  if (msg) return `New date ${msg}.`;
+  if (iso === v._raw[key]) return `The new date is the same as the current date (${fmtDate(iso)}).`;
+  return null;
+}
+// Saves the new date on the lot and logs the field old → new and the reason (field "Change reason"). Status and aging follow from the dates.
+function recordDateChange(scr, v, key, iso, reason) {
+  logChange(scr, 'Update', v, [[docDateLabel(key), 'date', v._raw[key], iso], ['Change reason', 'text', null, String(reason).trim()]]);
+  v._raw[key] = iso;
+}
 // [BEHAVIOR] Security Bond dates: not in the future, not before Buyer Paid, the transferred ORCR reaches JBAP before the seller; a bond is refunded or forfeited, not both
 function bondValidate(r, e) {
   const val = k => (k in e ? e[k] : r[k]) || null, out = {};
@@ -401,6 +421,8 @@ function bondValidate(r, e) {
   return out;
 }
 const EWB_NA = r => r.doas !== 'branch', NO_DOAS = r => r.doas === 'none';   // n/a cells on Document Monitoring
+// A Document Monitoring date column: editable while the date is blank, read-only once a date is saved (Change date corrects it); the label comes from DOC_DATE_FIELDS
+const docDate = (key, na) => C(docDateLabel(key), key, 'date', { edit: 'date', na, lockWhen: r => !!r._raw[key] });
 const AM_COLS = [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 150 }),
   C('Seller', 'seller', 'code'), C('Status', 'status', 'status'), C('Result Price', 'price', 'money'), C('Awarding Date', 'awarding', 'date'), C('Buyer Paid', 'buyer_paid', 'date'),
   C('Payment to Seller', 'pay_seller', 'date'), C('Seller Acknowl\u00adedgement', 'seller_ack', 'date'), C('Dispatch Date', 'dispatch', 'date'), C('Release Date', 'release', 'date'),
@@ -488,18 +510,19 @@ const SCREENS = [
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ rts_fad_ok: notFuture(e.rts_fad_ok) || notBefore(e.rts_fad_ok, r.rts_smd_ok, 'the SMD Manager approval') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Approved units moved to VWD › For Return to Seller.' },
-  { dept: 'FAD', slug: 'document-monitoring', title: 'Document Monitoring', actions: VFSU,
-    rule: `Every sold or cancelled lot, in the columns of JBAP's Documents Monitoring sheet. Status is the furthest step reached: Pending Payment (seller not paid yet), Pending DOAS, DOAS for Signing, Pending Documents (signed DOAS back), For Releasing (documents at JBAP), Complete (documents with the buyer) or Cancelled. EWB buyers sign the DOAS at EWB's HO or store; TFS has no DOAS (n/a). Aging counts working days while a step waits. The Open view hides Complete and Cancelled lots.`,
-    rows: () => V().filter(v => v.status === 'Sold' || v.status === 'Cancelled'), sort: ['auction_lot', 'asc'],
+  { dept: 'FAD', slug: 'document-monitoring', title: 'Document Monitoring', actions: VFSU, isNew: true,
+    rule: `Sold lots that JBAP has paid to the seller (Payment to Seller filled in); for EWB, whose buyers sign the DOAS at EWB's HO or store, lots the buyer has paid. Cancelled lots are not listed (JBAP, 26 Oct 2026). Columns follow JBAP's Documents Monitoring sheet. Status is the furthest step reached: Pending DOAS, DOAS for Signing (JBAP has the DOAS; EWB: the buyer was called out to sign, to confirm), Pending Documents (signed DOAS back), For Releasing (documents at JBAP) or Complete (documents with the buyer). TFS has no DOAS (n/a). A date that is filled in is read-only: use Change date, with a reason, to correct it. Aging counts working days while a step waits. The Open view hides Complete lots.`,
+    rows: () => V().filter(v => v.status === 'Sold' && (doasOf(v) === 'branch' ? !!v.buyer_paid : !!v.pay_seller)), sort: ['auction_lot', 'asc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 190 }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
       C('Seller Payment', 'pay_seller', 'date'),
-      C('EWB Call Out', 'ewb_callout', 'date', { edit: 'date', na: EWB_NA }), C('Date DOAS Signed (EWB)', 'ewb_signed', 'date', { edit: 'date', na: EWB_NA }), C('EWB HO/Store', 'ewb_place', 'text', { edit: 'text', na: EWB_NA }),
-      C('Receipt of DOAS', 'rcv_doas', 'date', { edit: 'date', na: NO_DOAS }), C('DOAS Aging', 'doas_aging', 'int', { na: NO_DOAS }),
-      C('JBAP Receipt of Signed DOAS', 'buyer_doas', 'date', { edit: 'date', na: NO_DOAS }), C('Seller Receipt of Signed DOAS', 'seller_doas', 'date', { edit: 'date', na: NO_DOAS }),
-      C('JBAP Receipt of Documents', 'orig_docs', 'date', { edit: 'date' }), C('Buyer Receipt of Documents', 'to_buyer', 'date', { edit: 'date' }), C('Docs Aging', 'docs_aging', 'int'),
+      docDate('ewb_callout', EWB_NA), docDate('ewb_signed', EWB_NA), C('EWB HO/Store', 'ewb_place', 'text', { edit: 'text', na: EWB_NA }),
+      docDate('rcv_doas', NO_DOAS), C('DOAS Aging', 'doas_aging', 'int', { na: NO_DOAS }),
+      docDate('buyer_doas', NO_DOAS), docDate('seller_doas', NO_DOAS),
+      docDate('orig_docs'), docDate('to_buyer'), C('Docs Aging', 'docs_aging', 'int'),
       C('Status', 'doc_status', 'text', { w: 130 }), C('Remarks', 'doc_remarks', 'text', { edit: 'text' }),
-      C('ATF No.', 'atf_no', 'code'), C('Print Transmittal?', 'print_doc_trans', 'check', { edit: 'check' })],
-    filters: [{ key: 'doc_status', label: 'Status', type: 'select', options: () => ['Open', ...DOC_STATUSES], match: (r, v) => (v === 'Open' ? !['Complete', 'Cancelled'].includes(r.doc_status) : r.doc_status === v) },
+      C('ATF No.', 'atf_no', 'code'), C('Print Transmittal?', 'print_doc_trans', 'check', { edit: 'check' }),
+      C('Change Date', 'change_date', 'rowbtn', { act: 'changeDate', btn: 'Change date', isNew: true, aria: r => `of ${r.plate || r.customer}`, showWhen: r => DOC_DATE_FIELDS.some(([k]) => r._raw[k]) })],
+    filters: [{ key: 'doc_status', label: 'Status', type: 'select', options: () => ['Open', ...DOC_STATUSES], match: (r, v) => (v === 'Open' ? r.doc_status !== 'Complete' : r.doc_status === v) },
       AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     initial: { doc_status: 'Open' },
     validate: docValidate,
@@ -1646,6 +1669,32 @@ const ACTIONS = {
         toast(err ? esc(err) : `Rebate rejected for ${esc(v.plate)}.`, err ? 'warn' : '');
       } }] });
     $('#rj-reason')?.focus();   // openModal focuses the first input (a read-only field)
+  },
+  // [BEHAVIOR] JBAP feedback (26 Oct 2026): FAD › Document Monitoring › Change date. A filled date is read-only in the list; here the user picks the field, types the new date and a reason (required).
+  // The checks are changeDateError's; the problem shows in one alert under the form and the field it is about is marked invalid and focused. Saving logs the field old → new and the reason.
+  changeDate(scr, el) {
+    const v = scr.rows().find(r => r.id === el.dataset.rid); if (!v) return;
+    const fields = DOC_DATE_FIELDS.filter(([k]) => v._raw[k]); if (!fields.length) return;
+    openModal({ title: `Change date: ${v.plate}`, icon: 'save',
+      body: `<div class="fgrid two">${roField('Auction No.', v.auction)}${roField('Lot', v.lot)}${roField('Plate Number', v.plate)}${roField('Customer Name', v.customer)}
+        <div class="fld full"><label for="cd-field">Field</label><select class="ctl" id="cd-field">${fields.map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('')}</select></div>
+        <div class="fld"><label for="cd-cur">Current date</label><input class="ctl" id="cd-cur" value="${esc(fmtDate(v._raw[fields[0][0]]))}" readonly></div>
+        <div class="fld"><label for="cd-date">New date</label>${dateField('cd-date', '', 'aria-required="true" aria-describedby="cd-err"')}</div>
+        <div class="fld full"><label for="cd-reason">Reason</label><textarea class="ctl" id="cd-reason" aria-required="true" aria-describedby="cd-err" placeholder="Required: why the date is changed"></textarea></div>
+        <div class="fld full"><span class="err" id="cd-err" role="alert"></span></div></div>
+        <p class="note">The new date gets the same checks as the list. The change and the reason are saved in the Activity Log. Status and aging follow the dates.</p>`,
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Save change', kind: 'pr', icon: 'save', onClick: () => {
+        const key = $('#cd-field').value, iso = parseDateInput($('#cd-date').value, TODAY), reason = $('#cd-reason').value.trim(), err = changeDateError(v, key, iso, reason);
+        const bad = !err ? null : err === CHANGE_REASON_ERR ? 'reason' : 'date';
+        ['date', 'reason'].forEach(k => { const box = $(`#cd-${k}`); box.classList.toggle('is-invalid', bad === k); if (bad === k) box.setAttribute('aria-invalid', 'true'); else box.removeAttribute('aria-invalid'); });
+        $('#cd-err').textContent = err || '';
+        if (err) { $(`#cd-${bad}`).focus(); $('#cd-err').scrollIntoView({ block: 'nearest' }); return; }   // on a short screen the dialog scrolls: keep the message in view too
+        recordDateChange(scr, v, key, iso, reason); closeModal(); render();
+        ([...document.querySelectorAll('[data-act="changeDate"]')].find(b => b.dataset.rid === v.id) || $('#content'))?.focus();   // the list is drawn again: back to this row's button, else the page
+        toast(`${esc(docDateLabel(key))} of ${esc(v.plate)} changed to ${fmtDate(iso)}. The reason is in the Activity Log.`);
+      } }] });
+    $('#cd-field').addEventListener('change', () => { $('#cd-cur').value = fmtDate(v._raw[$('#cd-field').value]); });
+    $('#cd-date')?.focus();   // openModal focuses the first input (a read-only field)
   },
   resetFilter(scr) { const ui = U(scr.id), key = filterFocusKey(document.activeElement); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); refocusFilter($('#content'), key); },
 };
