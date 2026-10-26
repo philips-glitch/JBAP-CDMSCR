@@ -10,14 +10,11 @@ test('Payment Seller: recording the payment date on printed lots moves them on, 
   assert.ok(!scr.isNew && !scr.buttons.find(b => b.act === 'printSeller').isNew, 'the 19 Oct New marks are gone');
   assert.match(scr.buttons.find(b => b.act === 'printSeller').label, /Record payment date & print/);
 });
-test('Pending Awarding: Rebate editable (0 to the result price), saved with the awarding', () => {
-  const P = load(), scr = P.byId['FAD/pending-awarding'], col = scr.cols.find(c => c.key === 'rebate'), r = scr.rows().find(x => x.price);
-  assert.strictEqual(col.edit, 'money'); assert.ok(!col.isNew && !scr.isNew, 'the 19 Oct New marks are gone');
-  assert.match(scr.validate(r, { rebate: '-1' }).rebate, /0 or more/);
-  assert.match(scr.validate(r, { rebate: String(r.price + 1) }).rebate, /result price/);
-  assert.strictEqual(scr.validate(r, { rebate: '5000' }).rebate, null);
-  P.U(scr.id).edits[r.id] = { rebate: '5000' }; P.recordAwarding(scr, [r]);
-  assert.strictEqual(r._raw.rebate, 5000);
+test('Pending Awarding: no rebate is typed here (SMD types it in Result Price, the President decides it); awarding leaves the approved rebate as it is', () => {
+  const P = load(), scr = P.byId['FAD/pending-awarding'], r = scr.rows().find(x => x.rebate_status === 'Approved');
+  assert.ok(!scr.cols.some(c => c.edit && /^rebate/.test(c.key)), 'no editable rebate column'); assert.ok(!scr.isNew, 'the screen itself carries no New mark');
+  const rebate = r._raw.rebate; P.recordAwarding(scr, [r]);
+  assert.strictEqual(r._raw.rebate, rebate);
 });
 test('Commission Billing shows Auction No. and Auction Date', () => {
   const P = load(), cb = P.byId['FAD/commission-billing'], keys = cb.cols.map(c => c.key);

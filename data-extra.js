@@ -15,9 +15,16 @@
     V050: { bond_orcr_jbap: '2026-10-06', bond_orcr_seller: '2026-10-07' },
     V054: { bond_forfeited: '2026-10-07', bond_remarks: 'Sample: buyer did not transfer the ORCR' } };
   D.vehicles.forEach(v => { if (bond[v.id]) Object.assign(v, bond[v.id]); });
-  // [MOCK] JBAP answer Q5 (20 Oct 2026): rebate approval date (Rebate Approved (President)) on two Pending Awarding lots that already carry a rebate in the Access data:
-  // V102 and V095 show a date, so FAD can award them; V092 (also SAAF-approved, so pre-ticked with the switch on), V067, V074 and V082 have a rebate and no date yet, so Email BAAF holds them back.
-  D.vehicles.forEach(v => { const d = { V102: '2026-08-25', V095: '2026-09-28' }[v.id]; if (d) v.rebate_approved = d; });
+  // [MOCK] JBAP 26 Oct 2026: rebates typed by SMD in Result Price, decided by the President. The six Pending Awarding lots that carry a rebate in the Access data show each state:
+  // V102 and V095 Approved (FAD can award them), V092 (also SAAF-approved, so pre-ticked with the switch on), V067 and V074 Pending approval (Email BAAF and Save changes hold them back), V082 Rejected (no rebate is given).
+  const rebates = {
+    V102: { rebate_status: 'Approved', rebate_requested: '2026-08-21', rebate_approved: '2026-08-25' },
+    V095: { rebate_status: 'Approved', rebate_requested: '2026-09-25', rebate_approved: '2026-09-28' },
+    V092: { rebate_status: 'Pending approval', rebate_requested: '2026-10-02' },
+    V067: { rebate_status: 'Pending approval', rebate_requested: '2026-10-07' },
+    V074: { rebate_status: 'Pending approval', rebate_requested: '2026-10-08' },
+    V082: { rebate_status: 'Rejected', rebate_requested: '2026-10-07', rebate_rejected: '2026-10-08', rebate_reject_reason: 'The rebate is too high for this lot' } };
+  D.vehicles.forEach(v => { if (rebates[v.id]) Object.assign(v, rebates[v.id]); });
   // [MOCK] JBAP answer Q14 (20 Oct 2026): holiday list for Settings > Holiday List. Sample list of the fixed-date Philippine holidays of 2025-11 to 2026-12, to be kept by the CDMS administrator (ADMIN role);
   // check it against the official proclamation (moving holidays such as Holy Week and Eid are not listed). Working days skip these dates, both types, as well as weekends.
   D.holidays = [

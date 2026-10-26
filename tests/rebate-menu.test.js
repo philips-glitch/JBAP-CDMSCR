@@ -23,11 +23,11 @@ test('Report holds Rebate Monitoring (Download report kept) and Liability to Sel
   assert.match(home, /href="#\/report\/rebate-monitoring">Rebate Monitoring<span class="ptag mini new"/); assert.match(home, /href="#\/report\/liability-to-seller">Liability to Seller<span class="ptag mini new"/);
   assert.match(home, /href="#\/FAD\/rebate-payable">Rebate Payable<span class="ptag mini new"/); assert.doesNotMatch(home, /Rebate ›/);
 });
-test('screens per department: Report 7, FAD 14, SMD 9 (total 37, with the switch off and on)', () => {
+test('screens per department: Report 7, FAD 14, SMD 9, Approval 1 (total 38, with the switch off and on)', () => {
   const P = load();
-  assert.deepStrictEqual(perDept(P), { Customer: 1, Report: 7, FAD: 14, SMD: 9, VWD: 4, Settings: 1, LOG: 1 });
-  assert.strictEqual(P.SCREENS.length, 37); assert.strictEqual(P.SCREENS.filter(P.shown).length, 37);
-  P.setProposed(true); assert.strictEqual(P.SCREENS.filter(P.shown).length, 37);
+  assert.deepStrictEqual(perDept(P), { Customer: 1, Report: 7, Approval: 1, FAD: 14, SMD: 9, VWD: 4, Settings: 1, LOG: 1 });
+  assert.strictEqual(P.SCREENS.length, 38); assert.strictEqual(P.SCREENS.filter(P.shown).length, 38);
+  P.setProposed(true); assert.strictEqual(P.SCREENS.filter(P.shown).length, 38);
 });
 test('Report › Rebate Monitoring is the live list of rebates: shared columns, totals, sort; Rebate Approved (President) read only', () => {
   const P = load(), rm = P.byId['report/rebate-monitoring'];

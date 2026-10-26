@@ -80,6 +80,7 @@ const DEPT_ICON = {
   FAD: '<rect x="5" y="2.5" width="14" height="19" rx="1.6"/><rect x="7.8" y="5.3" width="8.4" height="3.6" rx=".6"/><path d="M8.3 12.3h.1M12 12.3h.1M15.7 12.3h.1M8.3 15.3h.1M12 15.3h.1M15.7 15.3h.1M8.3 18.3h.1M12 18.3h.1M15.7 18.3h.1"/>',
   SMD: '<rect x="3" y="3.5" width="18" height="12.5" rx="1.2"/><path d="M12 16v3.5M8 21h8"/><path d="M6.5 13v-2.5M10 13V8.5M13.5 13v-3M17 13V6.5"/>',
   VWD: '<path d="M2.5 9.5L12 4l9.5 5.5V21h-19z"/><path d="M6 21v-6.5h12V21"/><path d="M7.6 17.8h8.8M9 14.5l1-1.8h4l1 1.8"/><path d="M8.6 19.6h.1M15.4 19.6h.1"/>',
+  APP: '<rect x="5" y="3.5" width="14" height="17.5" rx="1.6"/><path d="M9 3.5V2.5h6v2H9z"/><path d="M8.5 13.2l2.6 2.6 4.6-5.2"/>',
   SET: '<path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>',
   LOG: '<rect x="4.5" y="3.5" width="13" height="17.5" rx="1.4"/><path d="M8 3.5V2.5h6v2H8z"/><path d="M7.5 9h7M7.5 12.5h4"/><circle cx="17" cy="17" r="4.2"/><path d="M17 15v2.2l1.4 1"/>',
 };
@@ -92,7 +93,7 @@ const syncHolidays = () => { HOLIDAY_DATES = new Set(S.holidays.map(h => h.date)
 if (S) syncHolidays();
 const SELLER = D ? Object.fromEntries(D.sellers.map(s => [s.code, s])) : {};
 const UI = {};          // per-screen UI state: filters, sort, page, edits, errors, message
-const OPEN = { Customer: false, Report: false, FAD: false, SMD: false, VWD: false, Settings: false };
+const OPEN = { Customer: false, Report: false, Approval: false, FAD: false, SMD: false, VWD: false, Settings: false };
 
 // ─── Proposed improvements switch (spec 2026-10-15) ──────────────────
 // [BEHAVIOR] Off = the CR scope exactly; on = LOGIQUE's proposals P3–P6 (P1 withdrawn after JBAP's feedback of 15 Oct 2026; P2 withdrawn after JBAP's feedback of 26 Oct 2026). A link with ?proposed=1 opens with the switch on.
@@ -192,6 +193,7 @@ function enrichV(v) {
     penalty: overdue && PENALTY_LOCATIONS.includes(v.location || 'Pasay City') ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
     penalty_paid: (v.penalty_payments || []).reduce((a, p) => a + p.amount, 0) || null,
     ...sm, min_bid: rb.min_bid, highest_offer: rb.highest_offer, rebate_revenue: rb.revenue,
+    rebate_ok: approvedRebate(v), rebate_decided: v.rebate_approved || v.rebate_rejected || null,   // JBAP feedback (26 Oct 2026): the approved amount only (Pending Awarding); the date the President decided (Rebate Approval)
   });
 }
 const V = () => S.veh.map(enrichV);
@@ -343,20 +345,10 @@ const sellerOpts = () => Object.keys(SELLER).sort();
 const VFS = ['View', 'Filter', 'Sort'], VFSU = ['View', 'Filter', 'Sort', 'Update'], VS = ['View', 'Sort'], VSU = ['View', 'Sort', 'Update'];
 const notFuture = d => d && d > TODAY ? `cannot be after today (${fmtDate(TODAY)})` : null;
 const notBefore = (d, ref, refLabel) => d && ref && d < ref ? `cannot be before ${refLabel} (${fmtDate(ref)})` : null;
-// [BEHAVIOR] JBAP answer Q5 (20 Oct 2026): a rebate has no set formula; SMD recommends it, the President approves it, FAD types the approval date (Rebate Approved (President)).
-// The date is blank when the lot has no rebate (blank or 0); a lot with a rebate needs it before it is awarded, by Save changes with an Awarding Date or by Email BAAF.
-const REBATE_NEEDS_APPROVAL = "The rebate needs the President's approval date before awarding.";
-function rebateApprovalError(rebate, approved, awarding) {
-  const has = Number(rebate) > 0;
-  return !has && approved ? 'No rebate to approve' : has && awarding && !approved ? REBATE_NEEDS_APPROVAL : null;
-}
-// [BEHAVIOR] Review of 20 Oct 2026: the approval date (the one in the edit, else the saved one) is not after the Awarding Date typed in the edit; a TYPED approval date is not before the start of the lot's auction (a saved date is not re-checked)
-function rebateApprovedError(r, e) {
-  const ap = 'rebate_approved' in e ? e.rebate_approved : r.rebate_approved;
-  return notFuture(e.rebate_approved) || notBefore(e.rebate_approved, r.auction_start, 'the auction start')
-    || (e.awarding && ap && ap > e.awarding ? `cannot be after the Awarding Date (${fmtDate(e.awarding)})` : null)
-    || ('rebate' in e || 'rebate_approved' in e || e.awarding ? rebateApprovalError('rebate' in e ? e.rebate : r.rebate, ap, e.awarding) : null);
-}
+// [BEHAVIOR] JBAP feedback (26 Oct 2026): SMD types the rebate in Result Price and the President approves or rejects it in Approval › Rebate Approval. Only an approved rebate counts:
+// Pending Awarding shows it, the BAAF rebate attachment, Report › Rebate Monitoring and FAD › Rebate Payable use it. A lot with a rebate and no status is Access data (awarded before this): its rebate counts as approved.
+const REBATE_PENDING = "The rebate is waiting for the President's approval.";
+const approvedRebate = v => !v.rebate ? null : (!v.rebate_status || v.rebate_status === 'Approved') ? v.rebate : null;
 // [BEHAVIOR] JBAP feedback (26 Oct 2026): SMD types the rebate in Result Price and it waits for the President. The fields a saved amount sets on the lot:
 // a rebate (not blank, not 0) is Pending approval as of today, with any earlier approval or rejection cleared; no rebate clears all five. rebate_status: 'Pending approval' | 'Approved' | 'Rejected' | blank.
 function rebateRequestFields(raw, amount, today) {
@@ -365,14 +357,24 @@ function rebateRequestFields(raw, amount, today) {
 }
 const REBATE_REQUEST_LOG = { rebate_status: ['Rebate Status', 'text'], rebate_requested: ['Rebate Requested', 'date'], rebate_approved: ['Rebate Approved', 'date'], rebate_rejected: ['Rebate Rejected', 'date'], rebate_reject_reason: ['Reject Reason', 'text'] };
 // Sets the request fields on a lot whose rebate amount was just saved (r._raw.rebate is the new amount; prev holds the amounts before the save) and returns the extra log rows [label, type, old, new].
-// The same amount typed again (e.g. 5000.00 for 5000) is not a change: the President's decision stands.
+// The same amount typed again (e.g. 5000.00 for 5000) is not a change: the President's decision stands. A rebate that has no status yet (Access data) is sent for approval even when the amount is the same.
 function applyRebateRequest(r, prev) {
-  if (prev && (prev.rebate ?? null) === (r._raw.rebate ?? null)) return [];
+  if (prev && (prev.rebate ?? null) === (r._raw.rebate ?? null) && r._raw.rebate_status) return [];
   const f = rebateRequestFields(r._raw, r._raw.rebate ?? null, TODAY);
   const rows = Object.entries(f).filter(([k, v]) => (r._raw[k] ?? null) !== v).map(([k, v]) => [...REBATE_REQUEST_LOG[k], r._raw[k] ?? null, v]);
   Object.assign(r._raw, f); return rows;
 }
-// The rebate amount typed in Result Price: 0 or more, not above the result price; blank = none (the same checks as round 4's Pending Awarding column)
+// [BEHAVIOR] JBAP feedback (26 Oct 2026): the President's decision on a rebate that is Pending approval. Approved sets the status and today's date; Rejected needs a reason and sets the status, today's date and the reason.
+// Logged under module Approval (the screen's department). Returns the problem as text, or null when the decision is recorded.
+function recordRebateDecision(scr, v, decision, reason = '') {
+  const raw = v._raw, why = String(reason ?? '').trim();
+  if (raw.rebate_status !== 'Pending approval') return 'This rebate is not waiting for a decision.';
+  if (decision === 'Rejected' && !why) return 'A reason is required to reject a rebate.';
+  const f = decision === 'Approved' ? { rebate_status: 'Approved', rebate_approved: TODAY } : { rebate_status: 'Rejected', rebate_rejected: TODAY, rebate_reject_reason: why };
+  logChange(scr, 'Update', v, Object.entries(f).map(([k, n]) => [...REBATE_REQUEST_LOG[k], raw[k] ?? null, n]));
+  Object.assign(raw, f); return null;
+}
+// The rebate amount typed in Result Price: 0 or more, not above the result price; blank = none
 const rebateAmountError = (r, e) => 'rebate' in e && e.rebate !== '' ? (Number(e.rebate) < 0 ? 'must be 0 or more' : r.price != null && Number(e.rebate) > r.price ? 'cannot be more than the result price' : null) : null;
 
 // [BEHAVIOR] Document dates: not in the future, not before Buyer Paid, steps in order (EWB call out → signed; receipt → JBAP signed → seller receipt),
@@ -418,23 +420,20 @@ const UNREL_FILTERS = [AUCTION_FILTER, { key: 'customer', label: 'Customer Name'
 const REBMON_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 180 }), C('Seller', 'seller', 'code'),
   C('Buyer', 'customer', 'text', { w: 220 }), C('Minimum Bid', 'min_bid', 'money'), C('Highest Offer', 'highest_offer', 'money'), C('Rebate', 'rebate', 'money'), C('Rebate Approved (President)', 'rebate_approved', 'date'),
   C('Commission', 'com', 'money'), C('Revenue (Net of Rebate)', 'rebate_revenue', 'money'), C('Date Remitted', 'rebate_paid', 'date')];
-const REBMON = { rows: () => sold().filter(v => v.rebate), sort: ['auction_lot', 'desc'], cols: REBMON_COLS,
+const REBMON = { rows: () => sold().filter(v => approvedRebate(v) !== null), sort: ['auction_lot', 'desc'], cols: REBMON_COLS,
   totals: rows => ({ plate: `${rows.length} lots`, rebate: money(sumBy(rows, 'rebate')), com: money(sumBy(rows, 'com')), rebate_revenue: money(sumBy(rows, 'rebate_revenue')) }) };
 const SCREENS = [
   // ===================== FAD =====================
   { dept: 'FAD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFSU,
-    rule: 'Vehicles with status SOLD and a blank Awarding Date. Tick For BAAF and press Email BAAF to award. Transfer Fees come from the seller parameters and are not changed here (JBAP, 16 Oct 2026). Security Bond defaults from the seller settings; override it when needed. Rebate is entered here before the BAAF (proposal, Q73). Rebates are recommended by SMD and approved by the President (JBAP answer Q5); FAD types the approval date.',
+    rule: 'Vehicles with status SOLD and a blank Awarding Date. Tick For BAAF and press Email BAAF to award. Transfer Fees come from the seller parameters and are not changed here (JBAP, 16 Oct 2026). Security Bond defaults from the seller settings; override it when needed. Rebate (approved) shows the rebate the President approved, with its Rebate Status; SMD types the rebate in Result Price and the President decides it in Approval › Rebate Approval (JBAP, 26 Oct 2026). It is blank while the rebate is pending or after it is rejected. A lot whose rebate is Pending approval cannot be awarded.',
     rows: () => sold().filter(v => !v.awarding), sort: ['lot', 'asc'],
     cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('For BAAF', 'for_baaf', 'check', { edit: 'check' }), C('Seller Approved', 'saaf_approved', 'date'),
-      C('Awarding Date', 'awarding', 'date', { edit: 'date' }), C('Rebate', 'rebate', 'money', { edit: 'money' }), C('Rebate Approved (President)', 'rebate_approved', 'date', { edit: 'date' }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
+      C('Awarding Date', 'awarding', 'date', { edit: 'date' }), C('Rebate (approved)', 'rebate_ok', 'money', { isNew: true }), C('Rebate Status', 'rebate_status', 'text', { isNew: true }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
       C('Make/Model', 'model', 'text', { w: 210 }), C('Result Price', 'price', 'money'), C('Transfer Fees', 'transfer_fee', 'money'), C('Security Bond', 'security_bond', 'money', { edit: 'money' })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
-    // [BEHAVIOR] JBAP feedback (19 Oct 2026, proposal Q73): the rebate is entered before the BAAF; 0 or more, not above the result price; blank = none
-    // [BEHAVIOR] JBAP answer Q5: the approval date is checked when it, the rebate or the Awarding Date is in the edit (the saved values fill in the rest)
-    validate: (r, e) => ({ awarding: notFuture(e.awarding) || notBefore(e.awarding, r.auction_end, 'the auction end'),
-      security_bond: 'security_bond' in e && (e.security_bond === '' || Number(e.security_bond) < 0) ? 'must be 0 or more' : null,
-      rebate: 'rebate' in e && e.rebate !== '' ? (Number(e.rebate) < 0 ? 'must be 0 or more' : r.price != null && Number(e.rebate) > r.price ? 'cannot be more than the result price' : null) : null,
-      rebate_approved: rebateApprovedError(r, e) }),
+    // [BEHAVIOR] JBAP feedback (26 Oct 2026): a lot whose rebate is Pending approval cannot be awarded (Save changes with an Awarding Date; Email BAAF holds it back with the same message)
+    validate: (r, e) => ({ awarding: notFuture(e.awarding) || notBefore(e.awarding, r.auction_end, 'the auction end') || (e.awarding && r.rebate_status === 'Pending approval' ? REBATE_PENDING : null),
+      security_bond: 'security_bond' in e && (e.security_bond === '' || Number(e.security_bond) < 0) ? 'must be 0 or more' : null }),
     buttons: [{ label: 'Email BAAF', kind: 'ol', icon: 'mail', act: 'emailBaaf', count: 'for_baaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Vehicles with an Awarding Date moved to Unpaid.',
     queue: true, ready: { key: 'for_baaf', when: r => !!r.saaf_approved },
@@ -531,8 +530,8 @@ const SCREENS = [
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), penalty_paid: money(sumBy(rows, 'penalty_paid')) }) },
   // FAD › Rebate Payable (JBAP feedback of 26 Oct 2026: back in FAD from SMD, where it sat from 20 Oct 2026). FAD records Rebate Paid.
   { dept: 'FAD', slug: 'rebate-payable', title: 'Rebate Payable', actions: VSU, isNew: true,
-    rule: 'Result price records with status SOLD, a rebate, a Buyer Paid date, and a blank Rebate Paid date. FAD records Rebate Paid (JBAP, 26 Oct 2026; SMD held it from 20 Oct 2026); a paid rebate leaves this list and shows as Date Remitted in Report › Rebate Monitoring.',
-    rows: () => sold().filter(v => v.rebate && v.buyer_paid && !v.rebate_paid), sort: ['adate', 'asc'],
+    rule: 'Result price records with status SOLD, a rebate, a Buyer Paid date, and a blank Rebate Paid date. FAD records Rebate Paid (JBAP, 26 Oct 2026; SMD held it from 20 Oct 2026); a paid rebate leaves this list and shows as Date Remitted in Report › Rebate Monitoring. Only rebates the President approved are listed.',
+    rows: () => sold().filter(v => approvedRebate(v) !== null && v.buyer_paid && !v.rebate_paid), sort: ['adate', 'asc'],
     cols: [C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 360 }), C('Rebate', 'rebate', 'money'),
       C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date', { edit: 'date' })],
     totals: rows => ({ rebate: money(sumBy(rows, 'rebate')) }),
@@ -726,7 +725,7 @@ const SCREENS = [
 
   // JBAP feedback (26 Oct 2026): Rebate Monitoring and Liability to Seller move from FAD to the Report menu (a moved screen counts as changed: New badge). Rebate Monitoring's columns come from REBMON.
   { id: 'report/rebate-monitoring', dept: 'Report', title: 'Rebate Monitoring', actions: VS, isNew: true,
-    rule: 'Result price records with status SOLD and a rebate. Minimum Bid = Awarded Price, Highest Offer = Minimum Bid − Rebate, Revenue = Commission − Rebate (JBAP\'s Rebate Monitoring file). Download report saves an Excel file of the rebates in an auction range with all the file\'s columns. Rebate Approved (President) is blank for lots awarded before the approval date was recorded.',
+    rule: 'Result price records with status SOLD and a rebate. Minimum Bid = Awarded Price, Highest Offer = Minimum Bid − Rebate, Revenue = Commission − Rebate (JBAP\'s Rebate Monitoring file). Download report saves an Excel file of the rebates in an auction range with all the file\'s columns. Only rebates the President approved are listed (rebates still waiting or rejected are not). Rebate Approved (President) is blank for lots awarded before the approval date was recorded.',
     ...REBMON,
     buttons: [{ label: 'Download report', kind: 'ol', icon: 'download', act: 'downloadRebate', view: true }] },   // view: shown on a view-only screen (it changes no data)
   { id: 'report/liability-to-seller', dept: 'Report', title: 'Liability to Seller', actions: VS, layout: 'query', isNew: true,
@@ -746,6 +745,20 @@ const SCREENS = [
     filters: [{ key: 'cid', label: 'Buyer ID', type: 'text', w: 'w1' }, { key: 'customer', label: 'Buyer Name' }],
     totals: rows => ({ customer: `${rows.length} buyers`, lots: intf(sumBy(rows, 'lots')), total_bought: money(sumBy(rows, 'total_bought')), unpaid: intf(sumBy(rows, 'unpaid')), cancels: intf(sumBy(rows, 'cancels')) }) },
 
+  // ===================== Approval › Rebate Approval (JBAP feedback, 26 Oct 2026; the President's menu) =====================
+  // Rows: every lot with a rebate status (the default filter shows the pending ones). The menu number counts the pending rebates. Approve and Reject are row buttons on pending rows only.
+  { id: 'approval/rebate-approval', dept: 'Approval', title: 'Rebate Approval', actions: VFSU, isNew: true,
+    rule: 'The President approves or rejects the rebates SMD typed in Result Price (JBAP, 26 Oct 2026). Approved rebates appear in FAD › Pending Awarding; a rejected rebate is not given. Reject needs a reason. The Rebate Status filter also shows approved and rejected rebates.',
+    rows: () => sold().filter(v => v.rebate_status), initial: { rebate_status: ['Pending approval'] }, sort: ['rebate_requested', 'asc'],
+    count: () => sold().filter(v => v.rebate_status === 'Pending approval').length,
+    cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 180 }), C('Seller', 'seller', 'code'),
+      C('Customer Name', 'customer', 'text', { w: 220 }), C('Result Price', 'price', 'money'), C('Rebate', 'rebate', 'money'), C('Requested', 'rebate_requested', 'date'),
+      C('Rebate Status', 'rebate_status', 'text'), C('Decided', 'rebate_decided', 'date'), C('Reason', 'rebate_reject_reason', 'text', { w: 220 }),
+      C('Approve', 'approve', 'rowbtn', { act: 'approveRebate', btn: 'Approve', aria: r => `rebate of ${r.plate || r.customer}`, showWhen: r => r.rebate_status === 'Pending approval' }),
+      C('Reject', 'reject', 'rowbtn', { act: 'rejectRebate', btn: 'Reject', aria: r => `rebate of ${r.plate || r.customer}`, showWhen: r => r.rebate_status === 'Pending approval' })],
+    filters: [{ key: 'rebate_status', label: 'Rebate Status', type: 'select', options: () => ['Pending approval', 'Approved', 'Rejected'] }, AUCTION_FILTER,
+      { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }] },
+
   // ===================== Settings › Holiday List (JBAP answer Q14, 20 Oct 2026) =====================
   { id: 'settings/holidays', dept: 'Settings', title: 'Holiday List', actions: VFSU, layout: 'holidays', listTitle: 'Holidays',
     rule: 'Holidays and other non-working days: working days skip Saturdays, Sundays and every date listed here, regular holiday or special non-working day. In CDMS only users with the ADMIN role add or remove holidays (JBAP answer Q14); deadlines and aging skip these dates. Prototype: the list is sample data (check it against the official proclamation) and the ADMIN role is not simulated; changes last until you refresh the page.',
@@ -755,14 +768,14 @@ const SCREENS = [
 
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
-    rule: 'Every data change made in FAD, SMD and VWD, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals, the SAAF and Result Price (saved rebates and cancelled sales); FAD entries include Rebate Paid.',
+    rule: 'Every data change made in FAD, SMD and VWD, every rebate decision of the President in Approval, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals, the SAAF and Result Price (saved rebates and cancelled sales); FAD entries include Rebate Paid.',
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
-      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD', 'Settings'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Delete'] },
+      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD', 'Approval', 'Settings'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Delete'] },
       { key: 'record', label: 'Record / Plate' }],
-    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them, sends a SAAF, saves a rebate or cancels a sale in Result Price.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : null; } },
+    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them, sends a SAAF, saves a rebate or cancels a sale in Result Price.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : m[0] === 'Approval' ? 'No activity yet: Approval logs an entry each time the President approves or rejects a rebate.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -811,7 +824,7 @@ function sortRows(scr, rows) {
 
 // ─── Rendering: shell ─────────────────────────────────────────────────
 const TOP_BEFORE = [['Dashboard', 'dashboard', 0], ['Customer', 'customer', 0], ['Seller Inquiry', 'seller-inquiry', 0], ['Cars', 'cars', 1], ['Master', 'master', 1],
-  ['Auction', 'auction', 1], ['Live Auction', 'live-auction', 1], ['Live Result', 'live-result', 1], ['Market Search', 'market-search', 0], ['Report', 'report', 1]];
+  ['Auction', 'auction', 1], ['Live Auction', 'live-auction', 1], ['Live Result', 'live-result', 1], ['Market Search', 'market-search', 0], ['Report', 'report', 1], ['Approval', 'approval', 1]];   // Approval (JBAP, 26 Oct 2026): the President's menu, right after Report
 const TOP_AFTER = [['Sales Summary', 'sales-summary', 0], ['Cashier Closing', 'cashier-closing', 0], ['Deposit', 'deposit', 1], ['Payment', 'payment', 1], ['Inspection', 'inspection', 0], ['Staff', 'staff', 1]];
 const disabledItem = ([label, key, caret]) => `<button type="button" class="mi is-disabled" aria-disabled="true" data-disabled="${esc(label)}" title="Not part of this prototype">
   <img src="assets/ic-${key}.png" alt="">${esc(label)}${caret ? '<span class="caret"></span>' : ''}</button>`;
@@ -839,11 +852,12 @@ function sideHtml(route) {
   const logOn = route === LOG_ID;
   const log = `<a class="mi ${logOn ? 'is-active' : ''}" href="#/${LOG_ID}" ${logOn ? 'aria-current="page"' : ''}>${deptSvg('LOG')}Log Activity</a>`;
   return TOP_BEFORE.map(x => TOP_MENUS[x[1]] ? topMenu(x[1], route) : disabledItem(x)).join('') + groups + TOP_AFTER.map(disabledItem).join('') + topMenu('settings', route) + log +
-    '<p class="side-note">Prototype: only Customer Inquiry, Report, FAD, SMD, VWD, Settings and Log Activity are active. Other menus are disabled.</p>';
+    '<p class="side-note">Prototype: only Customer Inquiry, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active. Other menus are disabled.</p>';
 }
 // Top-level menus outside FAD / SMD / VWD: Customer (Customer Inquiry; a customer page keeps it highlighted) and Report. Items show their record count.
 const TOP_MENUS = { customer: { dept: 'Customer', disabled: ['Sales Actions'], on: (s, r) => r === s.id || (s.id === CUST_ID && !!custRoute(r)) },
   report: { dept: 'Report', disabled: [], on: (s, r) => r === s.id },
+  approval: { dept: 'Approval', disabled: [], icon: 'APP', on: (s, r) => r === s.id },   // Approval (JBAP, 26 Oct 2026): Rebate Approval for the President; its icon is drawn inline
   settings: { dept: 'Settings', disabled: [], icon: 'SET', on: (s, r) => r === s.id } };   // Settings (JBAP answer Q14): after the other menus, before Log Activity; its icon is drawn inline
 function topMenu(key, route) {
   const m = TOP_MENUS[key], open = OPEN[m.dept];
@@ -1199,23 +1213,20 @@ function recordDispatch(scr, rows, dateFor) {
   const ui = U(scr.id);
   rows.forEach(r => { const d = dateFor(r); logChange(scr, 'Update', r, [['Dispatch Date', 'date', r._raw.dispatch, d], ['For Dispatch Email?', 'check', r._raw.for_dispatch_email, false]]); r._raw.dispatch = d; r._raw.for_dispatch_email = false; delete ui.edits[r.id]; });
 }
-// [BEHAVIOR] JBAP answer Q5: of the lots ticked for the BAAF, those with a rebate and no approval date (typed on the row or saved) are held back with REBATE_NEEDS_APPROVAL; the others go
+// [BEHAVIOR] JBAP feedback (26 Oct 2026): of the lots ticked for the BAAF, those whose rebate is Pending approval are held back with REBATE_PENDING; the others go (a rejected rebate is no rebate, so that lot goes)
 function baafSplit(rows, edits) {
-  const eff = (r, k) => (k in (edits[r.id] || {}) ? edits[r.id][k] : r[k]);
-  const held = rows.filter(r => rebateApprovalError(eff(r, 'rebate'), eff(r, 'rebate_approved'), true) === REBATE_NEEDS_APPROVAL);
+  const held = rows.filter(r => r.rebate_status === 'Pending approval');
   return { send: rows.filter(r => !held.includes(r)), held };
 }
-// [BEHAVIOR] Sending the BAAF records the Awarding Date (date entered, else today), the transfer fee (seller parameter) and, when there is one, the security bond and the rebate approval date on each lot
+// [BEHAVIOR] Sending the BAAF records the Awarding Date (date entered, else today), the transfer fee (seller parameter) and, when there is one, the security bond on each lot (the rebate is not edited here: it is the one the President approved)
 function recordAwarding(scr, rows) {
   const ui = U(scr.id);
   rows.forEach(r => {
     const e = ui.edits[r.id] || {}, award = e.awarding || TODAY, tf = r._raw.transfer_fee;
     const sb = 'security_bond' in e && e.security_bond !== '' ? Number(e.security_bond) : r.security_bond, bond = !!(sb || r.security_bond);   // a bond, or a bond overridden to 0
-    const rb = 'rebate' in e ? (e.rebate === '' ? null : Number(e.rebate)) : r._raw.rebate;   // JBAP feedback (19 Oct 2026): the rebate typed on this screen is saved with the awarding
-    const ra = 'rebate_approved' in e ? e.rebate_approved || null : r._raw.rebate_approved ?? null;   // JBAP answer Q5: so is the President's approval date
     logChange(scr, 'Update', r, [['Awarding Date', 'date', r._raw.awarding, award], ['Transfer Fees', 'money', r._raw.transfer_fee, tf],
-      ...(bond ? [['Security Bond', 'money', r._raw.security_bond ?? null, sb]] : []), ['Rebate', 'money', r._raw.rebate ?? null, rb], ['Rebate Approved (President)', 'date', r._raw.rebate_approved ?? null, ra], ['For BAAF', 'check', r._raw.for_baaf, false]]);
-    r._raw.awarding = award; r._raw.transfer_fee = tf; if (bond) r._raw.security_bond = sb; r._raw.rebate = rb; r._raw.rebate_approved = ra; r._raw.for_baaf = false; delete ui.edits[r.id];
+      ...(bond ? [['Security Bond', 'money', r._raw.security_bond ?? null, sb]] : []), ['For BAAF', 'check', r._raw.for_baaf, false]]);
+    r._raw.awarding = award; r._raw.transfer_fee = tf; if (bond) r._raw.security_bond = sb; r._raw.for_baaf = false; delete ui.edits[r.id];
   });
 }
 // [BEHAVIOR] VWD releases only when the seller's DOAS is signed (DOAS sellers) and no storage penalty is unpaid (JBAP Q17).
@@ -1235,6 +1246,9 @@ function recordRelease(scr, v, f) {
 }
 // A read-only field of a dialog; the input carries the label as its accessible name (the visible label is not tied to it)
 const roField = (label, val) => `<div class="fld"><label>${label}</label><input class="ctl" value="${esc(val)}" aria-label="${esc(label)}" readonly></div>`;
+// The lot and its rebate as read-only fields, for the Approve and Reject dialogs of Approval › Rebate Approval
+const rebateFacts = v => [['Auction No.', v.auction], ['Lot', v.lot], ['Plate Number', v.plate], ['Make/Model', v.model], ['Customer Name', v.customer], ['Seller', v.seller],
+  ['Result Price', money(v.price)], ['Rebate', money(v.rebate)], ['Requested', fmtDate(v.rebate_requested)]].map(([l, x]) => roField(l, x)).join('');
 // [BEHAVIOR] JBAP feedback (16 Oct 2026, #9): paying the storage penalty records the full amount due today (optional OR / reference no.) and moves the dispatch deadline to today
 function recordPenaltyPayment(scr, v, ref) {
   const amount = v.penalty;
@@ -1331,9 +1345,9 @@ const ACTIONS = {
   emailBaaf(scr) {
     const ticked = selectedRows(scr, 'for_baaf'), ui = U(scr.id);
     if (!ticked.length) { setMsg(scr, 'error', 'Tick <b>For BAAF</b> on at least one vehicle, then press Email BAAF.'); render(); return; }
-    const { send: rows, held } = baafSplit(ticked, ui.edits);   // JBAP answer Q5: lots with a rebate and no approval date do not go
-    const heldMsg = held.length ? `${held.length} vehicle(s) not sent:<br>${held.map(r => `Lot ${esc(r.lot || '-')} (${esc(r.plate || r.customer)}): ${esc(REBATE_NEEDS_APPROVAL)}`).join('<br>')}` : null;
-    const markHeld = () => held.forEach(r => { (ui.errors[r.id] ||= {}).rebate_approved = REBATE_NEEDS_APPROVAL; });   // the held lots' Rebate Approved cells turn red with the same message (validateEdits replaces ui.errors, so this runs after it)
+    const { send: rows, held } = baafSplit(ticked, ui.edits);   // JBAP feedback (26 Oct 2026): lots whose rebate is Pending approval do not go
+    const heldMsg = held.length ? `${held.length} vehicle(s) not sent:<br>${held.map(r => `Lot ${esc(r.lot || '-')} (${esc(r.plate || r.customer)}): ${esc(REBATE_PENDING)}`).join('<br>')}` : null;
+    const markHeld = () => held.forEach(r => { (ui.errors[r.id] ||= {}).awarding = REBATE_PENDING; });   // the held lots' Awarding Date cells turn red with the same message (validateEdits replaces ui.errors, so this runs after it)
     if (!rows.length) { setMsg(scr, 'error', heldMsg); markHeld(); render(); return; }
     const errs = validateEdits(scr, rows.map(r => r.id).filter(id => ui.edits[id]));
     if (errs.length) { setMsg(scr, 'error', `Please fix before sending:<br>${errs.join('<br>')}${heldMsg ? `<br>${heldMsg}` : ''}`); markHeld(); render(); return; }
@@ -1341,7 +1355,7 @@ const ACTIONS = {
     const groups = {}; rows.forEach(r => (groups[r.cid] ||= []).push(r));
     const eff = (r, k) => (k in (ui.edits[r.id] || {}) ? ui.edits[r.id][k] : r[k]);
     const lotsOf = list => list.map(r => Object.assign({}, r, { transfer_fee: Number(eff(r, 'transfer_fee') || 0), security_bond: Number(eff(r, 'security_bond') || 0),
-      rebate: (v => v === '' || v == null ? null : Number(v))(eff(r, 'rebate')) }));   // the rebate typed on the screen goes on the BAAF rebate attachment before it is saved
+      rebate: approvedRebate(r) }));   // the BAAF rebate attachment lists the approved rebate only (a rejected one is no rebate)
     const buyerOf = list => ({ customer: list[0].customer, cid: list[0].cid, email: list[0].email });
     const docs = {};
     const mails = Object.values(groups).map(list => {
@@ -1354,10 +1368,10 @@ const ACTIONS = {
         body: 'Congratulations!!<br>We are pleased to inform you that you have been awarded with the vehicles as attached. Please pay on or before the deadline indicated in the notice. Thank you!' });
     }).join('');
     openModal({ title: `Email BAAF: ${Object.keys(groups).length} buyer(s), ${rows.length} vehicle(s)`, icon: 'mail', wide: true, body: mails,
-      note: `Simulated: no email is actually sent. Click an attachment to preview it.${held.length ? ` ${held.length} vehicle(s) held back: the rebate needs the President's approval date.` : ''}`, onAtt: key => openReport(docs[key][0], docs[key][1](), () => ACTIONS.emailBaaf(scr)),
+      note: `Simulated: no email is actually sent. Click an attachment to preview it.${held.length ? ` ${held.length} vehicle(s) held back: the rebate is waiting for the President's approval.` : ''}`, onAtt: key => openReport(docs[key][0], docs[key][1](), () => ACTIONS.emailBaaf(scr)),
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Send ${Object.keys(groups).length} email(s)`, kind: 'pr', icon: 'mail', onClick: () => {
         recordAwarding(scr, rows);
-        closeModal(); render(); toast(`BAAF sent to ${Object.keys(groups).length} buyer(s). ${rows.length} vehicle(s) moved to Unpaid.${held.length ? ` ${held.length} held back (rebate not approved).` : ''}`);
+        closeModal(); render(); toast(`BAAF sent to ${Object.keys(groups).length} buyer(s). ${rows.length} vehicle(s) moved to Unpaid.${held.length ? ` ${held.length} held back (rebate waiting for the President).` : ''}`);
       } }] });
   },
   emailSaaf(scr) {
@@ -1606,6 +1620,33 @@ const ACTIONS = {
       } }] });
     $('#cs-date')?.focus();   // openModal focuses the first input (a read-only field)
   },
+  // [BEHAVIOR] JBAP feedback (26 Oct 2026): Approval › Rebate Approval. Approve asks to confirm; Reject needs a reason (the check is recordRebateDecision's, shown inline). Both log under module Approval.
+  approveRebate(scr, el) {
+    const v = scr.rows().find(r => r.id === el.dataset.rid); if (!v) return;
+    openModal({ title: `Approve rebate: ${v.plate}`, icon: 'check',
+      body: `<div class="fgrid two">${rebateFacts(v)}</div><p class="note">The rebate of PHP ${money(v.rebate)} is approved as of today. It then shows in FAD › Pending Awarding and Report › Rebate Monitoring; once the buyer has paid, it also shows in FAD › Rebate Payable.</p>`,
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Approve rebate', kind: 'pr', icon: 'check', onClick: () => {
+        const err = recordRebateDecision(scr, v, 'Approved'); closeModal(); render(); $('#content')?.focus();
+        toast(err ? esc(err) : `Rebate of PHP ${money(v.rebate)} approved for ${esc(v.plate)}.`, err ? 'warn' : '');
+      } }] });
+  },
+  rejectRebate(scr, el) {
+    const v = scr.rows().find(r => r.id === el.dataset.rid); if (!v) return;
+    openModal({ title: `Reject rebate: ${v.plate}`, icon: 'ban',
+      body: `<div class="fgrid two">${rebateFacts(v)}
+        <div class="fld full"><label for="rj-reason">Reason</label><textarea class="ctl" id="rj-reason" aria-required="true" aria-describedby="rj-err" placeholder="Required"></textarea></div>
+        <div class="fld full"><span class="err" id="rj-err" role="alert"></span></div></div>
+        <p class="note">The rebate is not given and does not show in FAD › Pending Awarding. SMD can type a new amount in Result Price to send it again.</p>`,
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Reject rebate', kind: 'dg', icon: 'ban', onClick: () => {
+        const box = $('#rj-reason'), reason = box.value.trim(), err = recordRebateDecision(scr, v, 'Rejected', reason), noReason = !!err && !reason;
+        box.classList.toggle('is-invalid', noReason); if (noReason) box.setAttribute('aria-invalid', 'true'); else box.removeAttribute('aria-invalid');
+        $('#rj-err').textContent = noReason ? err : '';
+        if (noReason) { box.focus(); return; }
+        closeModal(); render(); $('#content')?.focus();
+        toast(err ? esc(err) : `Rebate rejected for ${esc(v.plate)}.`, err ? 'warn' : '');
+      } }] });
+    $('#rj-reason')?.focus();   // openModal focuses the first input (a read-only field)
+  },
   resetFilter(scr) { const ui = U(scr.id), key = filterFocusKey(document.activeElement); ui.filters = {}; ui.applied = {}; ui.page = 1; render(); refocusFilter($('#content'), key); },
 };
 
@@ -1634,7 +1675,7 @@ function bind() {
   const content = $('#content'), menu = $('#menu');
   menu.addEventListener('click', ev => {
     const g = ev.target.closest('[data-group]'); if (g) { OPEN[g.dataset.group] = !OPEN[g.dataset.group]; renderSide(route()); return; }
-    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, Report, FAD, SMD, VWD, Settings and Log Activity are active.`, 'warn'); return; }
+    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active.`, 'warn'); return; }
     if (ev.target.closest('.mis, a.mi')) document.body.classList.remove('nav-open');
   });
   content.addEventListener('change', ev => {

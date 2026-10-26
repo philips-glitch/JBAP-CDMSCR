@@ -11,7 +11,7 @@ test('Report holds Rebate Monitoring and Liability to Seller; FAD has Rebate Pay
   const redirect = { 'FAD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-monitoring': 'report/rebate-monitoring',
     'SMD/rebate-payable': 'FAD/rebate-payable', 'FAD/liability-to-seller': 'report/liability-to-seller' };
   for (const [from, to] of Object.entries(redirect)) assert.strictEqual(P.routeOf(from), to, from);
-  assert.strictEqual(P.SCREENS.length, 37);
+  assert.strictEqual(P.SCREENS.length, 38);
 });
 test('New badge marks only round-5 changes', () => {
   const P = load();

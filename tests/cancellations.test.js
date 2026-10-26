@@ -45,7 +45,7 @@ test('Cancellation Entry is gone (JBAP, 26 Oct 2026): every cancellation is in R
   P.U(scr.id).applied = { waived: ['No'] }; const n = P.applyFilters(scr, scr.rows()); assert.ok(n.length && n.every(r => !r.waived));
   assert.match(scr.rule, /Cancel sale in SMD › Result Price/); assert.doesNotMatch(scr.rule, /Cancellation Entry/);
 });
-test('37 screens (37 with the Proposed improvements switch off: the SAAF screen is standard since JBAP answer Q11)', () => {
-  const P = load(); assert.strictEqual(P.SCREENS.length, 37); assert.strictEqual(P.SCREENS.filter(P.shown).length, 37);
+test('38 screens (38 with the Proposed improvements switch off: the SAAF screen is standard since JBAP answer Q11)', () => {
+  const P = load(); assert.strictEqual(P.SCREENS.length, 38); assert.strictEqual(P.SCREENS.filter(P.shown).length, 38);
   assert.ok(!P.SCREENS.some(s => s.proposed), 'no screen is behind the switch any more (columns still can be)');
 });

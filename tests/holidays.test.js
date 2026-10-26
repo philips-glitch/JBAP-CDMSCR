@@ -150,7 +150,7 @@ test('sidebar: Settings is a top menu with Holiday List, after the other top men
   assert.ok(side.indexOf('data-disabled="Staff"') < side.indexOf('data-group="Settings"') && side.indexOf('data-group="Settings"') < side.indexOf('href="#/log-activity"'), 'between Staff and Log Activity');
   assert.match(side, /<a class="mis is-active" href="#\/settings\/holidays" aria-current="page">Holiday List<span class="cnt">18<\/span><\/a>/);
   assert.doesNotMatch(side, /data-disabled="Settings"/);
-  assert.match(side, /only Customer Inquiry, Report, FAD, SMD, VWD, Settings and Log Activity are active/);
+  assert.match(side, /only Customer Inquiry, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active/);
   assert.match(P.homeLayout(), /VWD menus that replace the MS Access post-auction forms, plus Settings › Holiday List./);
 });
 
@@ -158,9 +158,9 @@ test('route: #/settings/holidays opens the screen, with or without the switch', 
   const P = load(); assert.strictEqual(P.routeOf('settings/holidays'), 'settings/holidays'); P.setProposed(true); assert.strictEqual(P.routeOf('settings/holidays'), 'settings/holidays');
 });
 
-test('Log Activity: Module filter offers Settings, Action filter offers Delete; a removal shows as Delete', () => {
+test('Log Activity: Module filter offers Approval and Settings, Action filter offers Delete; a removal shows as Delete', () => {
   const P = load(), log = P.byId['log-activity'];
-  assert.deepStrictEqual(log.filters.find(f => f.key === 'module').options(), ['FAD', 'SMD', 'VWD', 'Settings']);
+  assert.deepStrictEqual(log.filters.find(f => f.key === 'module').options(), ['FAD', 'SMD', 'VWD', 'Approval', 'Settings']);
   assert.deepStrictEqual(log.filters.find(f => f.key === 'action').options(), ['Update', 'Create', 'Cancel', 'Delete']);
   P.recordHolidayAdd(hs(P), { date: '2026-09-09', name: 'X', type: 'Regular holiday' }); P.recordHolidayRemove(hs(P), '2026-09-09');
   const row = log.rows().find(r => r.action === 'Delete'), cell = P.cellHtml(log, row, log.cols.find(c => c.key === 'action'), false);
