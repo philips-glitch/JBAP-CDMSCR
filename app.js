@@ -430,9 +430,12 @@ const EWB_NA = r => r.doas !== 'branch', NO_DOAS = r => r.doas === 'none';   // 
 // A Document Monitoring date column: editable while the date is blank, read-only once a date is saved (Change date corrects it); the label comes from DOC_DATE_FIELDS
 const docDate = (key, na) => C(docDateLabel(key), key, 'date', { edit: 'date', na, lockWhen: r => !!r._raw[key] });
 // [BEHAVIOR] JBAP feedback (26 Oct 2026): Email DOAS for signature is for lots whose DOAS is signed at JBAP and whose Receipt of DOAS is blank (EWB and TFS cannot be ticked).
-// Print Transmittal? is for lots waiting for the documents or holding them (Pending Documents, For Releasing) that have no ATF No. yet; it is also the P4 ready rule.
+// Print Transmittal? may be ticked on lots waiting for the documents or holding them (Pending Documents, For Releasing) that have no ATF No. yet: FAD ticks it when the documents arrive.
+// The P4 pre-tick (printReady) covers only For Releasing lots without an ATF No. (documents already recorded as received): printing records JBAP Receipt of Documents and emails the buyer,
+// so it must never be one click on lots whose documents have not arrived (controller ruling, 26 Oct 2026).
 const doasEmailOk = r => doasOf(r) === 'jbap' && !r.rcv_doas;
 const printTransOk = r => ['Pending Documents', 'For Releasing'].includes(r.doc_status) && !r.atf_no;
+const printReady = r => r.doc_status === 'For Releasing' && !r.atf_no;
 const AM_COLS = [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 150 }),
   C('Seller', 'seller', 'code'), C('Status', 'status', 'status'), C('Result Price', 'price', 'money'), C('Awarding Date', 'awarding', 'date'), C('Buyer Paid', 'buyer_paid', 'date'),
   C('Payment to Seller', 'pay_seller', 'date'), C('Seller Acknowl\u00adedgement', 'seller_ack', 'date'), C('Dispatch Date', 'dispatch', 'date'), C('Release Date', 'release', 'date'),
@@ -539,8 +542,8 @@ const SCREENS = [
     validate: docValidate,
     buttons: [{ label: 'Email DOAS for signature', kind: 'ol', icon: 'mail', act: 'emailDoas', count: 'for_doas_email', isNew: true },
       { label: 'Print document transmittal', kind: 'ol', icon: 'print', act: 'printDocTrans', count: 'print_doc_trans', isNew: true }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Complete lots leave the Open view.',
-    queue: true, ready: { key: 'print_doc_trans', when: printTransOk },
-    ruleP: ['P4', 'Lots waiting for the documents or holding them (Pending Documents, For Releasing) that have no ATF No. yet arrive pre-ticked.'] },
+    queue: true, ready: { key: 'print_doc_trans', when: printReady },
+    ruleP: ['P4', 'Lots whose documents are at JBAP (For Releasing) and have no ATF No. yet arrive pre-ticked. A Pending Documents lot is ticked by hand when its documents arrive.'] },
   // JBAP feedback (15 Oct 2026): the Security Bond billed with the vehicle, monitored like the bid bond until refund or forfeiture (JBAP's Security Bond sheet)
   { dept: 'FAD', slug: 'security-bond', title: 'Security Bond', actions: VFSU, tag: 'Wish',
     rule: 'Paid lots with a security bond (seller setting, or the amount set at Pending Awarding). The buyer transfers the ORCR; once the seller has it, the bond is refunded. Status is the furthest step reached: Pending Documents, Waiting ORCR (the buyer has the documents), Pending Refund (the seller has the transferred ORCR, or JBAP has the refund), Complete (buyer refunded) or Forfeited. The Open view hides Complete and Forfeited.',

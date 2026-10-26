@@ -109,14 +109,31 @@ test('Print Transmittal: records JBAP Receipt of Documents once (logged), drops 
   assert.strictEqual(scr.rows().find(r => r.id === v.id).doc_status, 'For Releasing');
   w._raw.orig_docs = '2026-10-05'; P.recordDocTransmittal(scr, w, [], ''); assert.strictEqual(w._raw.orig_docs, '2026-10-05', 'a recorded date is never replaced');
 });
-test('Print Transmittal? tick: Pending Documents or For Releasing with no ATF No.; it is also the P4 ready rule', () => {
+test('Print Transmittal? tick: allowed on Pending Documents or For Releasing with no ATF No.', () => {
   const P = load(), scr = docmon(P), col = scr.cols.find(c => c.key === 'print_doc_trans'), rows = scr.rows();
   const ok = rows.filter(r => ['Pending Documents', 'For Releasing'].includes(r.doc_status) && !r.atf_no);
   assert.ok(ok.some(r => r.doc_status === 'Pending Documents') && ok.some(r => r.doc_status === 'For Releasing'));
-  assert.ok(ok.every(r => P.printTransOk(r) && !col.disabledWhen(r) && scr.ready.when(r)));
+  assert.ok(ok.every(r => P.printTransOk(r) && !col.disabledWhen(r)));
   const no = rows.filter(r => !ok.includes(r)); assert.ok(no.some(r => r.doc_status === 'Pending DOAS') && no.some(r => r.doc_status === 'Complete'));
-  assert.ok(no.every(r => !P.printTransOk(r) && col.disabledWhen(r) && !scr.ready.when(r)));
+  assert.ok(no.every(r => !P.printTransOk(r) && col.disabledWhen(r) && !scr.ready.when(r)));   // nothing outside the tick rule is ready either
   const atf = rows.find(r => r.doc_status === 'Pending Documents'); atf._raw.atf_no = 'HRAD-ATF-1'; assert.ok(!P.printTransOk(P.enrichV(atf._raw)), 'an ATF No. ends it');
   assert.strictEqual(scr.ready.key, 'print_doc_trans'); assert.strictEqual(typeof P.ACTIONS.printDocTrans, 'function');
   assert.strictEqual(scr.buttons.find(b => b.act === 'printDocTrans').count, 'print_doc_trans');
+});
+test('P4 pre-tick for Print Transmittal? covers only For Releasing lots without an ATF No.; a Pending Documents lot is never pre-ticked', () => {
+  const P = load(), scr = docmon(P), rows = scr.rows();
+  const pending = rows.filter(r => r.doc_status === 'Pending Documents' && !r.atf_no), releasing = rows.filter(r => r.doc_status === 'For Releasing' && !r.atf_no);
+  assert.ok(pending.length && releasing.length, 'sample has both');
+  assert.ok(pending.every(r => !scr.ready.when(r) && !P.printReady(r) && P.printTransOk(r)), 'a Pending Documents lot may be ticked by hand, but is not ready');
+  assert.ok(releasing.every(r => scr.ready.when(r) && P.printReady(r)));
+  assert.match(scr.ruleP[1], /For Releasing/); assert.doesNotMatch(scr.ruleP[1], /arrive pre-ticked.?$|waiting for the documents or holding/, 'the rule text names only For Releasing');
+  const ids = list => list.map(r => r.id).sort();
+  assert.deepStrictEqual(ids(P.selectedRows(scr, 'print_doc_trans')), [], 'switch off: nothing is pre-ticked');
+  P.setProposed(true);
+  const sel = P.selectedRows(scr, 'print_doc_trans');
+  assert.deepStrictEqual(ids(sel), ids(releasing), 'switch on: only the For Releasing lots without an ATF No.');
+  assert.ok(!sel.some(r => r.doc_status === 'Pending Documents'));
+  assert.ok(pending.every(r => !P.tickDefault(scr, r, 'print_doc_trans')));
+  P.U(scr.id).edits[pending[0].id] = { print_doc_trans: true };   // FAD ticks it by hand when the documents arrive
+  assert.ok(P.selectedRows(scr, 'print_doc_trans').some(r => r.id === pending[0].id), 'a hand tick is allowed and counted');
 });
