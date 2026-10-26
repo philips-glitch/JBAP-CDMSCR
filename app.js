@@ -429,6 +429,10 @@ function bondValidate(r, e) {
 const EWB_NA = r => r.doas !== 'branch', NO_DOAS = r => r.doas === 'none';   // n/a cells on Document Monitoring
 // A Document Monitoring date column: editable while the date is blank, read-only once a date is saved (Change date corrects it); the label comes from DOC_DATE_FIELDS
 const docDate = (key, na) => C(docDateLabel(key), key, 'date', { edit: 'date', na, lockWhen: r => !!r._raw[key] });
+// [BEHAVIOR] JBAP feedback (26 Oct 2026): Email DOAS for signature is for lots whose DOAS is signed at JBAP and whose Receipt of DOAS is blank (EWB and TFS cannot be ticked).
+// Print Transmittal? is for lots waiting for the documents or holding them (Pending Documents, For Releasing) that have no ATF No. yet; it is also the P4 ready rule.
+const doasEmailOk = r => doasOf(r) === 'jbap' && !r.rcv_doas;
+const printTransOk = r => ['Pending Documents', 'For Releasing'].includes(r.doc_status) && !r.atf_no;
 const AM_COLS = [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 150 }),
   C('Seller', 'seller', 'code'), C('Status', 'status', 'status'), C('Result Price', 'price', 'money'), C('Awarding Date', 'awarding', 'date'), C('Buyer Paid', 'buyer_paid', 'date'),
   C('Payment to Seller', 'pay_seller', 'date'), C('Seller Acknowl\u00adedgement', 'seller_ack', 'date'), C('Dispatch Date', 'dispatch', 'date'), C('Release Date', 'release', 'date'),
@@ -526,15 +530,17 @@ const SCREENS = [
       docDate('buyer_doas', NO_DOAS), docDate('seller_doas', NO_DOAS),
       docDate('orig_docs'), docDate('to_buyer'), C('Docs Aging', 'docs_aging', 'int'),
       C('Status', 'doc_status', 'text', { w: 130 }), C('Remarks', 'doc_remarks', 'text', { edit: 'text' }),
-      C('ATF No.', 'atf_no', 'code'), C('Print Transmittal?', 'print_doc_trans', 'check', { edit: 'check' }),
+      C('For DOAS Email?', 'for_doas_email', 'check', { edit: 'check', isNew: true, disabledWhen: r => !doasEmailOk(r) }),   // after JBAP's sheet columns, next to the other tick
+      C('ATF No.', 'atf_no', 'code'), C('Print Transmittal?', 'print_doc_trans', 'check', { edit: 'check', disabledWhen: r => !printTransOk(r) }),
       C('Change Date', 'change_date', 'rowbtn', { act: 'changeDate', btn: 'Change date', isNew: true, aria: r => `of ${r.plate || r.customer}`, showWhen: r => DOC_DATE_FIELDS.some(([k]) => r._raw[k]) })],
     filters: [{ key: 'doc_status', label: 'Status', type: 'select', options: () => ['Open', ...DOC_STATUSES], match: (r, v) => (v === 'Open' ? r.doc_status !== 'Complete' : r.doc_status === v) },
       AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     initial: { doc_status: 'Open' },
     validate: docValidate,
-    buttons: [{ label: 'Print document transmittal', kind: 'ol', icon: 'print', act: 'printDocTrans', count: 'print_doc_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Complete lots leave the Open view.',
-    queue: true, ready: { key: 'print_doc_trans', when: r => r.doc_status === 'For Releasing' && !r.atf_no },
-    ruleP: ['P4', 'Lots whose documents are at JBAP (For Releasing) and have no ATF No. yet arrive pre-ticked.'] },
+    buttons: [{ label: 'Email DOAS for signature', kind: 'ol', icon: 'mail', act: 'emailDoas', count: 'for_doas_email', isNew: true },
+      { label: 'Print document transmittal', kind: 'ol', icon: 'print', act: 'printDocTrans', count: 'print_doc_trans', isNew: true }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Complete lots leave the Open view.',
+    queue: true, ready: { key: 'print_doc_trans', when: printTransOk },
+    ruleP: ['P4', 'Lots waiting for the documents or holding them (Pending Documents, For Releasing) that have no ATF No. yet arrive pre-ticked.'] },
   // JBAP feedback (15 Oct 2026): the Security Bond billed with the vehicle, monitored like the bid bond until refund or forfeiture (JBAP's Security Bond sheet)
   { dept: 'FAD', slug: 'security-bond', title: 'Security Bond', actions: VFSU, tag: 'Wish',
     rule: 'Paid lots with a security bond (seller setting, or the amount set at Pending Awarding). The buyer transfers the ORCR; once the seller has it, the bond is refunded. Status is the furthest step reached: Pending Documents, Waiting ORCR (the buyer has the documents), Pending Refund (the seller has the transferred ORCR, or JBAP has the refund), Complete (buyer refunded) or Forfeited. The Open view hides Complete and Forfeited.',
@@ -1307,13 +1313,31 @@ const cancelLetterGroups = rows => { const g = {}; rows.forEach(r => (g[r.custom
 // Removes one tick from a row's unsaved edits; other unsaved edits on the row stay pending
 const clearTick = (scr, id, key) => { const ed = U(scr.id).edits; if (ed[id]) { delete ed[id][key]; if (!Object.keys(ed[id]).length) delete ed[id]; } };
 // [BEHAVIOR] Saves the documents received and returns the ATF control number (HRAD-ATF-<running no.>); a reprint keeps the existing number.
+// JBAP feedback (26 Oct 2026): printing the transmittal also records JBAP Receipt of Documents = today when it is blank (the Documents Release email goes with it, see ACTIONS.printDocTrans);
+// an unsaved date typed on the row for it is dropped, so it cannot overwrite the recorded one on the next Save. Other unsaved date edits on the row stay pending.
 function recordDocTransmittal(scr, v, docs, others, remarks = '') {
-  const co = D.meta.company, atf = v._raw.atf_no || `HRAD-ATF-${co.next.atf++}`;
+  const co = D.meta.company, atf = v._raw.atf_no || `HRAD-ATF-${co.next.atf++}`, first = !v._raw.orig_docs;
   logChange(scr, 'Update', v, [['Documents Received', 'text', (v._raw.docs_received || []).join(', '), docs.join(', ')], ['Documents Others', 'text', v._raw.docs_others, others], ['Documents Remarks', 'text', v._raw.docs_remarks, remarks],
-    ['ATF Control No.', 'text', v._raw.atf_no, atf], ['Print Transmittal?', 'check', v._raw.print_doc_trans, false]]);
+    ['ATF Control No.', 'text', v._raw.atf_no, atf], ['Print Transmittal?', 'check', v._raw.print_doc_trans, false], ...(first ? [['JBAP Receipt of Documents', 'date', null, TODAY]] : [])]);
   Object.assign(v._raw, { docs_received: docs, docs_others: others, docs_remarks: remarks, atf_no: atf, print_doc_trans: false });
-  clearTick(scr, v.id, 'print_doc_trans');   // unsaved date edits on the row stay pending
+  clearTick(scr, v.id, 'print_doc_trans');
+  if (first) { v._raw.orig_docs = TODAY; clearTick(scr, v.id, 'orig_docs'); }
   return atf;
+}
+// [BEHAVIOR] JBAP feedback (26 Oct 2026): sending the DOAS for signature email sets Receipt of DOAS = today on its lots (the status becomes DOAS for Signing) and clears the tick.
+// A lot that already has a Receipt of DOAS is left alone (a filled date is locked); an unsaved date typed on the row for it is dropped, so it cannot overwrite the recorded one on the next Save.
+function recordDoasEmail(scr, rows) {
+  rows.forEach(r => {
+    if (r._raw.rcv_doas) return;
+    logChange(scr, 'Update', r, [['Receipt of DOAS', 'date', r._raw.rcv_doas, TODAY], ['For DOAS Email?', 'check', r._raw.for_doas_email, false]]);
+    r._raw.rcv_doas = TODAY; r._raw.for_doas_email = false;
+    clearTick(scr, r.id, 'for_doas_email'); clearTick(scr, r.id, 'rcv_doas');
+  });
+}
+// The lots of a list grouped by buyer (Buyer ID; the name when a lot has none), each group as { buyer: { customer, cid, email }, lots }: one email per buyer
+function byBuyer(rows) {
+  const g = new Map(); rows.forEach(r => { const k = r.cid || r.customer || r.id; if (!g.has(k)) g.set(k, { buyer: { customer: r.customer, cid: r.cid, email: r.email }, lots: [] }); g.get(k).lots.push(r); });
+  return [...g.values()];
 }
 // [BEHAVIOR] JBAP feedback (26 Oct 2026): the first problem with a Cancel sale entry in SMD › Result Price, or null when it can be recorded.
 // f.date: ISO date, '' = blank, null = not a date; f.waived: the Waived? choice; f.just: the justification (required when the fee is waived).
@@ -1508,21 +1532,43 @@ const ACTIONS = {
       } }] });
   },
   printDocTrans(scr) {
-    const rows = selectedRows(scr, 'print_doc_trans');
-    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Print Transmittal?</b> on at least one lot first.'); render(); return; }
-    const missing = rows.filter(r => !r.orig_docs);
-    if (missing.length) { setMsg(scr, 'error', `Enter <b>JBAP Receipt of Documents</b> and save first: ${missing.map(r => esc(r.plate)).join(', ')}.`); render(); return; }
-    setMsg(scr, null); render();
+    const ticked = selectedRows(scr, 'print_doc_trans');
+    if (!ticked.length) { setMsg(scr, 'error', 'Tick <b>Print Transmittal?</b> on at least one lot first.'); render(); return; }
+    // [BEHAVIOR] JBAP feedback (26 Oct 2026): Print Transmittal records JBAP Receipt of Documents itself, so it no longer waits for that date. A stale tick on a lot that cannot print now (not Pending Documents or For Releasing, or an ATF No. already) is left out and never blocks the others
+    const rows = ticked.filter(printTransOk), left = ticked.filter(r => !printTransOk(r));
+    const leftMsg = left.length ? `${left.length} lot(s) not printed: only lots in <b>Pending Documents</b> or <b>For Releasing</b> with no ATF No. yet can be printed (${left.map(r => esc(r.plate || r.customer)).join(', ')}).` : null;
+    if (!rows.length) { setMsg(scr, 'error', leftMsg); render(); return; }
+    setMsg(scr, leftMsg ? 'error' : null, leftMsg); render();
+    const groups = byBuyer(rows);   // one Documents Release email per buyer goes with the transmittal
     const form = rows.map((r, n) => `<fieldset class="dt-lot"><legend><b>${esc(r.plate)}</b> · ${esc(r.customer)}</legend><div class="cols2">${DOC_TYPES.map((t, i) => `<label class="chkline"><input type="checkbox" class="chk" id="dt-${n}-${i}" ${(r.docs_received || []).includes(t) ? 'checked' : ''}>${esc(t)}</label>`).join('')}</div>
       <div class="fld"><label for="dt-${n}-o">Others</label><input class="ctl" id="dt-${n}-o" value="${esc(r.docs_others || '')}"></div>
       <div class="fld"><label for="dt-${n}-r">Remarks</label><input class="ctl" id="dt-${n}-r" value="${esc(r.docs_remarks || '')}"></div></fieldset>`).join('');
-    openModal({ title: `Document transmittal: ${rows.length} lot(s)`, icon: 'print', wide: true, body: form, note: 'Tick the documents received from the seller.',
-      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record & print', kind: 'pr', icon: 'print', onClick: () => {
+    const mails = groups.map(g => REPORTS.email(REPORTS.documentsReleaseEmail(g.buyer, g.lots))).join('');
+    openModal({ title: `Document transmittal: ${rows.length} lot(s)`, icon: 'print', wide: true,
+      body: `<h3 class="dlg-h">Auction transmittal form: tick the documents received from the seller</h3>${form}<h3 class="dlg-h">Email to the buyer (one per buyer): Documents Release</h3>${mails}`,
+      note: 'Simulated: no email is actually sent. Recording sets JBAP Receipt of Documents to today.',
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record, email & print', kind: 'pr', icon: 'print', onClick: () => {
         const pages = rows.map((r, n) => { const docs = DOC_TYPES.filter((_, i) => $(`#dt-${n}-${i}`).checked), others = $(`#dt-${n}-o`).value.trim(), remarks = $(`#dt-${n}-r`).value.trim();
           if (others && !docs.includes('Others')) docs.push('Others');   // [BEHAVIOR] typed Others text counts as the Others document being received
           const atf = recordDocTransmittal(scr, r, docs, others, remarks); return REPORTS.documentTransmittal(enrichV(r._raw), docs, others, atf, remarks); }).join('');
         render(); openModal({ title: 'Auction transmittal form', icon: 'print', wide: true, body: pages, footer: [{ label: 'Close', kind: 'gh', onClick: closeModal }, { label: 'Print', kind: 'pr', icon: 'print', onClick: printModal }] });
-        printModal(); toast(`Transmittal recorded for ${rows.length} lot(s).`);
+        printModal(); toast(`Transmittal recorded for ${rows.length} lot(s); ${groups.length} Documents Release email(s) sent.`);
+      } }] });
+  },
+  // [BEHAVIOR] JBAP feedback (26 Oct 2026): Email DOAS for signature. One email per buyer for the ticked lots (DOAS signed at JBAP, Receipt of DOAS blank); Send sets Receipt of DOAS = today on them
+  emailDoas(scr) {
+    const ticked = selectedRows(scr, 'for_doas_email');
+    if (!ticked.length) { setMsg(scr, 'error', 'Tick <b>For DOAS Email?</b> on at least one lot first.'); render(); return; }
+    const rows = ticked.filter(doasEmailOk), left = ticked.filter(r => !doasEmailOk(r));   // a stale tick on a lot that cannot be emailed now never blocks the others
+    const leftMsg = left.length ? `${left.length} lot(s) not emailed: the DOAS is not signed at JBAP, or Receipt of DOAS is already filled in (${left.map(r => esc(r.plate || r.customer)).join(', ')}).` : null;
+    if (!rows.length) { setMsg(scr, 'error', leftMsg); render(); return; }
+    setMsg(scr, leftMsg ? 'error' : null, leftMsg); render();
+    const groups = byBuyer(rows), n = groups.length;
+    const mails = groups.map(g => REPORTS.email(REPORTS.doasForSignatureEmail(g.buyer, g.lots))).join('');
+    openModal({ title: `Email DOAS for signature: ${n} buyer(s), ${rows.length} lot(s)`, icon: 'mail', wide: true, body: mails,
+      note: 'Simulated: no email is actually sent. Sending sets Receipt of DOAS to today.',
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Send ${n} email(s)`, kind: 'pr', icon: 'mail', onClick: () => {
+        recordDoasEmail(scr, rows); closeModal(); render(); toast(`${n} email(s) sent; Receipt of DOAS recorded on ${rows.length} lot(s).`);
       } }] });
   },
   emailDispatch(scr) {

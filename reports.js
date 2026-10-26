@@ -25,10 +25,29 @@ function rebateRecord(v) {
     remitted: v.rebate_paid || null, commission: has(v.com) ? v.com : null, revenue: m.revenue };
 }
 const rebateLotsIn = (lots, from, to) => lots.filter(v => +v.auction >= from && +v.auction <= to);
+// [BEHAVIOR] JBAP feedback (26 Oct 2026): the unit table of the two buyer emails shows Make and Model apart: Make = the first word of Make / Model, Model = the rest
+const makeModel = m => { const s = String(m ?? '').trim(), i = s.search(/\s/); return i < 0 ? { make: s, model: '' } : { make: s.slice(0, i), model: s.slice(i).trim() }; };
+const mailTo = b => b.email ? `${b.customer} <${b.email}>` : (b.customer || '');   // name and email, as the other buyer emails; a buyer with no email on file shows the name only
+// Unit table of JBAP's DOAS for signature and Documents release emails (Seller, Buyer, Year, Make, Model, Plate Number; the release email adds Color). Year and Color are blank when unknown.
+const unitTable = (lots, buyer, withColor) => `<div class="utbl"><table><thead><tr><th>Seller</th><th>Buyer</th><th>Year</th><th>Make</th><th>Model</th><th>Plate Number</th>${withColor ? '<th>Color</th>' : ''}</tr></thead><tbody>${lots.map(v => {
+  const mm = makeModel(v.model);
+  return `<tr><td>${esc(v.seller_full || v.seller || '')}</td><td>${esc(v.customer || buyer.customer)}</td><td>${esc(v.year || '')}</td><td>${esc(mm.make)}</td><td>${esc(mm.model)}</td><td>${esc(v.plate || '')}</td>${withColor ? `<td>${esc(v.color || '')}</td>` : ''}</tr>`; }).join('')}</tbody></table></div>`;
 const REPORTS = {
-  email({ from, to, cc, subject, body, atts }) {
+  email({ from, to, cc, subject, body, atts = [] }) {
     return `<article class="mail"><div class="mail-h"><b>From</b><span>${esc(from)}</span><b>To</b><span>${esc(to)}</span>${cc ? `<b>CC</b><span>${esc(cc)}</span>` : ''}<b>Subject</b><span>${esc(subject)}</span>
-      <b>Attached</b><span>${atts.map(a => `<button type="button" class="att" data-att="${esc(a.key)}">${IC.clip}${esc(a.name)}</button>`).join(' ')}</span></div><div class="mail-b">${body}</div></article>`;
+      ${atts.length ? `<b>Attached</b><span>${atts.map(a => `<button type="button" class="att" data-att="${esc(a.key)}">${IC.clip}${esc(a.name)}</button>`).join(' ')}</span>` : ''}</div><div class="mail-b">${body}</div></article>`;
+  },
+  // JBAP feedback (26 Oct 2026): Email DOAS for signature (FAD › Document Monitoring). From Finance, To the buyer, CC Sales; JBAP's wording, the lots' own data. Returns what REPORTS.email takes (no attachment).
+  doasForSignatureEmail(buyer, lots) {
+    return { from: CO().emails.finance, to: mailTo(buyer), cc: CO().emails.sales, subject: `JBAP DOAS FOR SIGNATURE - ${String(buyer.customer || '').toUpperCase()}`, atts: [],
+      body: `<p>Dear Client,</p><p>Please be informed that the DOAS for the following units are available in our main office for your signature. You may sign from Monday to Friday, 9am to 5pm. Unit details are as follows:</p>${unitTable(lots, buyer, false)}
+        <p>*Please note that original documents will be processed upon the seller's receipt of the signed DOAS.</p><p>Thank you.</p><p>JBAP Finance and Admin</p>` };
+  },
+  // JBAP feedback (26 Oct 2026): the Documents Release email that Print Transmittal sends (JBAP's sentence was cut off; our reading, to confirm)
+  documentsReleaseEmail(buyer, lots) {
+    return { from: CO().emails.finance, to: mailTo(buyer), cc: CO().emails.sales, subject: `JBAP DOCUMENTS RELEASE - ${String(buyer.customer || '').toUpperCase()}`, atts: [],
+      body: `<p>Dear Client,</p><p>This is to inform you that the original documents for the following units are readily available for pick up in our Main Office. You may pick up the documents from Monday through Friday, 9 a.m. to 5 p.m.</p>${unitTable(lots, buyer, true)}
+        <p>*If through a representative, please provide a hard copy of the signed Authorization Letter together with a copy of your valid ID and your representative. Kindly note that the documents will not be released without the submission of the original authorization letter.</p><p>Thank you.</p><p>JBAP Finance and Admin</p>` };
   },
   // 1. JBAP_AWARDING: Buyer's Winning Bid Confirmation
   awarding(b, lots, award) {

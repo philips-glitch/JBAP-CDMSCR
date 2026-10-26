@@ -195,6 +195,13 @@ tfoot td{font-weight:700;background:#eef1f8;border-top:2px solid var(--line-2);b
 .mail-h{background:#f6f8fc;padding:10px 12px;font-size:12.5px;display:grid;grid-template-columns:80px 1fr;gap:4px 8px;border-bottom:1px solid var(--line)}
 .mail-h b{color:var(--faint);font-weight:600}
 .mail-b{padding:12px;font-size:13px;line-height:1.55}
+.mail-b p{margin:0 0 10px}.mail-b p:last-child{margin-bottom:0}
+.mail-b .utbl{overflow-x:auto;margin:0 0 10px}.mail-b .utbl table{width:auto;min-width:100%;font-size:12.5px}
+.mail-b .utbl th{background:#eef1f8;color:var(--text);border:1px solid #b9bfcc;padding:5px 8px;text-align:left;font-weight:600;white-space:nowrap}
+.mail-b .utbl td{border:1px solid #b9bfcc;padding:4px 8px;height:auto;white-space:normal;background:#fff}
+.mail-b .utbl td:nth-child(3),.mail-b .utbl td:nth-child(6){white-space:nowrap}
+.dlg-h{font-size:13.5px;color:var(--navy);margin:0 0 8px}.modal-b .dlg-h:not(:first-child){margin-top:18px}
+@media (max-width:480px){.modal-f{flex-wrap:wrap}.modal-f .left{flex:1 1 100%;margin-right:0}}   /* phone: the note takes its own line above the buttons */
 .att{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);border-radius:3px;padding:3px 8px;font-size:12px;background:#fff}
 .toast-wrap{position:fixed;right:18px;bottom:40px;display:flex;flex-direction:column;gap:8px;z-index:200}
 .toast{background:#1d2a64;color:#fff;padding:11px 14px;border-radius:5px;box-shadow:0 6px 20px rgba(0,0,0,.2);font-size:13px;max-width:380px;display:flex;gap:8px;animation:tin .2s ease-out}

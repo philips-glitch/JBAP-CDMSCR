@@ -31,7 +31,7 @@ test('DOC_DATE_FIELDS are the date columns of the screen, in the screen order; e
   assert.deepStrictEqual(P.DOC_DATE_FIELDS.map(f => f[0]), ['ewb_callout', 'ewb_signed', 'rcv_doas', 'buyer_doas', 'seller_doas', 'orig_docs', 'to_buyer']);
   assert.deepStrictEqual(scr.cols.filter(c => c.lockWhen).map(c => [c.key, c.label]), P.DOC_DATE_FIELDS);
   assert.ok(scr.cols.filter(c => c.lockWhen).every(c => c.edit === 'date'));
-  const text = scr.cols.filter(c => c.edit === 'text' || c.edit === 'check'); assert.ok(text.length === 3 && text.every(c => !c.lockWhen), 'EWB HO/Store, Remarks and Print Transmittal stay editable');
+  const text = scr.cols.filter(c => c.edit === 'text' || c.edit === 'check'); assert.deepStrictEqual(text.map(c => c.key), ['ewb_place', 'doc_remarks', 'for_doas_email', 'print_doc_trans']); assert.ok(text.every(c => !c.lockWhen), 'EWB HO/Store, For DOAS Email?, Remarks and Print Transmittal stay editable');
 });
 test('Cells: a filled date shows as text, a blank one as a typed box; a saved date locks, an unsaved one stays editable', () => {
   const P = load(), scr = dm(P), col = k => scr.cols.find(c => c.key === k);

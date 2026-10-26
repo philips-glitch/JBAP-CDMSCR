@@ -17,7 +17,7 @@ test('switch on: ready rows are pre-ticked as in the spec table', () => {
   for (const id of ['FAD/payment-seller', 'FAD/commission-billing', 'FAD/for-dispatch']) { assert.deepStrictEqual(sel(id), ids(rows(id)), id); assert.ok(sel(id).length > 0, `${id}: pre-ticked rows exist (not vacuous)`); }
   assert.deepStrictEqual(sel('FAD/cancellation-billing'), ids(rows('FAD/cancellation-billing').filter(r => !r.bill_date))); assert.ok(sel('FAD/cancellation-billing').length > 0);
   assert.deepStrictEqual(sel('FAD/billing-monitoring'), ids(rows('FAD/billing-monitoring').filter(b => !b.trans || b.print_trans)));
-  assert.deepStrictEqual(sel('FAD/document-monitoring'), ids(rows('FAD/document-monitoring').filter(v => v.doc_status !== 'Complete' && ((v.doc_status === 'For Releasing' && !v.atf_no) || v.print_doc_trans))));
+  assert.deepStrictEqual(sel('FAD/document-monitoring'), ids(rows('FAD/document-monitoring').filter(v => v.doc_status !== 'Complete' && ((['Pending Documents', 'For Releasing'].includes(v.doc_status) && !v.atf_no) || v.print_doc_trans))));
   assert.deepStrictEqual(sel('FAD/pending-awarding'), ids(rows('FAD/pending-awarding').filter(v => v.saaf_approved || v.for_baaf)));
 });
 test('unticking a pre-ticked row holds it back', () => {
