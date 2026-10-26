@@ -1175,15 +1175,17 @@ function openModal({ title, icon = 'info', body, footer = [], note = '', wide = 
     <div class="modal-b">${body}</div><div class="modal-f"><span class="left">${note}</span>${footer.map((f, i) => `<button type="button" class="btn ${f.kind}" data-mbtn="${i}">${f.icon ? IC[f.icon] : ''}${esc(f.label)}</button>`).join('')}</div></div>`;
   document.body.appendChild(bg);
   if (emailBack) restoreEmailEdits(bg);
-  // The backdrop closes the dialog only when the press also started on it: selecting text in an edited email body and letting go outside the dialog must not throw the edit away
+  // The backdrop closes the dialog only when the press also started on it, and never while an email body in the dialog is being edited or differs from its standard text:
+  // a stray click must not throw an edit away (Cancel, the X and Escape still close it)
   let downOn = null; bg.addEventListener('pointerdown', ev => { downOn = ev.target; });
   bg.addEventListener('click', ev => {
     if (emailToolbarClick(ev)) return;
-    if ((ev.target === bg && downOn === bg) || ev.target.closest('[data-close]')) closeModal();
+    if ((ev.target === bg && downOn === bg && !emailsDirty([...bg.querySelectorAll('[data-em-body]')].map(emailBodyItem))) || ev.target.closest('[data-close]')) closeModal();
     const b = ev.target.closest('[data-mbtn]'); if (b) footer[+b.dataset.mbtn].onClick();
     const a = ev.target.closest('[data-att]'); if (a && onAtt) { keepEmailEdits(bg); onAtt(a.dataset.att); }
   });
   bg.addEventListener('paste', pasteAsText);
+  bg.addEventListener('drop', ev => { if (ev.target.closest?.('[data-em-body]')) ev.preventDefault(); });   // nothing is dropped into an email body (rich content from another page would bring its own markup); typing and paste stay
   bg.addEventListener('input', ev => { const eb = ev.target.closest?.('[data-em-body]'); if (eb) showEmailState(eb.closest('.mail')); });
   // Escape inside an email body being edited ends the editing (like Done); it does not close the dialog and lose the edit
   modalKeyHandler = ev => { if (ev.key !== 'Escape') return; const eb = ev.target.closest?.('[data-em-body][contenteditable]'); if (eb) { setEmailEditing(eb.closest('.mail'), false); $('[data-em-edit]', eb.closest('.mail')).focus(); } else closeModal(); }; document.addEventListener('keydown', modalKeyHandler);
@@ -1201,7 +1203,11 @@ const normMail = h => String(h ?? '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' 
 const editedFlag = (stdHtml, sentHtml) => normMail(stdHtml) !== normMail(sentHtml);
 // [BEHAVIOR] An email sent with an edited body is logged on each lot of that email: field "Email body edited", No → Yes (the log's Screen column says which screen sent it)
 function logEmailEdit(scr, rows) { rows.forEach(r => logChange(scr, 'Update', r, [['Email body edited', 'check', false, true]])); }
-const emailBodyEdited = el => { const t = document.createElement('div'); t.innerHTML = el.dataset.std; return editedFlag(t.innerHTML, el.innerHTML); };   // the standard text goes through the same HTML parser, so both sides are written alike
+// A body as { editing, std, html }: the standard text goes through the same HTML parser as the live body, so both sides are written alike
+const emailBodyItem = el => { const t = document.createElement('div'); t.innerHTML = el.dataset.std; return { editing: el.hasAttribute('contenteditable'), std: t.innerHTML, html: el.innerHTML }; };
+const emailBodyEdited = el => { const i = emailBodyItem(el); return editedFlag(i.std, i.html); };
+// Is any email body of a dialog being edited, or different from its standard text? Then a click on the backdrop does not close the dialog.
+const emailsDirty = items => items.some(i => i.editing || editedFlag(i.std, i.html));
 // One flag per email of the open dialog, in the order they are shown: was its body edited?
 const editedEmails = () => [...document.querySelectorAll('#modal [data-em-body]')].map(emailBodyEdited);
 // Send handlers: lists[i] = the lots of the i-th email shown. Call it before the lots are recorded.

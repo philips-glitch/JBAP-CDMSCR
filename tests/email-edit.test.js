@@ -14,9 +14,9 @@ const fs = require('fs'), path = require('path');
 const mail = (o = {}) => Object.assign({ from: 'finance@x', to: 'Some Buyer <buyer@x>', cc: 'sales@x', subject: 'JBAP TEST - SOME BUYER', body: '<p>Hello</p>' }, o);
 test('Email preview: toolbar buttons named by recipient, body labelled, standard text kept, header and attachments not editable', () => {
   const P = load(), html = P.REPORTS.email(mail({ atts: [{ key: 'k1', name: 'A.pdf' }] }));
-  assert.match(html, /<button type="button" class="em-btn" data-em-edit aria-label="Edit email to Some Buyer &lt;buyer@x&gt; \(JBAP TEST - SOME BUYER\)">Edit<\/button>/);
+  assert.match(html, /<button type="button" class="em-btn" data-em-edit aria-label="Edit email to Some Buyer &lt;buyer@x&gt; \(JBAP TEST - SOME BUYER\)">Edit<\/button><span class="ptag mini new" title="Added or changed after JBAP's feedback of 26 Oct 2026">New<\/span><button /);
   assert.match(html, /<button type="button" class="em-btn gh" data-em-reset aria-label="Reset to standard text, email to Some Buyer &lt;buyer@x&gt; \(JBAP TEST - SOME BUYER\)">Reset to standard text<\/button>/);
-  assert.match(html, /<div class="em-body" data-em-body data-std="&lt;p&gt;Hello&lt;\/p&gt;" role="group" aria-label="Email body"><p>Hello<\/p><\/div>/);
+  assert.match(html, /<div class="em-body" data-em-body data-std="&lt;p&gt;Hello&lt;\/p&gt;" role="group" aria-label="Email body, to Some Buyer &lt;buyer@x&gt; \(JBAP TEST - SOME BUYER\)" spellcheck="false"><p>Hello<\/p><\/div>/);
   assert.match(html, /class="mail-tools no-print"/, 'the toolbar is hidden when printing');
   assert.doesNotMatch(html, /contenteditable/, 'nothing is editable until Edit is pressed');
   const head = html.slice(html.indexOf('<div class="mail-h">'), html.indexOf('<div class="mail-tools'));
@@ -29,7 +29,7 @@ test('Email preview: the standard text is stored escaped, so quotes and tags in 
   assert.ok(!/[<>]/.test(std) && !std.includes("'"), 'no raw markup in the attribute');
   assert.strictEqual(std.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&'), body, 'the attribute decodes to the exact standard body');
   assert.match(html, /aria-label="Edit email to O&quot;Neil &lt;o@x&gt; \(/, 'the recipient is escaped in the button name');
-  assert.strictEqual((html.match(/aria-label="Email body"/g) || []).length, 1);
+  assert.strictEqual((html.match(/aria-label="Email body, to O&quot;Neil &lt;o@x&gt; \(/g) || []).length, 1, 'the body name is escaped too');
 });
 test('Two emails to the same recipients get different button names (Return to Seller: one email per seller)', () => {
   const P = load(), a = P.REPORTS.email(mail({ to: 'finance@x; vwd@x', subject: 'RETURN TO SELLER - A' })), b = P.REPORTS.email(mail({ to: 'finance@x; vwd@x', subject: 'RETURN TO SELLER - B' }));
@@ -58,4 +58,30 @@ test('Every send handler logs the edited emails before it records the lots', () 
     assert.ok(fn.indexOf('logEmailEdits(') < fn.search(/record(Awarding|SaafSent|DoasEmail|Dispatch|ReturnClearance|DocTransmittal)\(/), `${act}: edits are logged before the lots are recorded`);
   }
   assert.ok(rpt.includes('data-std="${esc(body)}"'), 'the standard body is only ever stored escaped');
+});
+// ---- fix round 1 ----
+test('New badge sits beside Edit in every email preview, outside the button; the four opener buttons carry none', () => {
+  const P = load(), html = P.REPORTS.email(mail());
+  const tools = html.slice(html.indexOf('<div class="mail-tools'), html.indexOf('<div class="mail-b">'));
+  assert.strictEqual((tools.match(/ptag mini new/g) || []).length, 1, 'one New badge in the toolbar');
+  assert.ok(tools.includes('>Edit</button><span class="ptag mini new"'), 'right after the Edit button, outside it');
+  assert.match(tools, /data-em-edit aria-label="Edit email to Some Buyer &lt;buyer@x&gt; \(JBAP TEST - SOME BUYER\)">Edit<\/button>/, 'the button name is unchanged');
+  const all = P.SCREENS.flatMap(s => s.buttons || []);
+  for (const act of ['emailBaaf', 'emailDispatch', 'emailSaaf', 'printReturn']) { const b = all.filter(x => x.act === act); assert.ok(b.length, act); b.forEach(x => assert.ok(!x.isNew, `${act} opener has no New badge`)); }
+});
+test('Each email body has its own name, the same recipient and subject as its Edit button', () => {
+  const P = load(), a = P.REPORTS.email(mail({ to: 'finance@x; vwd@x', subject: 'RETURN TO SELLER - A' })), b = P.REPORTS.email(mail({ to: 'finance@x; vwd@x', subject: 'RETURN TO SELLER - B' }));
+  const body = h => /data-em-body[^>]* aria-label="([^"]*)"/.exec(h)[1], btn = h => /data-em-edit aria-label="Edit email to ([^"]*)"/.exec(h)[1];
+  assert.notStrictEqual(body(a), body(b)); assert.strictEqual(body(a), `Email body, to ${btn(a)}`); assert.strictEqual(body(b), `Email body, to ${btn(b)}`);
+});
+test('Email body: spell-check off', () => { assert.match(load().REPORTS.email(mail()), /<div class="em-body" data-em-body [^>]*spellcheck="false">/); });
+test('emailsDirty: a body in edit mode or different from its standard text keeps the dialog open on a backdrop click; drops are refused', () => {
+  const P = load(), std = '<p>Dear Client,</p>\n<p>Thank you.</p>', same = { editing: false, std, html: '<p>Dear Client,</p> <p>Thank you.</p>  ' };
+  assert.strictEqual(P.emailsDirty([]), false, 'a dialog with no email body (a report, a form) closes as before');
+  assert.strictEqual(P.emailsDirty([same, same]), false);
+  assert.strictEqual(P.emailsDirty([same, Object.assign({}, same, { editing: true })]), true, 'in edit mode');
+  assert.strictEqual(P.emailsDirty([same, Object.assign({}, same, { html: '<p>Dear Mr X,</p><p>Thank you.</p>' })]), true, 'edited text');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+  assert.match(src, /ev\.target === bg && downOn === bg && !emailsDirty\(/, 'the backdrop rule asks emailsDirty');
+  assert.ok(src.includes("bg.addEventListener('drop', ev => { if (ev.target.closest?.('[data-em-body]')) ev.preventDefault(); });"), 'drops into an email body are refused');
 });
