@@ -1,9 +1,9 @@
 const test = require('node:test'), assert = require('node:assert');
 const { load } = require('./harness');
 // JBAP answer Q11 (20 Oct 2026): "Let's include this to minimize human intervention." The SAAF is standard; its pre-tick and the Finance-only dispatch copy stay proposed (P5).
-test('SAAF screen is standard (shown with the switch off, New, no P5 tag) and lists the same lots as FAD Pending Awarding', () => {
+test('SAAF screen is standard (shown with the switch off, no P5 tag) and lists the same lots as FAD Pending Awarding', () => {
   const P = load(), scr = P.byId['SMD/saaf'];
-  assert.ok(scr && P.shown(scr), 'shown with the switch off'); assert.ok(!scr.proposed && !scr.tag && scr.isNew);
+  assert.ok(scr && P.shown(scr), 'shown with the switch off'); assert.ok(!scr.proposed && !scr.tag && !scr.isNew);
   P.setProposed(true); assert.ok(P.shown(scr)); P.setProposed(false);
   assert.deepStrictEqual(scr.rows().map(r => r.id).sort(), P.byId['FAD/pending-awarding'].rows().map(r => r.id).sort());
   assert.ok(scr.actions.includes('Update'));
@@ -11,11 +11,11 @@ test('SAAF screen is standard (shown with the switch off, New, no P5 tag) and li
     P.setProposed(on);
     assert.doesNotMatch(P.pageHead(scr), /P5/, `page head, switch ${on}`);
     const entry = P.sideHtml('').match(/<a class="mis[^>]*>Seller Awarding Acknowledgement(?:<span[^>]*>[^<]*<\/span>)*/)[0];
-    assert.doesNotMatch(entry, /P5/, `menu entry, switch ${on}`); assert.match(entry, /ptag mini new/);
+    assert.doesNotMatch(entry, /P5/, `menu entry, switch ${on}`); assert.doesNotMatch(entry, /ptag mini new/, "no New mark since 26 Oct 2026");
   }
   P.setProposed(false);
-  assert.match(P.sideHtml(''), /href="#\/SMD\/saaf"[^>]*>Seller Awarding Acknowledgement<span class="ptag mini new"[^>]*>New<\/span><span class="cnt">\d+<\/span>/);
-  assert.match(P.homeLayout(), /href="#\/SMD\/saaf">Seller Awarding Acknowledgement<span class="ptag mini new"/);
+  assert.match(P.sideHtml(''), /href="#\/SMD\/saaf"[^>]*>Seller Awarding Acknowledgement<span class="cnt">\d+<\/span>/, 'no New mark since 26 Oct 2026');
+  assert.match(P.homeLayout(), /href="#\/SMD\/saaf">Seller Awarding Acknowledgement<span class="cnt">/);
 });
 test('SAAF sample data loads with the switch off: 4 approved, 3 sent and waiting, and the screen works as an update screen', () => {
   const P = load(), scr = P.byId['SMD/saaf'], rows = scr.rows();
@@ -33,7 +33,7 @@ test('P5 now covers only the pre-tick of approved lots and the Finance-only disp
   assert.doesNotMatch(p5[1], /SMD sends the SAAF|records the seller approval/, 'the SAAF screen itself is no longer a proposal');
   assert.strictEqual(p5[2], 'FAD/pending-awarding');
   const pa = P.byId['FAD/pending-awarding'], sa = pa.cols.find(c => c.key === 'saaf_approved');
-  assert.ok(!sa.proposed && !sa.tag && sa.isNew, 'Seller Approved on Pending Awarding is part of the standard SAAF flow, marked New');
+  assert.ok(!sa.proposed && !sa.tag && !sa.isNew, 'Seller Approved on Pending Awarding is part of the standard SAAF flow (no New mark since 26 Oct 2026)');
   assert.strictEqual(pa.ruleP[0], 'P5'); assert.match(pa.ruleP[1], /pre-ticked/);
   assert.match(P.byId['FAD/for-dispatch'].ruleP[1], /copied to Finance only \(P5\)/);
   assert.ok(!P.byId['SMD/saaf'].ruleP, 'no P5 note on the SAAF screen');
@@ -69,10 +69,10 @@ test('SAAF form: seller, lots, total, placeholder note; no buyer names', () => {
   assert.match(h, /Seller Awarding Acknowledgement Form/); assert.match(h, /Layout to be confirmed/); assert.match(h, /SMD staff/);
   for (const r of lots) { assert.ok(h.includes(r.plate)); assert.ok(!r.customer || !h.includes(r.customer)); }
 });
-test('Pending Awarding shows Seller Approved (New) with the switch off and on, read only; the pre-tick of approved lots needs the switch', () => {
+test('Pending Awarding shows Seller Approved with the switch off and on, read only; the pre-tick of approved lots needs the switch', () => {
   const P = load(), scr = P.byId['FAD/pending-awarding'];
-  assert.ok(P.colsOf(scr).some(c => c.key === 'saaf_approved' && c.isNew && !c.edit && !c.tag), 'switch off');
-  assert.match(P.dataCard(scr, 'x'), /<span>Seller Approved<\/span><span class="ptag new"/);
+  assert.ok(P.colsOf(scr).some(c => c.key === 'saaf_approved' && !c.isNew && !c.edit && !c.tag), 'switch off');
+  assert.doesNotMatch(P.dataCard(scr, 'x'), /<span>Seller Approved<\/span><span class="ptag new"/);
   assert.ok(!P.selectedRows(scr, 'for_baaf').some(r => r.saaf_approved), 'switch off: approved lots are not pre-ticked');
   P.setProposed(true);
   assert.ok(P.colsOf(scr).some(c => c.key === 'saaf_approved' && !c.tag), 'switch on: no P5 tag on the column either');

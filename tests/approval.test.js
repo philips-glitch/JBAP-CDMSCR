@@ -2,7 +2,7 @@ const test = require('node:test'), assert = require('node:assert');
 const { load } = require('./harness');
 test('clearance → SMD Manager → FAD Manager → VWD', () => {
   const P = load(), rts = P.byId['SMD/return-to-seller'], smd = P.byId['SMD/return-approval'], fad = P.byId['FAD/return-approval'], vwd = P.byId['VWD/for-return-to-seller'];
-  assert.ok(smd.isNew && fad.isNew && smd.group === 'Return to Seller' && rts.group === 'Return to Seller');
+  assert.ok(smd.group === 'Return to Seller' && rts.group === 'Return to Seller');
   const u = rts.rows()[0]; P.recordReturnClearance(rts, [u]);
   const a = smd.rows().find(r => r.id === u.id); assert.ok(a); assert.ok(!fad.rows().some(r => r.id === u.id)); assert.ok(!vwd.rows().some(r => r.id === u.id));
   assert.match(smd.validate(a, { rts_smd_ok: '2000-01-01' }).rts_smd_ok, /before/);
@@ -23,7 +23,7 @@ test('approval screens: dates are checked and logged, VWD gets the approval colu
   assert.match(fad.validate(fad.rows().find(r => r.id === u.id), { rts_fad_ok: ago(4) }).rts_fad_ok, /before/);
   assert.match(fad.validate(fad.rows().find(r => r.id === u.id), { rts_fad_ok: '2999-01-01' }).rts_fad_ok, /after today/);
   assert.strictEqual(fad.validate(fad.rows().find(r => r.id === u.id), { rts_fad_ok: ago(2) }).rts_fad_ok, null);
-  assert.deepStrictEqual(vwd.cols.filter(c => c.isNew).map(c => c.key), ['rts_fad_ok']); assert.ok(vwd.isNew);
+  assert.ok(!vwd.cols.some(c => c.isNew) && !vwd.isNew, 'the 19 Oct New marks are gone');
   assert.deepStrictEqual(vwd.cols.map(c => c.key).slice(-3), ['rts_cleared', 'rts_fad_ok', 'id']);
   assert.match(vwd.rule, /approved by the SMD and FAD Managers/); assert.match(rts.rule, /SMD Manager and the FAD Manager approve in CDMS \(proposal, Q76\)/);
   const home = P.homeLayout();

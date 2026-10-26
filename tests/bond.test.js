@@ -12,7 +12,7 @@ test('the buyer total and Payable to Seller include the bond', () => {
   assert.strictEqual(v.total, raw.price + (raw.transfer_fee || 0) + 20000);
   assert.strictEqual(Math.round((v.payable - P.sellerMoney(Object.assign({}, raw, { security_bond: 0 })).payable) * 100) / 100, 20000);
   for (const id of ['FAD/unpaid', 'FAD/payment-seller']) assert.strictEqual(P.byId[id].cols.find(c => c.key === 'total').label, 'Total (Awarded Price + Transfer Fees + Security Bond)', id);
-  assert.match(P.byId['FAD/liability-to-seller'].cols.find(c => c.key === 'total').label, /Security Bond/);
+  assert.match(P.byId['report/liability-to-seller'].cols.find(c => c.key === 'total').label, /Security Bond/);
   assert.strictEqual(P.byId['SMD/unpaid'].cols.find(c => c.key === 'total').label, 'Total (Awarded Price + Transfer Fees)', 'SMD Unpaid is the legacy Access snapshot: no bond');
 });
 test('Pending Awarding: Security Bond is editable, and sending the BAAF keeps it on the lot', () => {

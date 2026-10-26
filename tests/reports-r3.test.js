@@ -4,7 +4,7 @@ const { load } = require('./harness');
 const grp = (html, d) => html.split(`id="grp-${d}"`)[1].split('</div>')[0];
 test('Inventory Summary: units in the yard per seller and status; parking narrows the count', () => {
   const P = load(), scr = P.byId['report/inventory-summary'], inYard = P.inventoryRows().filter(r => r.yard === 'In yard');
-  assert.ok(scr.isNew); assert.deepStrictEqual(scr.cols.map(c => c.key), ['seller', 'in_yard', 'listed', 'not_listed', 'awarded', 'for_release', 'for_return']);
+  assert.ok(!scr.isNew, 'the 19 Oct New mark is gone'); assert.deepStrictEqual(scr.cols.map(c => c.key), ['seller', 'in_yard', 'listed', 'not_listed', 'awarded', 'for_release', 'for_return']);
   const rows = scr.rows(); assert.strictEqual(rows.reduce((a, r) => a + r.in_yard, 0), inYard.length);
   for (const r of rows) assert.strictEqual(r.in_yard, r.listed + r.not_listed + r.awarded + r.for_release + r.for_return, r.seller);
   P.U(scr.id).applied = { parking: ['IMET PARKING'] };
@@ -12,7 +12,7 @@ test('Inventory Summary: units in the yard per seller and status; parking narrow
 });
 test('Cancellation Monitoring report: every cancellation; old links open it', () => {
   const P = load(), scr = P.byId['report/cancellation-monitoring'];
-  assert.ok(scr.isNew); assert.strictEqual(scr.rows().length, P.CX().length); assert.deepStrictEqual(scr.actions, ['View', 'Filter', 'Sort']);
+  assert.ok(!scr.isNew, 'the 19 Oct New mark is gone'); assert.strictEqual(scr.rows().length, P.CX().length); assert.deepStrictEqual(scr.actions, ['View', 'Filter', 'Sort']);
   assert.ok(P.byId['FAD/cancellation-entry'], 'Cancellation Entry keeps its list');
   for (const id of ['FAD/cancellation-monitoring', 'SMD/cancellation-monitoring']) assert.strictEqual(P.routeOf(id), 'report/cancellation-monitoring');
 });
@@ -98,15 +98,15 @@ test('Cancellation Monitoring: newest first, table shows the penalty total, no r
   for (const h of ['Auction No.', 'Buyer ID', 'Seller', 'Waived?', 'Penalty', 'Cancellation Fee Remitted']) assert.ok(html.includes(`<span>${h}</span>`), h);
   const dates = P.sortRows(scr, P.applyFilters(scr, scr.rows())).map(r => r.dcancel); assert.ok(dates.length > 1 && dates.every((d, i) => i === 0 || dates[i - 1] >= d), 'Date Cancelled, newest first');
 });
-test('Cancellation Monitoring and Inventory Summary: listed under Report in the sidebar and on Home with New, switch on or off', () => {
+test('Cancellation Monitoring and Inventory Summary: listed under Report in the sidebar and on Home, switch on or off (no New mark since 26 Oct 2026)', () => {
   const P = load();
   for (const on of [false, true]) {
     P.setProposed(on);
     const side = P.sideHtml(''), home = P.homeLayout(), card = home.split('<section class="hcard">').find(c => c.includes('<b>Report</b>'));
     for (const id of ['report/inventory-summary', 'report/cancellation-monitoring']) {
       const s = P.byId[id], n = s.rows().length.toLocaleString();
-      assert.match(grp(side, 'Report'), new RegExp(`href="#/${id}"[^>]*>${s.title}<span class="ptag mini new"[^>]*>New</span><span class="cnt">${n}</span>`), `${id} sidebar, switch ${on}`);
-      assert.match(card, new RegExp(`href="#/${id}">${s.title}<span class="ptag mini new"[^>]*>New</span><span class="cnt">${n}</span>`), `${id} Home, switch ${on}`);
+      assert.match(grp(side, 'Report'), new RegExp(`href="#/${id}"[^>]*>${s.title}<span class="cnt">${n}</span>`), `${id} sidebar, switch ${on}`);
+      assert.match(card, new RegExp(`href="#/${id}">${s.title}<span class="cnt">${n}</span>`), `${id} Home, switch ${on}`);
     }
     for (const d of ['FAD', 'SMD']) assert.doesNotMatch(grp(side, d), /Cancellation Monitoring/, `${d} sidebar has no Cancellation Monitoring`);
     const sub = card.match(/<p class="sub"[^>]*>([^<]*)<\/p>/)[1];
@@ -144,8 +144,8 @@ test('menu counts do not follow the Parking pick of Inventory Summary (sidebar, 
   for (const on of [false, true]) {
     P.setProposed(on);
     const side = grp(P.sideHtml(''), 'Report'), card = P.homeLayout().split('<section class="hcard">').find(c => c.includes('<b>Report</b>'));
-    assert.match(side, new RegExp(`href="#/report/inventory-summary"[^>]*>Inventory Summary<span class="ptag mini new"[^>]*>New</span><span class="cnt">${whole}</span>`), `sidebar, switch ${on}`);
-    assert.match(card, new RegExp(`href="#/report/inventory-summary">Inventory Summary<span class="ptag mini new"[^>]*>New</span><span class="cnt">${whole}</span>`), `Home, switch ${on}`);
+    assert.match(side, new RegExp(`href="#/report/inventory-summary"[^>]*>Inventory Summary<span class="cnt">${whole}</span>`), `sidebar, switch ${on}`);
+    assert.match(card, new RegExp(`href="#/report/inventory-summary">Inventory Summary<span class="cnt">${whole}</span>`), `Home, switch ${on}`);
   }
   assert.strictEqual(P.countOf(scr), whole); assert.strictEqual(P.countOf(P.byId['report/cancellation-monitoring']), P.CX().length, 'other screens count their rows');
 });

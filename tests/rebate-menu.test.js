@@ -1,65 +1,48 @@
 const test = require('node:test'), assert = require('node:assert');
 const { load } = require('./harness');
-// User request, 20 Oct 2026: Rebate Payable moves to SMD; FAD keeps only Rebate Monitoring; SMD gets the menu "Rebate" with the tabs Rebate Monitoring and Rebate Payable
+// JBAP feedback, 26 Oct 2026: Rebate Monitoring and Liability to Seller move to the Report menu; Rebate Payable is back in FAD (FAD records Rebate Paid); SMD has no Rebate menu
+// (it reverses the user request of 20 Oct 2026, when SMD got a Rebate menu with Rebate Monitoring and Rebate Payable)
 const deptMenu = (h, dept) => h.split(`id="grp-${dept}"`)[1].split('data-group=')[0];
 const perDept = P => P.SCREENS.reduce((a, s) => Object.assign(a, { [s.dept]: (a[s.dept] || 0) + 1 }), {});
-test('FAD has Rebate Monitoring as a plain menu entry: no Rebate Payable, no Rebate group, Download report kept, no New badge', () => {
-  const P = load(), fad = P.byId['FAD/rebate-monitoring'];
-  assert.ok(fad && fad.dept === 'FAD' && fad.title === 'Rebate Monitoring');
-  assert.strictEqual(P.byId['FAD/rebate-payable'], undefined, 'FAD has no Rebate Payable');
-  assert.ok(!P.SCREENS.some(s => s.dept === 'FAD' && (s.group === 'Rebate' || /Rebate Payable/.test(s.title))), 'no Rebate group, no Rebate Payable in FAD');
-  assert.strictEqual(fad.group, undefined); assert.strictEqual(P.groupOf(fad), null);
-  assert.deepStrictEqual(fad.buttons.map(b => [b.act, b.view]), [['downloadRebate', true]], 'Download report stays on FAD');
-  assert.ok(!fad.isNew, 'the FAD screen itself is unchanged: no badge');
-  const side = deptMenu(P.sideHtml('FAD/rebate-monitoring'), 'FAD');
-  assert.match(side, new RegExp(`<a class="mis is-active" href="#/FAD/rebate-monitoring" aria-current="page">Rebate Monitoring<span class="cnt">${fad.rows().length}</span></a>`), 'one entry with its own record count');
-  assert.doesNotMatch(side, /Rebate Payable|>Rebate</, 'no Rebate Payable and no Rebate group entry in the FAD menu');
-  const head = P.pageHead(fad);
-  assert.match(head, /<h1>Rebate Monitoring<\/h1>/); assert.doesNotMatch(head, /class="tabs"/); assert.match(head, /<span>FAD<\/span>›<b>Rebate Monitoring<\/b>/);
-  assert.match(P.dataCard(fad, 'x'), /data-act="downloadRebate"/);
-  const home = P.homeLayout(); assert.doesNotMatch(home, /href="#\/FAD\/rebate-payable"/); assert.match(home, /href="#\/FAD\/rebate-monitoring">Rebate Monitoring<span class="cnt">/);
+test('Report holds Rebate Monitoring (Download report kept) and Liability to Seller; FAD and SMD list neither, nor a Rebate group', () => {
+  const P = load(), rm = P.byId['report/rebate-monitoring'], li = P.byId['report/liability-to-seller'];
+  assert.ok(rm && rm.dept === 'Report' && rm.title === 'Rebate Monitoring' && li && li.dept === 'Report' && li.title === 'Liability to Seller');
+  assert.strictEqual(rm.group, undefined); assert.strictEqual(P.groupOf(rm), null);
+  assert.deepStrictEqual(rm.buttons.map(b => [b.act, b.view]), [['downloadRebate', true]], 'Download report moves with the screen');
+  assert.deepStrictEqual(P.SCREENS.filter(s => s.dept === 'Report').map(s => s.id).slice(-3), ['report/cancellation-monitoring', 'report/rebate-monitoring', 'report/liability-to-seller'], 'in the Report menu after Cancellation Monitoring');
+  const side = deptMenu(P.sideHtml('report/rebate-monitoring'), 'Report');
+  assert.match(side, new RegExp(`<a class="mis is-active" href="#/report/rebate-monitoring" aria-current="page">Rebate Monitoring<span class="ptag mini new"[^>]*>New</span><span class="cnt">${rm.rows().length}</span></a>`), 'one entry with its own record count');
+  assert.match(deptMenu(P.sideHtml(''), 'Report'), new RegExp(`href="#/report/liability-to-seller" >Liability to Seller<span class="ptag mini new"[^>]*>New</span><span class="cnt">${li.rows().length}</span></a>`));
+  for (const d of ['FAD', 'SMD']) assert.doesNotMatch(deptMenu(P.sideHtml(''), d), />(Rebate Monitoring|Liability to Seller|Rebate)</, `no moved screen and no Rebate group in the ${d} menu`);
+  assert.ok(!P.SCREENS.some(s => s.group === 'Rebate'), 'no Rebate group anywhere');
+  const head = P.pageHead(rm);
+  assert.match(head, /<h1>Rebate Monitoring<span class="ptag new"/); assert.doesNotMatch(head, /class="tabs"/); assert.match(head, /<span>Report<\/span>›<b>Rebate Monitoring<\/b>/);
+  assert.match(P.dataCard(rm, 'x'), /data-act="downloadRebate"/);
+  assert.match(P.pageHead(li), /<span>Report<\/span>›<b>Liability to Seller<\/b>/);
+  const home = P.homeLayout();
+  assert.match(home, /href="#\/report\/rebate-monitoring">Rebate Monitoring<span class="ptag mini new"/); assert.match(home, /href="#\/report\/liability-to-seller">Liability to Seller<span class="ptag mini new"/);
+  assert.match(home, /href="#\/FAD\/rebate-payable">Rebate Payable<span class="ptag mini new"/); assert.doesNotMatch(home, /Rebate ›/);
 });
-test('SMD Rebate group: Rebate Monitoring then Rebate Payable, both New, one menu entry linking to the first tab', () => {
-  const P = load(), group = P.SCREENS.filter(s => s.dept === 'SMD' && s.group === 'Rebate');
-  assert.deepStrictEqual(group.map(s => s.id), ['SMD/rebate-monitoring', 'SMD/rebate-payable'], 'tab order');
-  assert.deepStrictEqual(group.map(s => s.title), ['Rebate Monitoring', 'Rebate Payable']);
-  assert.ok(group.every(s => s.isNew && !s.tag), 'both tabs carry the New badge');
-  const side = deptMenu(P.sideHtml('SMD/rebate-payable'), 'SMD');
-  assert.match(side, /<a class="mis is-active" href="#\/SMD\/rebate-monitoring" aria-current="page">Rebate<span class="ptag mini new"[^>]*>New<\/span><\/a>/, 'the group entry shows New and is active on the second tab');
-  assert.ok(!side.includes('href="#/SMD/rebate-payable"') && !/>Rebate (Monitoring|Payable)</.test(side), 'the tabs are not separate menu entries');
-  const head = P.pageHead(P.byId['SMD/rebate-payable']);
-  assert.match(head, /<h1>Rebate<span class="ptag new"/); assert.match(head, /<span>SMD<\/span>›<span>Rebate<\/span>›<b>Rebate Payable<\/b>/);
-  assert.ok(head.indexOf('href="#/SMD/rebate-monitoring" class="tab"') < head.indexOf('href="#/SMD/rebate-payable" class="tab is-active"'), 'Rebate Monitoring tab comes first');
-  const home = P.homeLayout(); assert.match(home, /href="#\/SMD\/rebate-monitoring">Rebate › Rebate Monitoring<span class="ptag mini new"/); assert.match(home, /href="#\/SMD\/rebate-payable">Rebate › Rebate Payable<span class="ptag mini new"/);
-});
-test('screens per department: FAD 16, SMD 10 (total still 38, with the switch off and on)', () => {
+test('screens per department: Report 7, FAD 15, SMD 8 (total 37, with the switch off and on)', () => {
   const P = load();
-  assert.deepStrictEqual(perDept(P), { Customer: 1, Report: 5, FAD: 16, SMD: 10, VWD: 4, Settings: 1, LOG: 1 });
-  assert.strictEqual(P.SCREENS.length, 38); assert.strictEqual(P.SCREENS.filter(P.shown).length, 38);
-  P.setProposed(true); assert.strictEqual(P.SCREENS.filter(P.shown).length, 38);
+  assert.deepStrictEqual(perDept(P), { Customer: 1, Report: 7, FAD: 15, SMD: 8, VWD: 4, Settings: 1, LOG: 1 });
+  assert.strictEqual(P.SCREENS.length, 37); assert.strictEqual(P.SCREENS.filter(P.shown).length, 37);
+  P.setProposed(true); assert.strictEqual(P.SCREENS.filter(P.shown).length, 37);
 });
-test('SMD Rebate Monitoring is the live list FAD shows: same rows, same columns (shared definition), totals, sort; view only, no Download report', () => {
-  const P = load(), fad = P.byId['FAD/rebate-monitoring'], smd = P.byId['SMD/rebate-monitoring'];
-  assert.deepStrictEqual(smd.rows().map(r => r.id), fad.rows().map(r => r.id), 'same rows in the same order');
-  assert.ok(smd.rows().length > 0);
-  assert.deepStrictEqual(smd.cols.map(c => c.key), fad.cols.map(c => c.key)); assert.deepStrictEqual(smd.cols.map(c => c.label), fad.cols.map(c => c.label));
-  assert.ok(smd.cols.map(c => c.key).includes('rebate_approved'), 'with Rebate Approved (President)');
-  assert.strictEqual(smd.cols, fad.cols, 'the column definitions are shared, so they stay equal');
-  assert.deepStrictEqual(smd.sort, fad.sort); assert.deepStrictEqual(smd.totals(smd.rows()), fad.totals(fad.rows()), 'same totals row');
-  assert.strictEqual(smd.totals(smd.rows()).plate, `${smd.rows().length} lots`);
-  assert.deepStrictEqual(P.colsOf(smd).map(c => c.key), P.colsOf(fad).map(c => c.key), 'same columns with the switch off');
-  assert.deepStrictEqual(smd.actions, fad.actions); assert.ok(!smd.actions.includes('Update'), 'view only');
-  assert.ok(!(smd.buttons || []).length, 'no Download report on SMD'); assert.doesNotMatch(P.dataCard(smd, 'x'), /data-act=/);
-  assert.deepStrictEqual(P.sortRows(smd, P.applyFilters(smd, smd.rows()).reverse()).map(r => r.id), P.sortRows(fad, P.applyFilters(fad, fad.rows()).reverse()).map(r => r.id), 'same sorting and filtering');
-  // live: a rebate recorded on a sold lot shows on both lists, and is no longer the legacy snapshot
-  const lot = P.sold().find(v => !v.rebate), n = smd.rows().length;
+test('Report › Rebate Monitoring is the live list of rebates: shared columns, totals, sort; Rebate Approved (President) read only', () => {
+  const P = load(), rm = P.byId['report/rebate-monitoring'];
+  assert.ok(rm.rows().length > 0 && rm.rows().every(r => r.rebate && r.status === 'Sold'));
+  assert.deepStrictEqual(rm.cols.map(c => c.key), ['auction', 'lot', 'plate', 'model', 'seller', 'customer', 'min_bid', 'highest_offer', 'rebate', 'rebate_approved', 'com', 'rebate_revenue', 'rebate_paid']);
+  assert.ok(!rm.cols.some(c => c.edit) && !rm.actions.includes('Update'), 'view only');
+  assert.deepStrictEqual(rm.sort, ['auction_lot', 'desc']); assert.strictEqual(rm.totals(rm.rows()).plate, `${rm.rows().length} lots`);
+  // live: a rebate recorded on a sold lot shows on the list at once
+  const lot = P.sold().find(v => !v.rebate), n = rm.rows().length;
   P.S.veh.find(x => x.id === lot.id).rebate = 1234;
-  assert.strictEqual(smd.rows().length, n + 1); assert.strictEqual(fad.rows().length, n + 1); assert.ok(smd.rows().some(r => r.id === lot.id));
-  assert.strictEqual(P.countOf(smd), n + 1);
+  assert.strictEqual(rm.rows().length, n + 1); assert.ok(rm.rows().some(r => r.id === lot.id)); assert.strictEqual(P.countOf(rm), n + 1);
 });
-test('SMD Rebate Payable is the FAD screen moved: same rows, columns and checks; Rebate Paid saves and is logged under SMD', () => {
-  const P = load(), scr = P.byId['SMD/rebate-payable'];
-  assert.ok(scr && scr.dept === 'SMD' && scr.group === 'Rebate' && scr.title === 'Rebate Payable');
+test('FAD Rebate Payable (back from SMD): same rows, columns and checks; Rebate Paid saves and is logged under FAD', () => {
+  const P = load(), scr = P.byId['FAD/rebate-payable'];
+  assert.ok(scr && scr.dept === 'FAD' && scr.group === undefined && scr.title === 'Rebate Payable');
   assert.deepStrictEqual(scr.actions, ['View', 'Sort', 'Update']);
   assert.match(scr.rule, /status SOLD, a rebate, a Buyer Paid date, and a blank Rebate Paid date/);
   assert.deepStrictEqual(scr.cols.map(c => [c.label, c.key, !!c.edit]), [['Auction Date', 'adate', false], ['Lot', 'lot', false], ['Customer Name', 'customer', false], ['Rebate', 'rebate', false], ['Buyer Paid', 'buyer_paid', false], ['Rebate Paid', 'rebate_paid', true]]);
@@ -76,40 +59,42 @@ test('SMD Rebate Payable is the FAD screen moved: same rows, columns and checks;
   P.U(scr.id).edits[r.id] = { rebate_paid: P.TODAY }; assert.deepStrictEqual(P.validateEdits(scr), []);
   assert.strictEqual(P.applyEdits(scr), 1); assert.strictEqual(r._raw.rebate_paid, P.TODAY, 'Rebate Paid saved on the lot');
   assert.ok(!scr.rows().some(x => x.id === r.id) && scr.rows().length === rows.length - 1, 'the paid rebate leaves the list');
-  assert.strictEqual(P.byId['FAD/rebate-monitoring'].rows().find(x => x.id === r.id).rebate_paid, P.TODAY, 'and shows as Date Remitted on Rebate Monitoring (FAD and SMD)');
-  assert.strictEqual(P.byId['SMD/rebate-monitoring'].rows().find(x => x.id === r.id).rebate_paid, P.TODAY);
+  assert.strictEqual(P.byId['report/rebate-monitoring'].rows().find(x => x.id === r.id).rebate_paid, P.TODAY, 'and shows as Date Remitted on Report › Rebate Monitoring');
   const logged = P.S.log.slice(before);
-  assert.strictEqual(logged.length, 1); assert.deepStrictEqual([logged[0].module, logged[0].screen, logged[0].action, logged[0].field, logged[0].old, logged[0].new], ['SMD', 'Rebate Payable', 'Update', 'Rebate Paid', '', P.fmtDate(P.TODAY)]);
+  assert.strictEqual(logged.length, 1); assert.deepStrictEqual([logged[0].module, logged[0].screen, logged[0].action, logged[0].field, logged[0].old, logged[0].new], ['FAD', 'Rebate Payable', 'Update', 'Rebate Paid', '', P.fmtDate(P.TODAY)]);
 });
-test('Save changes on SMD Rebate Payable through the screen action: toast note and Log Activity row under SMD', () => {
-  const P = load(), scr = P.byId['SMD/rebate-payable'], r = scr.rows()[0], before = P.S.log.length;
+test('FAD Rebate Payable sits after Unreleased Unit in the FAD menu, with its count and New badge; Save changes logs a row under FAD', () => {
+  const P = load(), scr = P.byId['FAD/rebate-payable'], ids = P.SCREENS.filter(s => s.dept === 'FAD').map(s => s.id);
+  assert.strictEqual(ids[ids.indexOf('FAD/unreleased-unit') + 1], 'FAD/rebate-payable');
+  assert.match(deptMenu(P.sideHtml('FAD/rebate-payable'), 'FAD'), new RegExp(`<a class="mis is-active" href="#/FAD/rebate-payable" aria-current="page">Rebate Payable<span class="ptag mini new"[^>]*>New</span><span class="cnt">${scr.rows().length}</span></a>`));
+  const r = scr.rows()[0], before = P.S.log.length;
   P.U(scr.id).edits[r.id] = { rebate_paid: P.TODAY };
   assert.strictEqual(scr.savedNote, 'Paid rebates removed from the list.');
   P.applyEdits(scr);
-  const row = P.S.log[P.S.log.length - 1]; assert.ok(P.S.log.length === before + 1 && row.module === 'SMD');
-  P.U('log-activity').applied.module = 'SMD'; assert.ok(P.byId['log-activity'].rows().some(l => l.id === row.id && l.screen === 'Rebate Payable'), 'visible under the SMD module filter');
+  const row = P.S.log[P.S.log.length - 1]; assert.ok(P.S.log.length === before + 1 && row.module === 'FAD');
+  P.U('log-activity').applied.module = 'FAD'; assert.ok(P.byId['log-activity'].rows().some(l => l.id === row.id && l.screen === 'Rebate Payable'), 'visible under the FAD module filter');
 });
-test('the old FAD Rebate Payable link opens SMD Rebate Payable and rewrites the address bar', () => {
+test('the old Rebate and Liability links open the new places and rewrite the address bar', () => {
   const P = load(), calls = [], had = 'history' in globalThis, prev = globalThis.history;
-  assert.strictEqual(P.MOVED['FAD/rebate-payable'], 'SMD/rebate-payable'); assert.strictEqual(P.routeOf('FAD/rebate-payable'), 'SMD/rebate-payable');
-  assert.strictEqual(P.routeOf('FAD/rebate-monitoring'), 'FAD/rebate-monitoring', 'FAD Rebate Monitoring keeps its link'); assert.strictEqual(P.routeOf('SMD/rebate-monitoring'), 'SMD/rebate-monitoring', 'SMD Rebate Monitoring keeps its id');
+  const redirect = { 'FAD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-payable': 'FAD/rebate-payable', 'FAD/liability-to-seller': 'report/liability-to-seller' };
+  for (const [from, to] of Object.entries(redirect)) { assert.strictEqual(P.MOVED[from], to, from); assert.strictEqual(P.routeOf(from), to, from); }
+  assert.strictEqual(P.MOVED['FAD/rebate-payable'], undefined, 'FAD Rebate Payable is a real screen again'); assert.strictEqual(P.routeOf('FAD/rebate-payable'), 'FAD/rebate-payable');
   globalThis.history = { replaceState: (...a) => calls.push(a) };
-  try { P.location.hash = '#/FAD/rebate-payable'; assert.strictEqual(P.route(), 'SMD/rebate-payable'); assert.deepStrictEqual(calls, [[null, '', '#/SMD/rebate-payable']], 'the address bar shows the new link'); }
+  try { P.location.hash = '#/SMD/rebate-payable'; assert.strictEqual(P.route(), 'FAD/rebate-payable'); assert.deepStrictEqual(calls, [[null, '', '#/FAD/rebate-payable']], 'the address bar shows the new link'); }
   finally { if (had) globalThis.history = prev; else delete globalThis.history; }
 });
-test('texts: SMD Rebate Monitoring and Rebate Payable are live; Rebate Paid is recorded by SMD', () => {
-  const P = load(), card = P.homeLayout().split('<section class="hcard">').find(h => h.includes('<b>SMD</b>')), sub = card.match(/<p class="sub"[^>]*>([^<]*)<\/p>/)[1];
-  const [legacy, live] = sub.split('Live data:');
-  assert.match(legacy, /Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch\.\s*$/); assert.doesNotMatch(legacy, /Rebate/, 'Rebate Monitoring is no longer a legacy screen');
-  assert.match(live, /Seller Awarding Acknowledgement, Unreleased Unit, Rebate Monitoring, Rebate Payable, Return to Seller, SMD Manager Approval/, 'both Rebate screens are listed as live');
+test('texts: SMD no longer lists Rebate screens; Home Report names rebates and liability; Rebate Paid is recorded by FAD again', () => {
+  const P = load(), cards = P.homeLayout().split('<section class="hcard">'), sub = d => cards.find(h => h.includes(`<b>${d}</b>`)).match(/<p class="sub"[^>]*>([^<]*)<\/p>/)[1];
+  const [legacy, live] = sub('SMD').split('Live data:');
+  assert.match(legacy, /Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch\.\s*$/);
+  assert.match(live, /Seller Awarding Acknowledgement, Unreleased Unit, Return to Seller, SMD Manager Approval\s*$/); assert.doesNotMatch(sub('SMD'), /Rebate/);
+  assert.match(sub('Report'), /rebates/); assert.match(sub('Report'), /liability to sellers/);
   const saaf = P.byId['SMD/saaf'].rule;
-  assert.match(saaf, /Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch in SMD still show the legacy sample/); assert.doesNotMatch(saaf, /Rebate Monitoring/);
-  const log = P.byId['log-activity']; assert.match(log.rule, /SMD entries come from Return to Seller clearances and approvals, the SAAF and Rebate Paid/);
-  P.U('log-activity').applied.module = 'SMD'; assert.match(log.emptyNote(), /Return to Seller[^]*SAAF[^]*Rebate Paid/);
+  assert.match(saaf, /Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch in SMD still show the legacy sample/); assert.doesNotMatch(saaf, /Rebate/);
+  const log = P.byId['log-activity']; assert.match(log.rule, /SMD entries come from Return to Seller clearances and approvals and the SAAF; FAD entries include Rebate Paid/); assert.doesNotMatch(log.rule, /SAAF and Rebate Paid/);
+  P.U('log-activity').applied.module = 'SMD'; assert.doesNotMatch(log.emptyNote(), /Rebate Paid/); assert.match(log.emptyNote(), /Return to Seller[^]*SAAF/);
   for (const id of ['SMD/pending-awarding', 'SMD/unpaid', 'SMD/seller-acknowledgement', 'SMD/for-dispatch']) assert.ok(P.byId[id].rows().length > 0, `${id} is still the legacy sample`);
-  const rule = P.byId['SMD/rebate-monitoring'].rule; assert.doesNotMatch(rule, /legacy|snapshot/i); assert.match(rule, /live/i); assert.match(rule, /view only/i);
-  assert.match(P.byId['SMD/rebate-payable'].rule, /SMD records Rebate Paid/);
+  assert.match(P.byId['FAD/rebate-payable'].rule, /FAD records Rebate Paid/); assert.match(P.byId['FAD/rebate-payable'].rule, /Report › Rebate Monitoring/);
   const src = ['app.js', 'reports.js', 'data-extra.js', 'index.html'].map(f => require('fs').readFileSync(require('path').join(__dirname, '..', f), 'utf8')).join('\n');
-  assert.doesNotMatch(src, /FAD › Rebate(?! Monitoring)|FAD Rebate Payable|FAD › Rebate Payable|Rebate Monitoring and Rebate Payable as two tabs of/, 'no text still puts Rebate Payable in FAD');
-  assert.doesNotMatch(src, /For Dispatch and Rebate Monitoring|For Dispatch, Rebate Monitoring/, 'no text still lists Rebate Monitoring as a legacy SMD screen');
+  assert.doesNotMatch(src, /SMD › Rebate|SMD Rebate|SMD records Rebate Paid|FAD › Rebate Monitoring|FAD Rebate Monitoring|FAD Liability|FAD › Liability/, 'no text still names the old places');
 });

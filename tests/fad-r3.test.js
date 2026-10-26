@@ -7,12 +7,12 @@ test('Payment Seller: recording the payment date on printed lots moves them on, 
   assert.ok(!scr.rows().some(r => rows.some(x => x.id === r.id)), 'left Payment Seller');
   assert.ok(rows.every(r => P.byId['FAD/seller-acknowledgement'].rows().some(x => x.id === r.id)));
   assert.ok(P.S.log.slice(before).some(e => e.field === 'Payment to Seller Date'));
-  assert.ok(scr.isNew && scr.buttons.find(b => b.act === 'printSeller').isNew);
+  assert.ok(!scr.isNew && !scr.buttons.find(b => b.act === 'printSeller').isNew, 'the 19 Oct New marks are gone');
   assert.match(scr.buttons.find(b => b.act === 'printSeller').label, /Record payment date & print/);
 });
 test('Pending Awarding: Rebate editable (0 to the result price), saved with the awarding', () => {
   const P = load(), scr = P.byId['FAD/pending-awarding'], col = scr.cols.find(c => c.key === 'rebate'), r = scr.rows().find(x => x.price);
-  assert.strictEqual(col.edit, 'money'); assert.ok(col.isNew && scr.isNew);
+  assert.strictEqual(col.edit, 'money'); assert.ok(!col.isNew && !scr.isNew, 'the 19 Oct New marks are gone');
   assert.match(scr.validate(r, { rebate: '-1' }).rebate, /0 or more/);
   assert.match(scr.validate(r, { rebate: String(r.price + 1) }).rebate, /result price/);
   assert.strictEqual(scr.validate(r, { rebate: '5000' }).rebate, null);
@@ -22,7 +22,7 @@ test('Pending Awarding: Rebate editable (0 to the result price), saved with the 
 test('Commission Billing shows Auction No. and Auction Date', () => {
   const P = load(), cb = P.byId['FAD/commission-billing'], keys = cb.cols.map(c => c.key);
   assert.ok(keys.indexOf('auction') > -1 && keys.indexOf('auction') + 1 === keys.indexOf('adate'));
-  assert.ok(cb.cols.find(c => c.key === 'auction').isNew && cb.isNew);
+  assert.ok(!cb.cols.find(c => c.key === 'auction').isNew && !cb.isNew, 'the 19 Oct New marks are gone');
 });
 test('Payment Seller: recording saves a typed Payment Voucher No., logs it, and leaves no edit behind for printed lots', () => {
   const P = load(); P.setProposed(true);   // Payment Voucher No. is a proposed column

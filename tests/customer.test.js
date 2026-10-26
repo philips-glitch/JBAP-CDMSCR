@@ -74,7 +74,7 @@ test('customer page: Customer Information is disabled, Transaction History shows
   assert.ok(html.includes(money(b.sold.reduce((a, v) => a + (v.price || 0), 0))), 'total bought');
   for (const h of ['Seller', 'Seller Name', 'Units Bought', 'Total Amount (PHP)', 'Unpaid Units', 'Last Auction']) assert.ok(html.includes(`>${h}<`), h);
   for (const [slug, label, n] of [['sold', 'Sold', b.sold.length], ['pending-awarding', 'Pending Awarding', b.pending.length], ['unpaid', 'Unpaid', b.unpaid.length], ['vehicle-release', 'Vehicle for release', b.for_release.length], ['pending-doas', 'Pending DOAS signature', b.pending_doas.length], ['docs-release', 'Documents for release', b.docs_release.length], ['cancellation', 'Cancellation', b.cancels.length]])
-    assert.match(html, new RegExp(`href="#/customer/${cid}${slug === 'sold' ? '' : '/' + slug}"[^>]*>${label}${['pending-doas', 'vehicle-release'].includes(slug) ? '<span class="ptag mini new"[^>]*>New</span>' : ''}<span class="cnt">${n}</span>`), slug);   // Pending DOAS signature (Q82) and Vehicle for release (Q21) carry the New mark
+    assert.match(html, new RegExp(`href="#/customer/${cid}${slug === 'sold' ? '' : '/' + slug}"[^>]*>${label}<span class="cnt">${n}</span>`), slug);   // the New marks of 19 and 20 Oct (Pending DOAS signature, Vehicle for release) are gone since 26 Oct 2026
   assert.doesNotMatch(html, /Sales Actions/, 'no Sales Actions tab');
   for (const h of ['Auction Month', 'Auction No.', 'Lot', 'Plate', 'Make/Model', 'Result Price', 'Notarial', 'Commission', 'Total', 'Step', 'Date of Release / Return']) assert.ok(html.includes(`>${h}<`), h);
   const lotTable = html.slice(html.indexOf('aria-label="Lot lists"'));
@@ -95,7 +95,7 @@ test('customer page: Pending DOAS signature and Documents for release (JBAP, 16 
   for (const x of ['Seller Payment', 'Receipt of DOAS', 'EWB Call Out', 'Working Days Since Receipt / Call Out']) assert.ok(t.includes(`>${x}<`), x);
   assert.ok(t.indexOf('>Receipt of DOAS<') < t.indexOf('>EWB Call Out<') && t.indexOf('>EWB Call Out<') < t.indexOf('>Working Days Since Receipt / Call Out<'), 'EWB Call Out sits after Receipt of DOAS');
   assert.strictEqual((t.match(/<tr data-lot=/g) || []).length, b.pending_doas.length);
-  assert.match(t, /aria-current="page">Pending DOAS signature<span class="ptag mini new"[^>]*>New<\/span><span class="cnt">/);
+  assert.match(t, /aria-current="page">Pending DOAS signature<span class="cnt">/);
   const withDocs = all.find(v => v.orig_docs && !v.to_buyer).cid, d = P.customerPage(withDocs, 'docs-release');
   assert.ok(d.includes('>JBAP Receipt of Documents<') && d.includes('>ATF No.<'));
   assert.deepStrictEqual(P.custRoute(`customer/${cid}/docs-release`), { cid, tab: 'docs-release' });
@@ -153,7 +153,7 @@ test('Pending DOAS signature includes EWB lots called out but not signed (Q82)',
   assert.ok(ewb.length >= 1, 'sample EWB lot waiting');
   const b = P.buyerOf(ewb[0].cid); assert.ok(b.pending_doas.some(v => v.id === ewb[0].id));
   const t = P.customerPage(ewb[0].cid, 'pending-doas'); assert.ok(t.includes('>EWB Call Out<'));
-  assert.match(t, /EWB Call Out<span class="ptag new"/);
+  assert.doesNotMatch(t, /EWB Call Out<span class="ptag new"/, 'the 20 Oct New mark on the column is gone');
 });
 
 test('Pending DOAS signature: who is listed, and the working days (EWB: from Receipt of DOAS, else from EWB Call Out)', () => {
@@ -194,18 +194,15 @@ test('Pending DOAS signature: who is listed, and the working days (EWB: from Rec
   assert.ok(checked > 10, 'a fair number of EWB lots compared');
 });
 
-test('customer page: the New mark sits on the Vehicle for release and Pending DOAS signature tabs, the EWB Call Out column and the working days column (and Date of Release / Return on Sold)', () => {
+test('customer page: the New marks of 19 and 20 Oct (Vehicle for release and Pending DOAS signature tabs, EWB Call Out, working days and Date of Release / Return columns) are gone since 26 Oct 2026', () => {
   const P = load(), cid = P.V().find(v => v.doas === 'branch' && v.ewb_callout && !v.ewb_signed && v.cid && v.status === 'Sold').cid;
   for (const tab of ['sold', 'pending-doas']) {   // the tab bar is the same on every list
     const h = P.customerPage(cid, tab), bar = h.slice(h.indexOf('aria-label="Lot lists"'), h.indexOf('</nav>', h.indexOf('aria-label="Lot lists"')));
-    assert.strictEqual((bar.match(/ptag/g) || []).length, 2, `${tab}: two New marks in the tab bar`);
-    assert.match(bar, /Vehicle for release<span class="ptag mini new" title="[^"]+">New<\/span><span class="cnt">\d+<\/span>/);
-    assert.match(bar, /Pending DOAS signature<span class="ptag mini new" title="[^"]+">New<\/span><span class="cnt">\d+<\/span>/);
+    assert.match(bar, /Vehicle for release<span class="cnt">\d+<\/span>/, `${tab}: no New mark on Vehicle for release`);
+    assert.match(bar, /Pending DOAS signature<span class="cnt">\d+<\/span>/, `${tab}: no New mark on Pending DOAS signature`);
   }
   const t = P.customerPage(cid, 'pending-doas');
-  assert.strictEqual((t.match(/class="ptag new"/g) || []).length, 2, 'two New marks on the column heads: EWB Call Out and the working days column (its meaning changed)');
-  assert.match(t, /<th scope="col"><span class="hb">Working Days Since Receipt \/ Call Out<span class="ptag new"/);
-  assert.match(t, /<th scope="col"><span class="hb">EWB Call Out<span class="ptag new"/);
+  assert.doesNotMatch(t, /<th scope="col"><span class="hb">[^<]*<span class="ptag new"/, 'no New mark on a column head');
   assert.doesNotMatch(P.customerPage(cid, 'docs-release'), /<span class="hb">EWB Call Out/, 'other lists do not get the column');
   assert.match(t, /EWB Call Out[\s\S]*Working Days Since Receipt \/ Call Out/);
   const rule = t.slice(t.indexOf('<p class="rule">'), t.indexOf('</p>', t.indexOf('<p class="rule">')));

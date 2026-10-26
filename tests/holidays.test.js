@@ -91,9 +91,9 @@ test('holidayError: date required and readable, not already listed, name require
   assert.strictEqual(P.holidayError(Object.assign({}, ok, { date: '2026-08-22' })), null, 'a holiday on a Saturday is allowed (it just changes nothing)');
 });
 
-test('Settings > Holiday List screen: columns, sort, filters, rule text, New mark', () => {
+test('Settings > Holiday List screen: columns, sort, filters, rule text; no New mark since 26 Oct 2026', () => {
   const P = load(), scr = hs(P);
-  assert.ok(scr && scr.isNew && P.shown(scr)); assert.strictEqual(scr.dept, 'Settings'); assert.strictEqual(scr.title, 'Holiday List');
+  assert.ok(scr && !scr.isNew && P.shown(scr)); assert.strictEqual(scr.dept, 'Settings'); assert.strictEqual(scr.title, 'Holiday List');
   assert.deepStrictEqual(P.colsOf(scr).filter(c => c.type !== 'rowbtn').map(c => c.label), ['Date', 'Day', 'Holiday', 'Type']);
   assert.deepStrictEqual(scr.cols.find(c => c.type === 'rowbtn').btn, 'Remove');
   assert.deepStrictEqual(scr.sort, ['date', 'asc']);
@@ -132,7 +132,7 @@ test('Add holiday form: typed date, name, type, Add holiday button; Remove is a 
   const t = P.dataCard(scr, 'Holiday List'); assert.match(t, /data-act="removeHoliday" data-rid="2026-08-31" aria-label="Remove National Heroes Day 08\/31\/2026"/);
   assert.strictEqual(typeof P.ACTIONS.removeHoliday, 'function');
   assert.match(P.pageHead(scr), /Home<\/a>›<span>Settings<\/span>›<b>Holiday List<\/b>/);
-  assert.match(P.pageHead(scr), /<h1>Holiday List<span class="ptag new"/);
+  assert.doesNotMatch(P.pageHead(scr), /<h1>Holiday List<span class="ptag new"/);
 });
 
 test('Add holiday form keeps what was typed, with the message, when it is refused', () => {
@@ -148,7 +148,7 @@ test('sidebar: Settings is a top menu with Holiday List, after the other top men
   const P = load(), side = P.sideHtml('settings/holidays');
   assert.match(side, /<button type="button" class="mi" data-group="Settings" aria-expanded="false" aria-controls="grp-Settings">/);
   assert.ok(side.indexOf('data-disabled="Staff"') < side.indexOf('data-group="Settings"') && side.indexOf('data-group="Settings"') < side.indexOf('href="#/log-activity"'), 'between Staff and Log Activity');
-  assert.match(side, /<a class="mis is-active" href="#\/settings\/holidays" aria-current="page">Holiday List<span class="ptag mini new"[^>]*>New<\/span><span class="cnt">18<\/span><\/a>/);
+  assert.match(side, /<a class="mis is-active" href="#\/settings\/holidays" aria-current="page">Holiday List<span class="cnt">18<\/span><\/a>/);
   assert.doesNotMatch(side, /data-disabled="Settings"/);
   assert.match(side, /only Customer Inquiry, Report, FAD, SMD, VWD, Settings and Log Activity are active/);
   assert.match(P.homeLayout(), /VWD menus that replace the MS Access post-auction forms, plus Settings › Holiday List./);

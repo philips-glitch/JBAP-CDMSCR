@@ -3,14 +3,14 @@ const { load } = require('./harness');
 // JBAP feedback of 16 Oct 2026: seller short code (#5, 7, 8, 10, 15, 16, 17, 21), Auction No. (#6, 8, 9, 12, 17, 18, 22), transfer fees (#5), Commission Billing (#13)
 test('seller code and Auction No. where JBAP asked', () => {
   const P = load(), keys = id => P.byId[id].cols.map(c => c.key);
-  for (const id of ['FAD/seller-acknowledgement', 'FAD/for-dispatch', 'FAD/liability-to-seller', 'SMD/pending-awarding', 'SMD/seller-acknowledgement', 'SMD/for-dispatch', 'VWD/for-dispatch']) {
+  for (const id of ['FAD/seller-acknowledgement', 'FAD/for-dispatch', 'report/liability-to-seller', 'SMD/pending-awarding', 'SMD/seller-acknowledgement', 'SMD/for-dispatch', 'VWD/for-dispatch']) {
     assert.ok(keys(id).includes('seller') && !keys(id).includes('seller_full'), id);
     assert.strictEqual(P.byId[id].cols.find(c => c.key === 'seller').type, 'code', id);
   }
   for (const id of ['FAD/payment-seller', 'FAD/for-dispatch', 'FAD/unreleased-unit', 'SMD/for-dispatch', 'SMD/unreleased-unit', 'VWD/unreleased-unit-overdue'])
     assert.ok(keys(id).includes('auction') && !keys(id).includes('adate'), id);
   assert.deepStrictEqual(P.byId['FAD/payment-seller'].filters.map(f => f.key), ['seller', 'auction', 'customer', 'plate']);
-  assert.deepStrictEqual(P.byId['FAD/liability-to-seller'].sort, ['seller', 'asc']);
+  assert.deepStrictEqual(P.byId['report/liability-to-seller'].sort, ['seller', 'asc']);
 });
 test('SMD snapshot rows get the seller code and the Auction No.', () => {
   const P = load();

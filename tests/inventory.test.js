@@ -41,7 +41,7 @@ test('statuses: Listed (auction not ended) and Not Listed replace the old set; y
 });
 test('Report › Inventory Monitoring: view only, New, filters without Latest auction; SMD and VWD inventory gone', () => {
   const P = load(), scr = P.byId['report/inventory-monitoring'];
-  assert.ok(scr.isNew); assert.deepStrictEqual(scr.actions, ['View', 'Filter', 'Sort']); assert.ok(!scr.cols.some(c => c.edit));
+  assert.ok(!scr.isNew, 'the 19 Oct New mark is gone'); assert.deepStrictEqual(scr.actions, ['View', 'Filter', 'Sort']); assert.ok(!scr.cols.some(c => c.edit));
   assert.deepStrictEqual(scr.filters.map(f => f.key), ['yard', 'status', 'inv_status', 'seller', 'parking', 'plate']);
   assert.deepStrictEqual(scr.filters.find(f => f.key === 'parking').options(), ['OPEN PARKING', 'STEEL PARKING', 'IMET PARKING', 'Not recorded']);
   assert.ok(scr.cols.some(c => c.key === 'first_auction') && scr.cols.some(c => c.key === 'listing_end'));
@@ -65,9 +65,9 @@ test('Inventory Monitoring rows: listing columns, parking filter (multi-select, 
   assert.strictEqual(t.plate, rows.length + ' units'); assert.strictEqual(counts.reduce((a, b) => a + b, 0), rows.length);
   assert.strictEqual(t.model, P.INV_STATUSES.map((s, i) => s + ' ' + counts[i]).filter(x => !x.endsWith(' 0')).join(' \u00b7 '));
 });
-test('Inventory Monitoring: New marks only on the two new columns; blank Auction Status is an empty cell', () => {
+test('Inventory Monitoring: no column carries a New mark since 26 Oct 2026; blank Auction Status is an empty cell', () => {
   const P = load(), scr = P.byId['report/inventory-monitoring'], rows = scr.rows();
-  assert.deepStrictEqual(scr.cols.filter(c => c.isNew).map(c => c.key), ['first_auction', 'listing_end']);
+  assert.deepStrictEqual(scr.cols.filter(c => c.isNew).map(c => c.key), [], 'the 19 Oct New marks are gone');
   const col = scr.cols.find(c => c.key === 'status'), yard = rows.find(r => r.id.startsWith('Y')), lot = rows.find(r => r.id.startsWith('V'));
   assert.strictEqual(P.cellHtml(scr, yard, col, false), '<td class="c"></td>');
   assert.match(P.cellHtml(scr, lot, col, false), /<span class="st /);
@@ -85,8 +85,8 @@ test('Report sidebar and Home list Inventory Monitoring with its Wish tag; VWD a
   for (const on of [false, true]) {
     P.setProposed(on);
     const side = P.sideHtml(''), home = P.homeLayout(), card = d => home.split('<section class="hcard">').find(c => c.includes(`<b>${d}</b>`));
-    assert.match(grp(side, 'Report'), /href="#\/report\/inventory-monitoring"[^>]*>Inventory Monitoring<span class="ptag mini wish">Wish<\/span><span class="ptag mini new"[^>]*>New<\/span><span class="cnt">\d+<\/span>/, `sidebar, switch ${on}`);
-    assert.match(card('Report'), /href="#\/report\/inventory-monitoring">Inventory Monitoring<span class="ptag mini wish">Wish<\/span><span class="ptag mini new"/, `Home, switch ${on}`);
+    assert.match(grp(side, 'Report'), /href="#\/report\/inventory-monitoring"[^>]*>Inventory Monitoring<span class="ptag mini wish">Wish<\/span><span class="cnt">\d+<\/span>/, `sidebar, switch ${on}`);
+    assert.match(card('Report'), /href="#\/report\/inventory-monitoring">Inventory Monitoring<span class="ptag mini wish">Wish<\/span><span class="cnt">/, `Home, switch ${on}`);
     for (const d of ['VWD', 'SMD']) { assert.doesNotMatch(grp(side, d), /Inventory/, `${d} sidebar`); assert.doesNotMatch(card(d), /Inventory/, `${d} Home card`); }
   }
 });

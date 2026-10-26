@@ -18,7 +18,9 @@ test('old links of moved or merged screens open their new place', () => {
   const P = load();
   const want = { 'FAD/result-summary': 'report/result-summary', 'SMD/result-summary': 'report/result-summary', 'FAD/auction-monitoring': 'report/auction-monitoring',
     'SMD/auction-monitoring': 'report/auction-monitoring', 'VWD/auction-monitoring': 'report/inventory-monitoring', 'FAD/cancellation-monitoring': 'report/cancellation-monitoring',
-    'SMD/cancellation-monitoring': 'report/cancellation-monitoring', 'FAD/cancellation-payment': 'FAD/cancellation-billing', 'FAD/rebate-payable': 'SMD/rebate-payable' };
+    'SMD/cancellation-monitoring': 'report/cancellation-monitoring', 'FAD/cancellation-payment': 'FAD/cancellation-billing',
+    // JBAP feedback, 26 Oct 2026: Rebate Monitoring and Liability to Seller moved to Report; Rebate Payable is back in FAD
+    'FAD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-payable': 'FAD/rebate-payable', 'FAD/liability-to-seller': 'report/liability-to-seller' };
   for (const [from, to] of Object.entries(want)) assert.strictEqual(P.routeOf(from), to, from);
   assert.strictEqual(P.routeOf('FAD/unpaid'), 'FAD/unpaid'); assert.strictEqual(P.routeOf('nope'), ''); assert.strictEqual(P.routeOf('customer/B0313'), 'customer/B0313');
   for (const h of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) assert.strictEqual(P.routeOf(h), '', `'#/${h}' is not a screen (inherited object properties are not routes)`);
@@ -35,7 +37,7 @@ test('route(): an inherited property name in the address is not a moved screen, 
 });
 test('sidebar: every menu item shows its record count; grouped entries and Log Activity do not', () => {
   const P = load(), side = P.sideHtml('');
-  for (const id of ['FAD/unpaid', 'FAD/document-monitoring', 'FAD/security-bond', 'FAD/rebate-monitoring', 'SMD/unpaid', 'VWD/for-dispatch', 'customer-inquiry', 'report/result-summary']) {
+  for (const id of ['FAD/unpaid', 'FAD/document-monitoring', 'FAD/security-bond', 'FAD/rebate-payable', 'report/rebate-monitoring', 'report/liability-to-seller', 'SMD/unpaid', 'VWD/for-dispatch', 'customer-inquiry', 'report/result-summary']) {
     const s = P.byId[id];
     assert.match(side, new RegExp(`href="#/${id}"[^>]*>${s.title}(<span class="ptag[^<]*</span>)?<span class="cnt">${s.rows().length.toLocaleString()}</span></a>`), id);
   }
@@ -50,8 +52,8 @@ test('sidebar: a grouped entry carries the tag of its tagged screen (SMD Return 
     P.setProposed(on); const side = P.sideHtml('');
     assert.match(entry(side, 'Return to Seller'), /<span class="ptag mini wish">Wish<\/span>/, `Return to Seller keeps its Wish tag (switch ${on})`);
     assert.strictEqual((entry(side, 'Return to Seller').match(/ptag mini wish/g) || []).length, 1, 'once');
-    for (const g of ['Billing', 'Rebate']) assert.doesNotMatch(entry(side, g).replace(/<span class="ptag mini new"[^>]*>New<\/span>/, ''), /ptag/, `${g} has no tag of its own`);
+    for (const g of ['Billing']) assert.doesNotMatch(entry(side, g).replace(/<span class="ptag mini new"[^>]*>New<\/span>/, ''), /ptag/, `${g} has no tag of its own`);
   }
   P.setProposed(false);
-  assert.ok(!['FAD/commission-billing', 'FAD/billing-monitoring', 'FAD/unpaid-billing', 'FAD/rebate-monitoring', 'SMD/rebate-monitoring', 'SMD/rebate-payable'].some(id => P.byId[id].tag), 'no Billing or Rebate screen is tagged');
+  assert.ok(!['FAD/commission-billing', 'FAD/billing-monitoring', 'FAD/unpaid-billing', 'FAD/rebate-payable', 'report/rebate-monitoring'].some(id => P.byId[id].tag), 'no Billing or Rebate screen is tagged');
 });

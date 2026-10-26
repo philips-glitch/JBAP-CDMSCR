@@ -41,7 +41,7 @@ test('Vehicle for release tab: the Sold columns plus Dispatch Date, Dispatch Dea
   assert.deepStrictEqual(heads(h), ['Auction Month', 'Auction No.', 'Lot', 'Seller', 'Plate', 'Make/Model', 'Result Price', 'Notarial', 'Commission', 'Total', 'Step', 'Dispatch Date', 'Dispatch Deadline', 'Penalty']);
   const t = lotTable(h);
   assert.strictEqual((t.match(/<tr data-lot=/g) || []).length, b.for_release.length);
-  assert.match(h, /aria-current="page">Vehicle for release<span class="ptag mini new"[^>]*>New<\/span><span class="cnt">\d+<\/span>/);
+  assert.match(h, /aria-current="page">Vehicle for release<span class="cnt">\d+<\/span>/, 'no New mark: the 20 Oct mark is gone');
   const lot = b.for_release.find(v => v.penalty > 0) || b.for_release[0], row = t.slice(t.indexOf(`data-lot="${lot.id}"`), t.indexOf('</tr>', t.indexOf(`data-lot="${lot.id}"`)));
   assert.ok(row.includes(`>${P.fmtDate(lot.dispatch)}<`), 'Dispatch Date');
   assert.ok(row.includes(P.fmtDate(lot.dispatch_deadline)), 'Dispatch Deadline');
@@ -54,10 +54,10 @@ test('Vehicle for release tab: the Sold columns plus Dispatch Date, Dispatch Dea
   if (late) assert.match(t, new RegExp(`<td class=" c late">${P.fmtDate(late.dispatch_deadline)}</td>`));
 });
 
-test('Sold tab: Date of Release / Return (New) is the release date of the lot, any release type, blank while in the yard', () => {
+test('Sold tab: Date of Release / Return is the release date of the lot, any release type, blank while in the yard', () => {
   const P = load(), cid = onRelease(P)[0].cid, h = P.customerPage(cid, 'sold');
   const hs = heads(h); assert.strictEqual(hs.at(-1), 'Date of Release / Return', 'after Step');
-  assert.match(h, /<th scope="col"><span class="hb">Date of Release \/ Return<span class="ptag new"/);
+  assert.match(h, /<th scope="col"><span class="hb">Date of Release \/ Return<\/span>/, 'no New mark: the 20 Oct mark is gone');
   const b = P.buyerOf(cid), yard = b.sold.find(v => !v.release), rowOf = (html, v) => { const t = lotTable(html); const i = t.indexOf(`data-lot="${v.id}"`); return t.slice(i, t.indexOf('</tr>', i) + 5); };
   assert.ok(yard, 'a lot still in the yard'); assert.match(rowOf(h, yard), /<td class=" c"><\/td><\/tr>$/, 'blank');
   const lot = b.sold[0]; lot._raw.release = '2026-10-02'; lot._raw.release_type = 'Sold';
@@ -77,8 +77,7 @@ test('customer page rule sentence names Vehicle for release and Date of Release 
   assert.match(rule, /Pending DOAS signature = /, 'the Q82 sentence stays');
 });
 
-test('the New marks of the customer page: tabs Vehicle for release and Pending DOAS signature; Sold list: one column', () => {
-  const P = load(), cid = onRelease(P)[0].cid, h = P.customerPage(cid, 'sold');
-  assert.strictEqual((h.match(/class="ptag new"/g) || []).length, 1, 'the Date of Release / Return head is the only column mark on Sold');
-  assert.strictEqual((P.customerPage(cid, 'vehicle-release').match(/class="ptag new"/g) || []).length, 0, 'no column marks on Vehicle for release: the tab carries it');
+test('the New marks of 20 Oct on the customer page are gone since 26 Oct 2026: no column head carries one on Sold or Vehicle for release', () => {
+  const P = load(), cid = onRelease(P)[0].cid;
+  for (const tab of ['sold', 'vehicle-release']) assert.doesNotMatch(P.customerPage(cid, tab), /<th scope="col"><span class="hb">[^<]*<span class="ptag new"/, tab);
 });

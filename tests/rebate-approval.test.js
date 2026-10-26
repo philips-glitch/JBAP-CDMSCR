@@ -5,19 +5,19 @@ const NEEDS = "The rebate needs the President's approval date before awarding.";
 const pa = P => P.byId['FAD/pending-awarding'];
 const lot = (P, o) => Object.assign({}, pa(P).rows().find(r => r.price), { rebate: 5000, rebate_approved: null }, o);
 
-test('Pending Awarding: Rebate Approved (President) is an editable New date column right after Rebate', () => {
+test('Pending Awarding: Rebate Approved (President) is an editable date column right after Rebate (no New mark since 26 Oct 2026)', () => {
   const P = load(), cols = pa(P).cols, i = cols.findIndex(c => c.key === 'rebate');
   const c = cols[i + 1];
-  assert.deepStrictEqual([c.key, c.label, c.type, c.edit, c.isNew, !!c.proposed], ['rebate_approved', 'Rebate Approved (President)', 'date', 'date', true, false]);
-  assert.match(P.dataCard(pa(P), 'Pending Awarding list'), /<span>Rebate Approved \(President\)<\/span><span class="ptag new"/);
+  assert.deepStrictEqual([c.key, c.label, c.type, c.edit, !!c.isNew, !!c.proposed], ['rebate_approved', 'Rebate Approved (President)', 'date', 'date', false, false]);
+  assert.doesNotMatch(P.dataCard(pa(P), 'Pending Awarding list'), /<span>Rebate Approved \(President\)<\/span><span class="ptag new"/);
 });
 
-test('Rebate Monitoring shows the approval date read-only, New, right after Rebate', () => {
-  const P = load(), cols = P.byId['FAD/rebate-monitoring'].cols, i = cols.findIndex(c => c.key === 'rebate'), c = cols[i + 1];
-  assert.deepStrictEqual([c.key, c.label, c.type, !!c.edit, c.isNew], ['rebate_approved', 'Rebate Approved (President)', 'date', false, true]);
-  const approved = P.byId['FAD/rebate-monitoring'].rows().find(r => r.rebate_approved);
+test('Rebate Monitoring shows the approval date read-only, right after Rebate', () => {
+  const P = load(), cols = P.byId['report/rebate-monitoring'].cols, i = cols.findIndex(c => c.key === 'rebate'), c = cols[i + 1];
+  assert.deepStrictEqual([c.key, c.label, c.type, !!c.edit, !!c.isNew], ['rebate_approved', 'Rebate Approved (President)', 'date', false, false]);
+  const approved = P.byId['report/rebate-monitoring'].rows().find(r => r.rebate_approved);
   assert.ok(approved, 'a sample lot with a rebate approval is listed');
-  assert.ok(P.cellHtml(P.byId['FAD/rebate-monitoring'], approved, c, false).includes(P.fmtDate(approved.rebate_approved)));
+  assert.ok(P.cellHtml(P.byId['report/rebate-monitoring'], approved, c, false).includes(P.fmtDate(approved.rebate_approved)));
 });
 
 test('Pending Awarding rule text: rebates are recommended by SMD and approved by the President; FAD types the date (one added sentence)', () => {
@@ -96,7 +96,7 @@ test('awarding through the BAAF saves the typed approval date with the lot and l
   const e = P.S.log.slice(before).find(x => x.field === 'Rebate Approved (President)');
   assert.ok(e, 'logged'); assert.deepStrictEqual([e.module, e.screen, e.action, e.old, e.new], ['FAD', 'Pending Awarding', 'Update', '', P.fmtDate(P.TODAY)]);
   assert.strictEqual(P.S.log.slice(before).filter(x => x.field === 'Rebate Approved (President)').length, 1);
-  assert.ok(P.byId['FAD/rebate-monitoring'].rows().find(x => x.id === r.id).rebate_approved === P.TODAY, 'the lot shows the date on Rebate Monitoring');
+  assert.ok(P.byId['report/rebate-monitoring'].rows().find(x => x.id === r.id).rebate_approved === P.TODAY, 'the lot shows the date on Rebate Monitoring');
 });
 
 test('Save changes saves and logs the approval date like any other edit; the lot stays in Pending Awarding', () => {
@@ -177,7 +177,7 @@ test('Email BAAF marks each held lot\'s Rebate Approved cell invalid with the sa
 });
 
 test('Rebate Monitoring rule: the approval date is blank for lots awarded before it was recorded', () => {
-  const P = load(), rule = P.byId['FAD/rebate-monitoring'].rule;
+  const P = load(), rule = P.byId['report/rebate-monitoring'].rule;
   assert.match(rule, /Rebate Approved \(President\) is blank for lots awarded before the approval date was recorded\./);
   assert.match(rule, /Download report saves an Excel file/, 'the earlier sentences stay');
 });

@@ -109,8 +109,8 @@ const shown = x => !x.proposed || PROPOSED;
 const colsOf = scr => scr.cols.filter(shown);
 const tagHtml = x => !x.tag ? '' : x.tag === 'Wish' ? '<span class="ptag wish">Wish list</span>' : PROPOSED ? `<span class="ptag">Proposed ${esc(x.tag)}</span>` : '';
 const tagMini = x => !x.tag ? '' : x.tag === 'Wish' ? '<span class="ptag mini wish">Wish</span>' : PROPOSED ? `<span class="ptag mini">${esc(x.tag)}</span>` : '';
-// [BEHAVIOR] User, 19 Oct 2026: "New" marks everything added or changed after JBAP's feedback of 19 Oct (rounds 2b + 3); always shown
-const NEW_TIP = "Added or changed after JBAP's feedback of 19 Oct 2026";
+// [BEHAVIOR] User, 26 Oct 2026: "New" marks everything added or changed after JBAP's feedback of 26 Oct (round 5); the marks of the 19 and 20 Oct rounds are gone; always shown
+const NEW_TIP = "Added or changed after JBAP's feedback of 26 Oct 2026";
 const newHtml = x => x && x.isNew ? `<span class="ptag new" title="${NEW_TIP}">New</span>` : '';
 const newMini = x => x && x.isNew ? `<span class="ptag mini new" title="${NEW_TIP}">New</span>` : '';
 
@@ -280,7 +280,7 @@ function buyerOf(cid) {
   return Object.assign({}, b, { sold, pending: sold.filter(isPendingAward), unpaid: sold.filter(isUnpaidLot),
     pending_doas: sold.filter(v => !v.buyer_doas && !v.seller_doas && !(v.doas === 'branch' && v.ewb_signed) && (v.rcv_doas || (v.doas === 'branch' && v.ewb_callout))).map(v => Object.assign(v, { doas_days: workdaysBetween(v.rcv_doas || v.ewb_callout, TODAY) })), for_release: sold.filter(v => v.dispatch && !v.release), docs_release: sold.filter(v => v.orig_docs && !v.to_buyer), cancels: CX().filter(c => c.cid === cid).sort((x, y) => y.auction - x.auction), sellers });
 }
-const CUST_TABS = [['sold', 'Sold'], ['pending-awarding', 'Pending Awarding'], ['unpaid', 'Unpaid'], ['vehicle-release', 'Vehicle for release', true], ['pending-doas', 'Pending DOAS signature', true], ['docs-release', 'Documents for release'], ['cancellation', 'Cancellation']];   // third item: New mark on the tab label
+const CUST_TABS = [['sold', 'Sold'], ['pending-awarding', 'Pending Awarding'], ['unpaid', 'Unpaid'], ['vehicle-release', 'Vehicle for release'], ['pending-doas', 'Pending DOAS signature'], ['docs-release', 'Documents for release'], ['cancellation', 'Cancellation']];   // optional third item: New mark on the tab label (none in round 5 so far)
 const custHref = (cid, tab) => `#/customer/${encodeURIComponent(cid)}${tab && tab !== 'sold' ? '/' + tab : ''}`;
 function custRoute(h) {   // #/customer/<Buyer ID>[/<list>] → { cid, tab }
   const m = /^customer\/([^/]+)(?:\/([^/]*))?$/.exec(h || ''); if (!m) return null;
@@ -396,20 +396,20 @@ const resultTotals = rows => { const u = sumBy(rows, 'units'), t = sumBy(rows, '
 const UNREL_COLS = [C('Customer Name', 'customer', 'text', { w: 280 }), C('Auction No.', 'auction', 'code'), C('Make/Model', 'model', 'text', { w: 240 }), C('Plate Number', 'plate', 'code'),
   C('Location', 'location', 'code'), C('Dispatch Deadline', 'dispatch_deadline', 'date', { late: true }), C('Penalty', 'penalty', 'money')];
 const UNREL_FILTERS = [AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }, { key: 'dispatch_deadline', label: 'Dispatch Deadline', type: 'daterange', w: 'w2' }];
-// [BEHAVIOR] Rebate Monitoring: FAD's screen and SMD › Rebate › Rebate Monitoring (since the user request of 20 Oct 2026) are the same live list, so both take their rows, sorting, columns and totals from REBMON and stay equal.
+// [BEHAVIOR] Rebate Monitoring (Report menu since JBAP's feedback of 26 Oct 2026; it was in FAD, and in SMD from 20 Oct 2026): rows, sorting, columns and totals come from REBMON.
 // The key columns of JBAP's Rebate Monitoring file (user choice of 16 Oct 2026); Month, VCN, Year, Color, Buyer ID and Awarded Price stay in the download only
 const REBMON_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 180 }), C('Seller', 'seller', 'code'),
-  C('Buyer', 'customer', 'text', { w: 220 }), C('Minimum Bid', 'min_bid', 'money'), C('Highest Offer', 'highest_offer', 'money'), C('Rebate', 'rebate', 'money'), C('Rebate Approved (President)', 'rebate_approved', 'date', { isNew: true }),
+  C('Buyer', 'customer', 'text', { w: 220 }), C('Minimum Bid', 'min_bid', 'money'), C('Highest Offer', 'highest_offer', 'money'), C('Rebate', 'rebate', 'money'), C('Rebate Approved (President)', 'rebate_approved', 'date'),
   C('Commission', 'com', 'money'), C('Revenue (Net of Rebate)', 'rebate_revenue', 'money'), C('Date Remitted', 'rebate_paid', 'date')];
 const REBMON = { rows: () => sold().filter(v => v.rebate), sort: ['auction_lot', 'desc'], cols: REBMON_COLS,
   totals: rows => ({ plate: `${rows.length} lots`, rebate: money(sumBy(rows, 'rebate')), com: money(sumBy(rows, 'com')), rebate_revenue: money(sumBy(rows, 'rebate_revenue')) }) };
 const SCREENS = [
   // ===================== FAD =====================
-  { dept: 'FAD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFSU, isNew: true,
+  { dept: 'FAD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFSU,
     rule: 'Vehicles with status SOLD and a blank Awarding Date. Tick For BAAF and press Email BAAF to award. Transfer Fees come from the seller parameters and are not changed here (JBAP, 16 Oct 2026). Security Bond defaults from the seller settings; override it when needed. Rebate is entered here before the BAAF (proposal, Q73). Rebates are recommended by SMD and approved by the President (JBAP answer Q5); FAD types the approval date.',
     rows: () => sold().filter(v => !v.awarding), sort: ['lot', 'asc'],
-    cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('For BAAF', 'for_baaf', 'check', { edit: 'check' }), C('Seller Approved', 'saaf_approved', 'date', { isNew: true }),
-      C('Awarding Date', 'awarding', 'date', { edit: 'date' }), C('Rebate', 'rebate', 'money', { edit: 'money', isNew: true }), C('Rebate Approved (President)', 'rebate_approved', 'date', { edit: 'date', isNew: true }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
+    cols: [C('Auction Number', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('For BAAF', 'for_baaf', 'check', { edit: 'check' }), C('Seller Approved', 'saaf_approved', 'date'),
+      C('Awarding Date', 'awarding', 'date', { edit: 'date' }), C('Rebate', 'rebate', 'money', { edit: 'money' }), C('Rebate Approved (President)', 'rebate_approved', 'date', { edit: 'date' }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
       C('Make/Model', 'model', 'text', { w: 210 }), C('Result Price', 'price', 'money'), C('Transfer Fees', 'transfer_fee', 'money'), C('Security Bond', 'security_bond', 'money', { edit: 'money' })],
     filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     // [BEHAVIOR] JBAP feedback (19 Oct 2026, proposal Q73): the rebate is entered before the BAAF; 0 or more, not above the result price; blank = none
@@ -432,7 +432,7 @@ const SCREENS = [
     validate: (r, e) => ({ buyer_paid: notFuture(e.buyer_paid) || notBefore(e.buyer_paid, r.awarding, 'the Awarding Date') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Paid vehicles moved to Payment Seller.' },
-  { dept: 'FAD', slug: 'payment-seller', title: 'Payment Seller', actions: VFSU, isNew: true, rule: 'Vehicles with status SOLD, a Buyer Paid date, and a blank Payment to Seller date. Deadline = 3 working days after Buyer Paid. To JBAP = commission + VAT − 15% withholding tax (NET sellers); Payable to Seller = total − To JBAP. Printing records the payment date on every printed lot (JBAP, 19 Oct 2026).',
+  { dept: 'FAD', slug: 'payment-seller', title: 'Payment Seller', actions: VFSU, rule: 'Vehicles with status SOLD, a Buyer Paid date, and a blank Payment to Seller date. Deadline = 3 working days after Buyer Paid. To JBAP = commission + VAT − 15% withholding tax (NET sellers); Payable to Seller = total − To JBAP. Printing records the payment date on every printed lot (JBAP, 19 Oct 2026).',
     rows: () => sold().filter(v => v.buyer_paid && !v.pay_seller), sort: ['pay_deadline', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 230 }), C('Auction No.', 'auction', 'code'), C('Plate Number', 'plate', 'code'),
       C('Total (Awarded Price + Transfer Fees + Security Bond)', 'total', 'money'), C('To JBAP', 'to_jbap', 'money'), C('Payable to Seller', 'payable', 'money'), C('Payment to Seller Date', 'pay_seller', 'date', { edit: 'date' }), C('Payment Voucher No.', 'voucher_no', 'text', { edit: 'text', proposed: true, tag: 'P3' }),
@@ -440,7 +440,7 @@ const SCREENS = [
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }],
     totals: rows => ({ total: money(sumBy(rows, 'total')), to_jbap: money(sumBy(rows, 'to_jbap')), payable: money(sumBy(rows, 'payable')) }),
     validate: (r, e) => ({ pay_seller: notFuture(e.pay_seller) || notBefore(e.pay_seller, r.buyer_paid, 'Buyer Paid') }),
-    buttons: [{ label: 'Record payment date & print', kind: 'ol', icon: 'print', act: 'printSeller', count: 'print_seller', isNew: true }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
+    buttons: [{ label: 'Record payment date & print', kind: 'ol', icon: 'print', act: 'printSeller', count: 'print_seller' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Paid sellers moved to Seller Acknowledgement and Commission Billing.',
     queue: true, ready: { key: 'print_seller', when: () => true },
     ruleP: ['P4', 'Every lot arrives pre-ticked for printing; untick a lot to hold it back. Payment Voucher No. (P3) is typed for now; it will come through JBAP\'s existing NOAH integration once it is re-routed from Access to CDMS.'] },
@@ -497,29 +497,26 @@ const SCREENS = [
     totals: rows => ({ plate: `${rows.length} lots`, security_bond: money(sumBy(rows, 'security_bond')) }),
     validate: bondValidate,
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Complete and forfeited bonds leave the Open view.' },
-  { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFSU, isNew: true,
+  { dept: 'FAD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFSU,
     rule: `Dispatched vehicles not yet released to the buyer. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15). Record payment records the penalty paid today and moves the dispatch deadline to today (JBAP, 16 Oct 2026); the penalty starts again the next day if the unit is still in the yard. Extend sets a new deadline with a reason and the approving FAD Manager (proposal, Q74).`,
     rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'],
     cols: [...UNREL_COLS, C('Penalty Paid', 'penalty_paid', 'money'), C('Penalty Payment', 'id', 'rowbtn', { act: 'payPenalty', btn: 'Record payment', showWhen: r => r.penalty > 0 }),
-      C('Extend Deadline', 'extend', 'rowbtn', { act: 'extendDeadline', btn: 'Extend', isNew: true })], filters: UNREL_FILTERS,
+      C('Extend Deadline', 'extend', 'rowbtn', { act: 'extendDeadline', btn: 'Extend' })], filters: UNREL_FILTERS,
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), penalty_paid: money(sumBy(rows, 'penalty_paid')) }) },
-  { dept: 'FAD', slug: 'liability-to-seller', title: 'Liability to Seller', actions: VS, layout: 'query',
-    rule: 'Units the buyer has paid for where Payment to Seller is still blank, or happened after the date entered.',
-    rows: () => { const d = U('FAD/liability-to-seller').asOf || TODAY; return sold().filter(v => v.buyer_paid && v.buyer_paid <= d && (!v.pay_seller || v.pay_seller > d)); },
-    sort: ['seller', 'asc'],
-    cols: [C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }),
-      C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller Deadline', 'pay_deadline', 'date'), C('Total (Result Price + Transfer Fees + Security Bond)', 'total', 'money')],
-    totals: rows => ({ seller: 'Total liability to sellers', total: money(sumBy(rows, 'total')) }) },
-  // FAD › Rebate Monitoring (one menu entry; until 20 Oct 2026 it was a tab of a FAD menu Rebate, and Rebate Payable has moved to SMD › Rebate). The columns come from REBMON, shared with SMD.
-  { dept: 'FAD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', actions: VS,
-    rule: 'Result price records with status SOLD and a rebate. Minimum Bid = Awarded Price, Highest Offer = Minimum Bid − Rebate, Revenue = Commission − Rebate (JBAP\'s Rebate Monitoring file). Download report saves an Excel file of the rebates in an auction range with all the file\'s columns. Rebate Approved (President) is blank for lots awarded before the approval date was recorded.',
-    ...REBMON,
-    buttons: [{ label: 'Download report', kind: 'ol', icon: 'download', act: 'downloadRebate', view: true }] },   // view: shown on a view-only screen (it changes no data)
+  // FAD › Rebate Payable (JBAP feedback of 26 Oct 2026: back in FAD from SMD, where it sat from 20 Oct 2026). FAD records Rebate Paid.
+  { dept: 'FAD', slug: 'rebate-payable', title: 'Rebate Payable', actions: VSU, isNew: true,
+    rule: 'Result price records with status SOLD, a rebate, a Buyer Paid date, and a blank Rebate Paid date. FAD records Rebate Paid (JBAP, 26 Oct 2026; SMD held it from 20 Oct 2026); a paid rebate leaves this list and shows as Date Remitted in Report › Rebate Monitoring.',
+    rows: () => sold().filter(v => v.rebate && v.buyer_paid && !v.rebate_paid), sort: ['adate', 'asc'],
+    cols: [C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 360 }), C('Rebate', 'rebate', 'money'),
+      C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date', { edit: 'date' })],
+    totals: rows => ({ rebate: money(sumBy(rows, 'rebate')) }),
+    validate: (r, e) => ({ rebate_paid: notFuture(e.rebate_paid) || notBefore(e.rebate_paid, r.buyer_paid, 'Buyer Paid') }),
+    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid rebates removed from the list.' },
   // FAD › Billing: Commission Billing first, then Billing Monitoring and Unpaid Billing (tabs in this order; user requests of 15 and 16 Oct 2026)
-  { dept: 'FAD', slug: 'commission-billing', title: 'Commission Billing', group: 'Billing', actions: VSU, isNew: true,
+  { dept: 'FAD', slug: 'commission-billing', title: 'Commission Billing', group: 'Billing', actions: VSU,
     rule: 'Result price records with a Remittance Date and no commission billing yet. Tick Print?, then Print commission billing to record the NOAH billing number and date.',
     rows: () => sold().filter(v => v.pay_seller && !v.billed), sort: ['customer', 'asc'],
-    cols: [C('Customer Name', 'customer', 'text', { w: 260 }), C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code', { isNew: true }), C('Auction Date', 'adate', 'code'), C('Plate Number', 'plate', 'code'), C('Print?', 'print_comm', 'check', { edit: 'check' }), C('Remittance Date', 'pay_seller', 'date'),
+    cols: [C('Customer Name', 'customer', 'text', { w: 260 }), C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code'), C('Auction Date', 'adate', 'code'), C('Plate Number', 'plate', 'code'), C('Print?', 'print_comm', 'check', { edit: 'check' }), C('Remittance Date', 'pay_seller', 'date'),
       C('Winning Bid', 'price', 'money'), C('Commission', 'com', 'money'), C('VAT', 'cvat', 'money'), C('Total', 'ctotal', 'money')],
     totals: rows => ({ plate: `${rows.length} units`, price: money(sumBy(rows, 'price')), com: money(sumBy(rows, 'com')), cvat: money(sumBy(rows, 'cvat')), ctotal: money(sumBy(rows, 'ctotal')) }),
     buttons: [{ label: 'Print commission billing', kind: 'ol', icon: 'print', act: 'printComm', count: 'print_comm' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
@@ -567,7 +564,7 @@ const SCREENS = [
     queue: true, ready: { key: 'for_print', when: r => !r.bill_date },
     ruleP: ['P4', 'Lots not billed yet arrive pre-ticked for billing.'] },
   // JBAP feedback (19 Oct 2026) / proposal Q76: the FAD Manager approves what the SMD Manager approved; VWD then records the return
-  { dept: 'FAD', slug: 'return-approval', title: 'Return to Seller Approval', actions: VFSU, isNew: true, queue: true,
+  { dept: 'FAD', slug: 'return-approval', title: 'Return to Seller Approval', actions: VFSU, queue: true,
     rule: 'Units the SMD Manager approved for return to the seller. The FAD Manager enters the approval date and saves; VWD then records the return (proposal, Q76).',
     rows: () => V().filter(v => v.rts_cleared && v.rts_smd_ok && !v.rts_fad_ok && !v.release).map(v => Object.assign(v, { listings: listingsOf(v) })), sort: ['rts_smd_ok', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Status', 'status', 'status'), C('Last Auction', 'auction', 'code'),
@@ -576,9 +573,9 @@ const SCREENS = [
     validate: (r, e) => ({ rts_fad_ok: notFuture(e.rts_fad_ok) || notBefore(e.rts_fad_ok, r.rts_smd_ok, 'the SMD Manager approval') }),
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Approved units moved to VWD › For Return to Seller.' },
 
-  // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch; live data on SAAF, Unreleased Unit, Rebate Monitoring, Rebate Payable, Return to Seller and SMD Manager Approval) =====================
+  // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch; live data on SAAF, Unreleased Unit, Return to Seller and SMD Manager Approval) =====================
   // JBAP answer Q11 (20 Oct 2026): SMD's update screen for the SAAF is standard (it was proposal P5); live data, unlike SMD's four legacy-sample screens
-  { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU, isNew: true,
+  { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU,
     rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch in SMD still show the legacy sample). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; the date shows in FAD Pending Awarding (JBAP answer Q11).',
     rows: () => sold().filter(v => !v.awarding), sort: ['seller', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
@@ -613,32 +610,20 @@ const SCREENS = [
     cols: [C('Seller', 'seller', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }), C('Auction No.', 'auction', 'code'),
       C('Make/Model', 'model', 'text', { w: 210 }), C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Dispatch Date', 'dispatch', 'date')],
     filters: [{ key: 'customer', label: 'Customer Name' }, { key: 'plate', label: 'Plate Number' }], totals: rows => ({ customer: `${rows.length} units` }) },
-  { dept: 'SMD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS, isNew: true,
+  { dept: 'SMD', slug: 'unreleased-unit', title: 'Unreleased Unit', actions: VFS,
     rule: 'Dispatched vehicles not yet released to the buyer (live data, the same list as FAD; JBAP, 19 Oct 2026). Storage penalty after the dispatch deadline. View, filter and sort only.',
     rows: () => sold().filter(v => v.dispatch && !v.release), sort: ['dispatch_deadline', 'asc'],
-    cols: [...UNREL_COLS.map(c => c.key === 'location' ? Object.assign({}, c, { isNew: true }) : c), C('Penalty Paid', 'penalty_paid', 'money', { isNew: true })], filters: UNREL_FILTERS,   // Location is new to SMD only: an SMD copy carries the mark, FAD and VWD share the unmarked column
+    cols: [...UNREL_COLS, C('Penalty Paid', 'penalty_paid', 'money')], filters: UNREL_FILTERS,
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), penalty_paid: money(sumBy(rows, 'penalty_paid')) }) },
-  // SMD › Rebate (user request of 20 Oct 2026): Rebate Monitoring (the live list FAD shows, view only) and Rebate Payable (moved from FAD; SMD records Rebate Paid)
-  { dept: 'SMD', slug: 'rebate-monitoring', title: 'Rebate Monitoring', group: 'Rebate', actions: VS, isNew: true,
-    rule: 'Result price records with status SOLD and a rebate: live data, the same list and columns as FAD Rebate Monitoring (user request, 20 Oct 2026). View only: no Download report here, it is in FAD Rebate Monitoring.',
-    ...REBMON },
-  { dept: 'SMD', slug: 'rebate-payable', title: 'Rebate Payable', group: 'Rebate', actions: VSU, isNew: true,
-    rule: 'Result price records with status SOLD, a rebate, a Buyer Paid date, and a blank Rebate Paid date. SMD records Rebate Paid (it was in FAD until the user request of 20 Oct 2026); a paid rebate leaves this list and shows as Date Remitted in Rebate Monitoring.',
-    rows: () => sold().filter(v => v.rebate && v.buyer_paid && !v.rebate_paid), sort: ['adate', 'asc'],
-    cols: [C('Auction Date', 'adate', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 360 }), C('Rebate', 'rebate', 'money'),
-      C('Buyer Paid', 'buyer_paid', 'date'), C('Rebate Paid', 'rebate_paid', 'date', { edit: 'date' })],
-    totals: rows => ({ rebate: money(sumBy(rows, 'rebate')) }),
-    validate: (r, e) => ({ rebate_paid: notFuture(e.rebate_paid) || notBefore(e.rebate_paid, r.buyer_paid, 'Buyer Paid') }),
-    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid rebates removed from the list.' },
-  { dept: 'SMD', slug: 'return-to-seller', title: 'Return to Seller', group: 'Return to Seller', actions: VFSU, tag: 'Wish', isNew: true,
+  { dept: 'SMD', slug: 'return-to-seller', title: 'Return to Seller', group: 'Return to Seller', actions: VFSU, tag: 'Wish',
     rule: `Units with status Not Sold or Cancelled that are not listed in an ongoing or future auction (JBAP, 16 Oct 2026), with no clearance yet. Tick For Return, then Print & email clearance form: one form per seller, emailed to FAD and VWD. Then the SMD Manager and the FAD Manager approve in CDMS (proposal, Q76); VWD sees the unit after the FAD approval.`,
     rows: () => V().filter(rtsEligible).map(v => Object.assign(v, { listings: listingsOf(v) })), sort: ['seller', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Status', 'status', 'status'), C('Last Auction', 'auction', 'code'),
-      C('Number of Listing', 'listings', 'int', { isNew: true }), C('Date of Entry', 'entry_date', 'date'), C('Days in Yard', 'days_in_yard', 'int'), C('For Return', 'for_return', 'check', { edit: 'check' })],
+      C('Number of Listing', 'listings', 'int'), C('Date of Entry', 'entry_date', 'date'), C('Days in Yard', 'days_in_yard', 'int'), C('For Return', 'for_return', 'check', { edit: 'check' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'status', label: 'Status', type: 'select', w: 'w1', options: () => ['Not Sold', 'Cancelled'] }, { key: 'plate', label: 'Plate Number' }],
     buttons: [{ label: 'Print & email clearance form', kind: 'ol', icon: 'print', act: 'printReturn', count: 'for_return' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }] },
   // JBAP feedback (19 Oct 2026) / proposal Q76: the SMD Manager approves a cleared unit in CDMS; FAD then approves, and VWD sees the unit only after that
-  { dept: 'SMD', slug: 'return-approval', title: 'SMD Manager Approval', group: 'Return to Seller', actions: VFSU, isNew: true, queue: true,
+  { dept: 'SMD', slug: 'return-approval', title: 'SMD Manager Approval', group: 'Return to Seller', actions: VFSU, queue: true,
     rule: 'Units cleared for return, waiting for the SMD Manager. Enter the approval date and save; the unit then waits for the FAD Manager (proposal, Q76).',
     rows: () => V().filter(v => v.rts_cleared && !v.release && !v.rts_smd_ok).map(v => Object.assign(v, { listings: listingsOf(v) })), sort: ['rts_cleared', 'asc'],
     cols: [C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Status', 'status', 'status'), C('Last Auction', 'auction', 'code'),
@@ -662,11 +647,11 @@ const SCREENS = [
     rule: `Dispatched vehicles past the dispatch deadline. Storage penalty PHP ${PENALTY_PER_DAY}/day after the dispatch deadline, only for units at ${PENALTY_LOCATIONS.join(' or ')} (Q15). VWD releases a vehicle with Release vehicle (JBAP Q9) once the penalty is paid.`,
     rows: () => sold().filter(v => v.dispatch && !v.release && v.dispatch_deadline < TODAY), sort: ['dispatch_deadline', 'asc'], cols: [...UNREL_COLS, C('Release', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })], filters: UNREL_FILTERS,
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')) }) },
-  { dept: 'VWD', slug: 'for-return-to-seller', title: 'For Return to Seller', actions: VFSU, tag: 'Wish', isNew: true, queue: true, releaseType: 'Return to Seller',
+  { dept: 'VWD', slug: 'for-return-to-seller', title: 'For Return to Seller', actions: VFSU, tag: 'Wish', queue: true, releaseType: 'Return to Seller',
     rule: 'Units cleared by SMD and approved by the SMD and FAD Managers that have not left the yard. VWD records the return with Release vehicle (type Return to Seller), like a release to a buyer (Q18): same running VRF No. and release form.',
     rows: () => V().filter(v => v.rts_cleared && v.rts_fad_ok && !v.release), sort: ['rts_cleared', 'asc'],
     cols: [C('Seller', 'seller_full', 'text', { w: 280 }), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 240 }), C('Location', 'location', 'code'),
-      C('Cleared by SMD', 'rts_cleared', 'date'), C('Approved by FAD Manager', 'rts_fad_ok', 'date', { isNew: true }), C('Return', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })],
+      C('Cleared by SMD', 'rts_cleared', 'date'), C('Approved by FAD Manager', 'rts_fad_ok', 'date'), C('Return', 'id', 'rowbtn', { act: 'releaseVehicle', btn: 'Release vehicle' })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }] },
 
   // ===================== Report (JBAP feedback 16 Oct 2026, #1: moved from FAD and SMD) =====================
@@ -679,12 +664,12 @@ const SCREENS = [
     rule: 'Auction result per auction and lot, with every milestone date from awarding to release to the buyer (live data, for FAD and SMD).',
     rows: V, cols: AM_COLS, sort: ['auction', 'desc'], filters: AM_FILTERS, totals: amTotals },
   // Wish 5 + JBAP feedback (16 Oct 2026, #2, #20, #23; 19 Oct 2026, VWD #4): Inventory Monitoring moves from VWD and SMD to the Report menu, for every department; view only, status calculated
-  { id: 'report/inventory-monitoring', dept: 'Report', title: 'Inventory Monitoring', actions: VFS, tag: 'Wish', compact: true, isNew: true,
+  { id: 'report/inventory-monitoring', dept: 'Report', title: 'Inventory Monitoring', actions: VFS, tag: 'Wish', compact: true,
     rule: `Every unit in the yard, one row each: the auction lots, the units JBAP's parking inventory file (as of 12 Oct 2026) shows in the yard that are not lots, and new vehicles captured at inspection (sample data; the real CDMS takes them from Inspection). Columns follow that file (Logistics, Originating Warehouse, Parking Location, Transfer Date, Returned to Seller WH and Date of Entry come from it; Date of Entry is inferred when a lot's plate is not in it). Inventory Status is calculated: Listed (in an auction that has not ended, or relisted), Not Listed, Awarded (sold), For Release (dispatched, waiting for the buyer's pull-out), For Return (cleared by SMD), Released or Returned; units from JBAP's file show Listed or For Return as the file does, new inspection units are Not Listed. First Auction Listed and End Date of Listing are blank for units that are not lots. View only; the counts follow the lots as they change in FAD, SMD and VWD. Days in Yard runs to the release or return date, or to today while the unit is in the yard.`,
     rows: inventoryRows, sort: ['entry_date', 'asc'], initial: { yard: 'In yard' },
     cols: [C('Date of Entry', 'entry_date', 'date'), C('VCN', 'vcn', 'code'), C('Plate Number', 'plate', 'code'), C('CS No.', 'cs_no', 'code'), C('Make/Model', 'model', 'text', { w: 200 }),
       C('Color', 'color', 'text', { w: 110 }), C('Year', 'year', 'code'), C('Seller', 'seller', 'code'), C('Logistics', 'logistics', 'text', { w: 130 }), C('Originating Warehouse', 'origin_wh', 'text', { w: 150 }),
-      C('Parking Location', 'parking', 'text', { w: 130 }), C('Transfer Date', 'transfer_date', 'date'), C('First Auction Listed', 'first_auction', 'code', { isNew: true }), C('End Date of Listing', 'listing_end', 'date', { isNew: true }),
+      C('Parking Location', 'parking', 'text', { w: 130 }), C('Transfer Date', 'transfer_date', 'date'), C('First Auction Listed', 'first_auction', 'code'), C('End Date of Listing', 'listing_end', 'date'),
       C('Auction Status', 'status', 'status'), C('Inventory Status', 'inv_status', 'text'), C('Released to Buyer', 'released_buyer', 'date'), C('Returned to Seller', 'returned_seller', 'date'),
       C('Returned to Seller WH', 'rts_wh', 'text', { w: 130 }), C('Days in Yard', 'days_in_yard', 'int')],
     filters: [{ key: 'yard', label: 'In yard / Out', type: 'select', w: 'w1', options: () => ['In yard', 'Out'] }, { key: 'status', label: 'Auction Status', type: 'select', w: 'w1', options: () => ['Sold', 'Not Sold', 'Cancelled'] },
@@ -694,7 +679,7 @@ const SCREENS = [
       { key: 'plate', label: 'Plate Number' }],
     totals: rows => ({ plate: `${rows.length} units`, model: INV_STATUSES.map(t => `${t} ${rows.filter(r => r.inv_status === t).length}`).filter(t => !t.endsWith(' 0')).join(' · ') }) },
   // JBAP feedback (19 Oct 2026, Q70): one row per seller, like the REPORT sheet of JBAP's parking inventory file; the Parking Location filter chooses which units are counted
-  { id: 'report/inventory-summary', dept: 'Report', title: 'Inventory Summary', actions: VFS, isNew: true,
+  { id: 'report/inventory-summary', dept: 'Report', title: 'Inventory Summary', actions: VFS,
     rule: `Units in the yard per seller and inventory status, like the REPORT sheet of JBAP's parking inventory file (proposal, Q70). Units without a seller are grouped as Not recorded. The Parking Location filter narrows the units counted.`,
     count() { return this.rows(true).length; },   // menu counts ignore the Parking pick
     rows: all => {   // all = true: every unit in the yard, whatever the Parking pick
@@ -710,7 +695,7 @@ const SCREENS = [
     filters: [{ key: 'parking', label: 'Parking Location', type: 'select', options: () => ['OPEN PARKING', 'STEEL PARKING', 'IMET PARKING', 'Not recorded'], match: () => true }],   // rows() applies the pick (it chooses the units, not the rows), so the generic filter lets every row through
     totals: rows => Object.fromEntries([['seller', 'Total'], ...['in_yard', 'listed', 'not_listed', 'awarded', 'for_release', 'for_return'].map(k => [k, intf(sumBy(rows, k))])]) },
   // JBAP feedback (19 Oct 2026, Q69): the list of every cancellation for FAD and SMD (the old FAD and SMD Cancellation Monitoring links open it); Cancellation Entry keeps its own list under the entry form
-  { id: 'report/cancellation-monitoring', dept: 'Report', title: 'Cancellation Monitoring', actions: VFS, isNew: true,
+  { id: 'report/cancellation-monitoring', dept: 'Report', title: 'Cancellation Monitoring', actions: VFS,
     rule: 'Every cancellation, view only, for FAD and SMD (proposal, Q69). Cancellation Entry keeps its own list for recording. Prototype: Seller is blank for cancellations whose lot is not in the sample data.',
     rows: CX, sort: ['dcancel', 'desc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 220 }), C('Buyer ID', 'cid', 'code'), C('Plate Number', 'plate', 'code'), C('Seller', 'seller', 'code'),
@@ -720,6 +705,19 @@ const SCREENS = [
       { key: 'seller', label: 'Seller', type: 'select', options: () => [...sellerOpts(), 'Not recorded'], match: (r, v) => (r.seller || 'Not recorded') === v },   // most sample cancellations are of lots outside the sample, so their seller is unknown
       { key: 'waived', label: 'Waived', type: 'select', w: 'w1', options: () => ['Yes', 'No'], match: (r, v) => (v === 'Yes') === !!r.waived }],
     totals: rows => ({ customer: `${rows.length} cancellations`, penalty: money(sumBy(rows, 'penalty')) }) },
+
+  // JBAP feedback (26 Oct 2026): Rebate Monitoring and Liability to Seller move from FAD to the Report menu (a moved screen counts as changed: New badge). Rebate Monitoring's columns come from REBMON.
+  { id: 'report/rebate-monitoring', dept: 'Report', title: 'Rebate Monitoring', actions: VS, isNew: true,
+    rule: 'Result price records with status SOLD and a rebate. Minimum Bid = Awarded Price, Highest Offer = Minimum Bid − Rebate, Revenue = Commission − Rebate (JBAP\'s Rebate Monitoring file). Download report saves an Excel file of the rebates in an auction range with all the file\'s columns. Rebate Approved (President) is blank for lots awarded before the approval date was recorded.',
+    ...REBMON,
+    buttons: [{ label: 'Download report', kind: 'ol', icon: 'download', act: 'downloadRebate', view: true }] },   // view: shown on a view-only screen (it changes no data)
+  { id: 'report/liability-to-seller', dept: 'Report', title: 'Liability to Seller', actions: VS, layout: 'query', isNew: true,
+    rule: 'Units the buyer has paid for where Payment to Seller is still blank, or happened after the date entered.',
+    rows: () => { const d = U('report/liability-to-seller').asOf || TODAY; return sold().filter(v => v.buyer_paid && v.buyer_paid <= d && (!v.pay_seller || v.pay_seller > d)); },
+    sort: ['seller', 'asc'],
+    cols: [C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 250 }),
+      C('Plate Number', 'plate', 'code'), C('Buyer Paid', 'buyer_paid', 'date'), C('Payment to Seller Deadline', 'pay_deadline', 'date'), C('Total (Result Price + Transfer Fees + Security Bond)', 'total', 'money')],
+    totals: rows => ({ seller: 'Total liability to sellers', total: money(sumBy(rows, 'total')) }) },
 
   // ===================== Customer › Customer Inquiry (read-only; Sales Actions is not part of the prototype) =====================
   { id: CUST_ID, dept: 'Customer', title: 'Customer Inquiry', actions: VFS,
@@ -731,7 +729,7 @@ const SCREENS = [
     totals: rows => ({ customer: `${rows.length} buyers`, lots: intf(sumBy(rows, 'lots')), total_bought: money(sumBy(rows, 'total_bought')), unpaid: intf(sumBy(rows, 'unpaid')), cancels: intf(sumBy(rows, 'cancels')) }) },
 
   // ===================== Settings › Holiday List (JBAP answer Q14, 20 Oct 2026) =====================
-  { id: 'settings/holidays', dept: 'Settings', title: 'Holiday List', actions: VFSU, layout: 'holidays', isNew: true, listTitle: 'Holidays',
+  { id: 'settings/holidays', dept: 'Settings', title: 'Holiday List', actions: VFSU, layout: 'holidays', listTitle: 'Holidays',
     rule: 'Holidays and other non-working days: working days skip Saturdays, Sundays and every date listed here, regular holiday or special non-working day. In CDMS only users with the ADMIN role add or remove holidays (JBAP answer Q14); deadlines and aging skip these dates. Prototype: the list is sample data (check it against the official proclamation) and the ADMIN role is not simulated; changes last until you refresh the page.',
     rows: holidayRows, sort: ['date', 'asc'],
     cols: [C('Date', 'date', 'date'), C('Day', 'day', 'text', { w: 120 }), C('Holiday', 'name', 'text', { w: 320 }), C('Type', 'type', 'text', { w: 200 }), C('Remove', 'id', 'rowbtn', { act: 'removeHoliday', btn: 'Remove', aria: r => `${r.name} ${fmtDate(r.date)}` })],
@@ -739,14 +737,14 @@ const SCREENS = [
 
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
-    rule: 'Every data change made in FAD, SMD and VWD, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals, the SAAF and Rebate Paid.',
+    rule: 'Every data change made in FAD, SMD and VWD, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals and the SAAF; FAD entries include Rebate Paid.',
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
       { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD', 'Settings'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Delete'] },
       { key: 'record', label: 'Record / Plate' }],
-    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them, sends a SAAF or records Rebate Paid.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : null; } },
+    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them or sends a SAAF.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -866,7 +864,7 @@ function filterCard(scr) {
     return `<div class="fld ${fd.w || ''}"><label for="${id}">${esc(fd.label)}</label><input class="ctl" id="${id}" data-filter="${fd.key}" placeholder="Type to search" value="${esc(f[fd.key] || '')}"></div>`;
   }).join('');
   const hasSel = scr.filters.some(fd => fd.type === 'select');
-  return `<section class="card filter" aria-label="Filter"><div class="card-h"><div class="ico">${IC.filter}</div>Filter${newMini({ isNew: hasSel })}</div>
+  return `<section class="card filter" aria-label="Filter"><div class="card-h"><div class="ico">${IC.filter}</div>Filter</div>
     ${hasSel ? '<p class="note msel-hint">Tick one or more values in a dropdown.</p>' : ''}<form class="fb" data-form="filter">${fields}<div class="btns"><button type="button" class="btn gh" data-act="resetFilter">${IC.reset}Reset</button>
     <button type="submit" class="btn pr">${IC.search}Apply filter</button></div></form></section>`;
 }
@@ -1043,12 +1041,12 @@ const CUST_SELLER_COLS = [C('Seller', 'seller', 'code'), C('Seller Name', 'selle
 const CUST_LOT_COLS = [C('Auction Month', 'amonth', 'code'), C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'),
   C('Make/Model', 'model', 'text', { w: 240 }), C('Result Price', 'price', 'money'), C('Notarial', 'transfer_fee', 'money'), C('Commission', 'com', 'money'), C('Total', 'total', 'money'), C('Step', 'step', 'code')];
 // JBAP answer Q21: Date of Release / Return (the lot's release date, any release type) is on the Sold list only; Vehicle for release adds the dispatch columns
-const CUST_SOLD_COLS = [...CUST_LOT_COLS, C('Date of Release / Return', 'release', 'date', { isNew: true })];
+const CUST_SOLD_COLS = [...CUST_LOT_COLS, C('Date of Release / Return', 'release', 'date')];
 const CUST_REL_COLS = [...CUST_LOT_COLS, C('Dispatch Date', 'dispatch', 'date'), C('Dispatch Deadline', 'dispatch_deadline', 'date', { late: true }), C('Penalty', 'penalty', 'money')];
 const CUST_CX_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 200 }),
   C('Date Cancelled', 'dcancel', 'date'), C('Waived?', 'waived', 'rocheck'), C('Justification', 'just', 'text', { w: 240 }), C('Penalty', 'penalty', 'money'), C('Billing Date', 'bill_date', 'date'), C('Paid Date', 'paid_date', 'date')];
 const CUST_DOAS_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
-  C('Seller Payment', 'pay_seller', 'date'), C('Receipt of DOAS', 'rcv_doas', 'date'), C('EWB Call Out', 'ewb_callout', 'date', { isNew: true }), C('Working Days Since Receipt / Call Out', 'doas_days', 'int', { isNew: true })];
+  C('Seller Payment', 'pay_seller', 'date'), C('Receipt of DOAS', 'rcv_doas', 'date'), C('EWB Call Out', 'ewb_callout', 'date'), C('Working Days Since Receipt / Call Out', 'doas_days', 'int')];
 const CUST_DOCS_COLS = [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Seller', 'seller', 'code'), C('Plate', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }),
   C('JBAP Receipt of Documents', 'orig_docs', 'date'), C('ATF No.', 'atf_no', 'code')];
 // Customer page: Customer Information (not built) and Customer Transaction History (cards, purchases by seller, lot lists as tabs with their own URL)
@@ -1086,7 +1084,7 @@ function proposedPanels() {
 function homeLayout() {
   const card = d => {
     const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}${newMini(s)}<span class="cnt">${countOf(s).toLocaleString()}</span></a></li>`).join('');
-    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch. Live data: Seller Awarding Acknowledgement, Unreleased Unit, Rebate Monitoring, Rebate Payable, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Monitoring and summary reports for FAD, SMD and VWD: results, auctions, inventory, cancellations' }[d];
+    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch. Live data: Seller Awarding Acknowledgement, Unreleased Unit, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Monitoring and summary reports for FAD, SMD and VWD: results, auctions, inventory, cancellations, rebates, liability to sellers' }[d];
     const icon = d === 'Report' ? '<img src="assets/ic-report.png" alt="" width="20" height="20">' : deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox');
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
@@ -1101,7 +1099,8 @@ const MOVED = { 'FAD/result-summary': 'report/result-summary', 'SMD/result-summa
   'FAD/auction-monitoring': 'report/auction-monitoring', 'SMD/auction-monitoring': 'report/auction-monitoring', 'VWD/auction-monitoring': 'report/inventory-monitoring',
   'VWD/inventory': 'report/inventory-monitoring', 'SMD/inventory': 'report/inventory-monitoring',
   'FAD/cancellation-monitoring': 'report/cancellation-monitoring', 'SMD/cancellation-monitoring': 'report/cancellation-monitoring', 'FAD/cancellation-payment': 'FAD/cancellation-billing',
-  'FAD/rebate-payable': 'SMD/rebate-payable' };   // user request of 20 Oct 2026: Rebate Payable moved to SMD
+  // JBAP feedback (26 Oct 2026): Rebate Monitoring and Liability to Seller moved to Report; Rebate Payable is back in FAD (the SMD link opens it)
+  'FAD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-payable': 'FAD/rebate-payable', 'FAD/liability-to-seller': 'report/liability-to-seller' };
 const moved = h => Object.hasOwn(MOVED, h) ? MOVED[h] : null;   // own keys only: '#/constructor' is neither a moved nor a known screen
 const routeOf = h => { const t = moved(h) || h, scr = Object.hasOwn(byId, t) ? byId[t] : null; return scr && shown(scr) ? t : custRoute(t) ? t : ''; };   // a proposed screen opens only with the switch on
 function route() {

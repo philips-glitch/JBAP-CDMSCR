@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert');
 const { load } = require('./harness');
-// Menu groups: screens shown as tabs of one menu entry, in tab order (user requests of 15 and 16 Oct 2026; the Rebate group moved from FAD to SMD on 20 Oct 2026)
-const GROUPS = { Billing: { dept: 'FAD', ids: ['FAD/commission-billing', 'FAD/billing-monitoring', 'FAD/unpaid-billing'] }, Rebate: { dept: 'SMD', ids: ['SMD/rebate-monitoring', 'SMD/rebate-payable'] } };
+// Menu groups: screens shown as tabs of one menu entry, in tab order (user requests of 15 and 16 Oct 2026; the Rebate group is gone since JBAP's feedback of 26 Oct 2026: Rebate Monitoring is in Report, Rebate Payable in FAD)
+const GROUPS = { Billing: { dept: 'FAD', ids: ['FAD/commission-billing', 'FAD/billing-monitoring', 'FAD/unpaid-billing'] } };
 const deptMenu = (h, dept) => h.split(`id="grp-${dept}"`)[1].split('data-group=')[0];
 test('a department shows one entry per group, linking to its first tab and active on every tab', () => {
   const P = load();
@@ -13,16 +13,14 @@ test('a department shows one entry per group, linking to its first tab and activ
       for (const x of ids) assert.doesNotMatch(h, new RegExp(`>${P.byId[x].title}<`), `${P.byId[x].title} is not a menu entry`);
     }
   }
-  assert.doesNotMatch(deptMenu(P.sideHtml('FAD/unpaid'), 'FAD'), /mis is-active" href="#\/FAD\/(commission-billing|rebate-monitoring)/, 'other screens leave the FAD entries inactive');
-  assert.doesNotMatch(deptMenu(P.sideHtml('FAD/unpaid'), 'SMD'), /mis is-active" href="#\/SMD\/rebate-monitoring/, 'other screens leave the SMD Rebate group inactive');
+  assert.doesNotMatch(deptMenu(P.sideHtml('FAD/unpaid'), 'FAD'), /mis is-active" href="#\/FAD\/commission-billing/, 'other screens leave the FAD entries inactive');
 });
-test('the Billing badge adds up its tabs (switch on); Rebate has no work list, so no badge', () => {
+test('the Billing badge adds up its tabs (switch on)', () => {
   const P = load(); P.setProposed(true);
   const q = GROUPS.Billing.ids.map(id => P.queueCounts(P.byId[id])).filter(Boolean);
   assert.ok(q.length >= 2, 'Commission Billing and Billing Monitoring both count');
   const ready = q.reduce((a, x) => a + x.ready, 0), late = q.reduce((a, x) => a + x.late, 0);
   assert.match(P.sideHtml(''), new RegExp(`aria-label="Billing: ${ready} waiting, ${late} overdue"`));
-  assert.doesNotMatch(P.sideHtml(''), /aria-label="Rebate:/);
 });
 test('every grouped screen shows the group heading, breadcrumb and tab bar in tab order; other screens have none', () => {
   const P = load();
@@ -39,8 +37,8 @@ test('every grouped screen shows the group heading, breadcrumb and tab bar in ta
   }
   assert.doesNotMatch(P.pageHead(P.byId['FAD/unpaid']), /class="tabs"/);
   assert.strictEqual(P.groupOf(P.byId['FAD/unpaid']), null);
-  assert.strictEqual(P.groupOf(P.byId['FAD/rebate-monitoring']), null, 'FAD Rebate Monitoring is not grouped');
-  assert.doesNotMatch(P.pageHead(P.byId['FAD/rebate-monitoring']), /class="tabs"/, 'FAD Rebate Monitoring has no tabs');
+  assert.strictEqual(P.groupOf(P.byId['FAD/rebate-payable']), null, 'FAD Rebate Payable is not grouped');
+  assert.doesNotMatch(P.pageHead(P.byId['FAD/rebate-payable']), /class="tabs"/, 'FAD Rebate Payable has no tabs');
 });
 test('Home labels the grouped screens "<group> › …"', () => {
   const P = load(), h = P.homeLayout();

@@ -2,7 +2,7 @@ const test = require('node:test'), assert = require('node:assert');
 const { load } = require('./harness');
 test('Extend deadline: new date, reason, approver; penalty recalculated; logged', () => {
   const P = load(), scr = P.byId['FAD/unreleased-unit'], v = scr.rows().find(r => r.penalty > 0), old = v.dispatch_deadline, before = P.S.log.length;
-  const col = scr.cols.find(c => c.act === 'extendDeadline'); assert.ok(col && col.isNew && scr.isNew);
+  const col = scr.cols.find(c => c.act === 'extendDeadline'); assert.ok(col && !col.isNew && !scr.isNew, 'the 19 Oct New marks are gone');
   assert.match(P.cellHtml(scr, v, col, true), /data-act="extendDeadline"/);
   P.recordDeadlineExtension(scr, v, { date: P.TODAY, reason: 'Buyer hospitalised', by: 'FAD Manager' });
   const after = scr.rows().find(r => r.id === v.id);
