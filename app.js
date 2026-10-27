@@ -25,7 +25,7 @@ const fmtDate = iso => { if (!iso) return ''; const [y, m, d] = iso.split('-'); 
 const toDate = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
 const toIso = dt => dt.toISOString().slice(0, 10);
 const addDays = (iso, n) => { const d = toDate(iso); d.setUTCDate(d.getUTCDate() + n); return toIso(d); };
-// [BEHAVIOR] JBAP answer Q14 (20 Oct 2026): working days skip Saturdays, Sundays and every date in the holiday list (Settings > Holiday List; regular holidays and special non-working days alike).
+// [BEHAVIOR] JBAP answer Q14 (20 Oct 2026): working days skip Saturdays, Sundays and every date in the holiday list (Master > Holiday List; regular holidays and special non-working days alike).
 // Every deadline (buyer, payment to seller, dispatch), aging and customer page count is built on these two functions. HOLIDAY_DATES is rebuilt from S.holidays when the list loads and each time a holiday is added or removed.
 let HOLIDAY_DATES = new Set();
 const isWorkday = d => { const w = d.getUTCDay(); return w !== 0 && w !== 6 && !HOLIDAY_DATES.has(toIso(d)); };
@@ -93,7 +93,7 @@ const syncHolidays = () => { HOLIDAY_DATES = new Set(S.holidays.map(h => h.date)
 if (S) syncHolidays();
 const SELLER = D ? Object.fromEntries(D.sellers.map(s => [s.code, s])) : {};
 const UI = {};          // per-screen UI state: filters, sort, page, edits, errors, message
-const OPEN = { Customer: false, Auction: false, Report: false, Approval: false, FAD: false, SMD: false, VWD: false, Settings: false };
+const OPEN = { Customer: false, Auction: false, Report: false, Approval: false, FAD: false, SMD: false, VWD: false, Master: false };
 
 // ─── Proposed improvements switch (spec 2026-10-15) ──────────────────
 // [BEHAVIOR] Off = the CR scope exactly; on = LOGIQUE's proposals P3–P6 (P1 withdrawn after JBAP's feedback of 15 Oct 2026; P2 withdrawn after JBAP's feedback of 26 Oct 2026). A link with ?proposed=1 opens with the switch on.
@@ -307,7 +307,7 @@ function logChange(scr, action, r, changes) {
   });
 }
 
-// ─── Holiday list (Settings › Holiday List; JBAP answer Q14, 20 Oct 2026) ──
+// ─── Holiday list (Master › Holiday List; JBAP answer Q14, 20 Oct 2026) ──
 // [BEHAVIOR] The list lives in S.holidays (a session copy of D.holidays, so a refresh restores the sample). In CDMS only users with the ADMIN role add or remove holidays; the prototype has no login, so every visitor can.
 const HOLIDAY_TYPES = ['Regular holiday', 'Special non-working day'];
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -320,7 +320,7 @@ function holidayErrors(f) {
     type: !HOLIDAY_TYPES.includes(f.type) ? 'Choose the type of holiday.' : null };
 }
 const holidayError = f => Object.values(holidayErrors(f)).find(Boolean) || null;
-// [BEHAVIOR] Adding or removing a holiday changes every deadline and aging count that spans the date at once, and is logged under module Settings (a removal is a Delete)
+// [BEHAVIOR] Adding or removing a holiday changes every deadline and aging count that spans the date at once, and is logged under module Master (a removal is a Delete)
 function recordHolidayAdd(scr, f) {
   const h = { date: f.date, name: f.name.trim(), type: f.type };
   S.holidays.push(h); S.holidays.sort((x, y) => x.date.localeCompare(y.date)); syncHolidays();
@@ -860,8 +860,8 @@ const SCREENS = [
     filters: [{ key: 'rebate_status', label: 'Rebate Status', type: 'select', options: () => ['Pending approval', 'Approved', 'Rejected'] }, AUCTION_FILTER,
       { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'plate', label: 'Plate Number' }] },
 
-  // ===================== Settings › Holiday List (JBAP answer Q14, 20 Oct 2026) =====================
-  { id: 'settings/holidays', dept: 'Settings', title: 'Holiday List', actions: VFSU, layout: 'holidays', listTitle: 'Holidays',
+  // ===================== Master › Holiday List (JBAP answer Q14, 20 Oct 2026) =====================
+  { id: 'master/holidays', dept: 'Master', title: 'Holiday List', actions: VFSU, layout: 'holidays', listTitle: 'Holidays',
     rule: 'Holidays and other non-working days: working days skip Saturdays, Sundays and every date listed here, regular holiday or special non-working day. In CDMS only users with the ADMIN role add or remove holidays (JBAP answer Q14); deadlines and aging skip these dates. Prototype: the list is sample data (check it against the official proclamation) and the ADMIN role is not simulated; changes last until you refresh the page.',
     rows: holidayRows, sort: ['date', 'asc'],
     cols: [C('Date', 'date', 'date'), C('Day', 'day', 'text', { w: 120 }), C('Holiday', 'name', 'text', { w: 320 }), C('Type', 'type', 'text', { w: 200 }), C('Remove', 'id', 'rowbtn', { act: 'removeHoliday', btn: 'Remove', aria: r => `${r.name} ${fmtDate(r.date)}` })],
@@ -869,14 +869,14 @@ const SCREENS = [
 
   // ===================== Log Activity (top-level menu, read-only) =====================
   { id: LOG_ID, dept: 'LOG', top: true, title: 'Log Activity', actions: VFS,
-    rule: 'Every data change made in FAD, SMD and VWD, every rebate decision of the President in Approval, and every holiday added or removed in Settings, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals, the SAAF and Result Price (saved rebates and cancelled sales); FAD entries include Rebate Paid. A sales action added on a customer page is logged under SMD.',
+    rule: 'Every data change made in FAD, SMD and VWD, every rebate decision of the President in Approval, and every holiday added or removed in Master, one row per changed field. Entries cannot be edited or deleted. VWD entries come from vehicle releases and returns; SMD entries come from Return to Seller clearances and approvals, the SAAF and Result Price (saved rebates and cancelled sales); FAD entries include Rebate Paid. A sales action added on a customer page is logged under SMD.',
     rows: () => S.log, sort: ['at', 'desc'],
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
-      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD', 'Auction', 'Approval', 'Settings'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Delete'] },
+      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD', 'Auction', 'Approval', 'Master'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Delete'] },
       { key: 'record', label: 'Record / Plate' }],
-    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them, sends a SAAF, saves a rebate, cancels a sale in Result Price or adds a sales action on a customer page.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : m[0] === 'Approval' ? 'No activity yet: Approval logs an entry each time the President approves or rejects a rebate.' : null; } },
+    emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them, sends a SAAF, saves a rebate, cancels a sale in Result Price or adds a sales action on a customer page.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Master' ? 'No activity yet: Master logs an entry each time a holiday is added or removed.' : m[0] === 'Approval' ? 'No activity yet: Approval logs an entry each time the President approves or rejects a rebate.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
 // [BEHAVIOR] User request (27 Oct 2026): every vehicle list opens with the latest auction first, lots in order within an auction (sortRows); a column header still re-sorts.
@@ -962,15 +962,15 @@ function sideHtml(route) {
   }).join('');
   const logOn = route === LOG_ID;
   const log = `<a class="mi ${logOn ? 'is-active' : ''}" href="#/${LOG_ID}" ${logOn ? 'aria-current="page"' : ''}>${deptSvg('LOG')}Log Activity</a>`;
-  return TOP_BEFORE.map(x => TOP_MENUS[x[1]] ? topMenu(x[1], route) : disabledItem(x)).join('') + groups + TOP_AFTER.map(disabledItem).join('') + topMenu('settings', route) + log +
-    '<p class="side-note">Prototype: only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active. Other menus are disabled.</p>';
+  return TOP_BEFORE.map(x => TOP_MENUS[x[1]] ? topMenu(x[1], route) : disabledItem(x)).join('') + groups + TOP_AFTER.map(disabledItem).join('') + log +
+    '<p class="side-note">Prototype: only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval, FAD, SMD, VWD, Master › Holiday List and Log Activity are active. Other menus are disabled.</p>';
 }
 // Top-level menus outside FAD / SMD / VWD: Customer (Customer Inquiry; a customer page keeps it highlighted) and Report. Items show their record count.
 const TOP_MENUS = { customer: { dept: 'Customer', disabled: [], on: (s, r) => r === s.id || (s.id === CUST_ID && !!custRoute(r)) },
   auction: { dept: 'Auction', disabled: [], on: (s, r) => r === s.id },   // Auction (existing CDMS menu, JBAP 27 Oct 2026): Result Price
   report: { dept: 'Report', disabled: [], on: (s, r) => r === s.id },
   approval: { dept: 'Approval', disabled: [], icon: 'APP', on: (s, r) => r === s.id },   // Approval (JBAP, 26 Oct 2026): Rebate Approval for the President; its icon is drawn inline
-  settings: { dept: 'Settings', disabled: [], icon: 'SET', on: (s, r) => r === s.id } };   // Settings (JBAP answer Q14): after the other menus, before Log Activity; its icon is drawn inline
+  master: { dept: 'Master', disabled: [], on: (s, r) => r === s.id } };   // Master (existing CDMS menu): Holiday List (JBAP answer Q14; moved from a Settings menu of its own, 27 Oct 2026)
 function topMenu(key, route) {
   const m = TOP_MENUS[key], open = OPEN[m.dept];
   const items = SCREENS.filter(s => s.dept === m.dept && shown(s)).map(s => { const on = m.on(s, route);
@@ -1154,7 +1154,7 @@ function onPairDate(el) {
   el.classList.toggle('is-dirty', !same); el.classList.toggle('is-invalid', val !== '' && !ISO_RE.test(val)); el.closest('tr')?.classList.toggle('is-dirty', !same);
   const c = $('[data-count="saafSave"]'); if (c) { const n = saafDirty(scr); c.textContent = n || ''; c.hidden = !n; }
 }
-// [BEHAVIOR] Settings › Holiday List: the Add holiday form above the list; what was typed stays, with the message, when it is refused
+// [BEHAVIOR] Master › Holiday List: the Add holiday form above the list; what was typed stays, with the message, when it is refused
 function holidayForm(scr) {
   const ui = U(scr.id), f = ui.hf || (ui.hf = { date: '', name: '', type: '', errors: {} }), er = k => f.errors[k] ? `<span class="err" id="hl-${k}-err">${esc(f.errors[k])}</span>` : '';
   return `<section class="card" aria-label="Add holiday"><div class="card-h"><div class="ico">${IC.cal}</div>Add holiday</div>
@@ -1257,13 +1257,13 @@ function homeLayout() {
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
   return `<div class="home"><nav class="crumb" aria-label="Breadcrumb"><b>Home</b></nav><h1>Post-Auction Menus</h1>
-    <p class="lead">Clickable prototype of the new Customer Inquiry, Report, FAD, SMD and VWD menus that replace the MS Access post-auction forms, plus Settings › Holiday List. Data is sample data and resets when you refresh the page. Demo date: <b>${fmtDate(TODAY)}</b>.</p>
+    <p class="lead">Clickable prototype of the new Customer Inquiry, Report, FAD, SMD and VWD menus that replace the MS Access post-auction forms, plus Master › Holiday List. Data is sample data and resets when you refresh the page. Demo date: <b>${fmtDate(TODAY)}</b>.</p>
     ${PROPOSED ? proposedPanels() : ''}<div class="hgrid">${['Auction', 'FAD', 'SMD', 'VWD', 'Report'].map(card).join('')}</div></div>`;
 }
 
 // ─── Router ───────────────────────────────────────────────────────────
 // [BEHAVIOR] JBAP feedback (16 Oct 2026): moved or merged screens; their old links open the new place
-const MOVED = { 'FAD/result-summary': 'report/result-summary', 'SMD/result-summary': 'report/result-summary',
+const MOVED = { 'settings/holidays': 'master/holidays', 'FAD/result-summary': 'report/result-summary', 'SMD/result-summary': 'report/result-summary',
   'FAD/auction-monitoring': 'report/auction-monitoring', 'SMD/auction-monitoring': 'report/auction-monitoring', 'VWD/auction-monitoring': 'report/inventory-monitoring',
   'VWD/inventory': 'report/inventory-monitoring', 'SMD/inventory': 'report/inventory-monitoring',
   'FAD/cancellation-monitoring': 'report/cancellation-monitoring', 'SMD/cancellation-monitoring': 'report/cancellation-monitoring', 'FAD/cancellation-payment': 'FAD/cancellation-billing',
@@ -2013,7 +2013,7 @@ function bind() {
   const content = $('#content'), menu = $('#menu');
   menu.addEventListener('click', ev => {
     const g = ev.target.closest('[data-group]'); if (g) { OPEN[g.dataset.group] = !OPEN[g.dataset.group]; renderSide(route()); return; }
-    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, Sales Actions, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active.`, 'warn'); return; }
+    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, Sales Actions, Report, Approval, FAD, SMD, VWD, Master › Holiday List and Log Activity are active.`, 'warn'); return; }
     if (ev.target.closest('.mis, a.mi')) document.body.classList.remove('nav-open');
   });
   content.addEventListener('change', ev => {

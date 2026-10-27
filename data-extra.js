@@ -25,7 +25,7 @@
     V074: { rebate_status: 'Pending approval', rebate_requested: '2026-10-08' },
     V082: { rebate_status: 'Rejected', rebate_requested: '2026-10-07', rebate_rejected: '2026-10-08', rebate_reject_reason: 'The rebate is too high for this lot' } };
   D.vehicles.forEach(v => { if (rebates[v.id]) Object.assign(v, rebates[v.id]); });
-  // [MOCK] JBAP answer Q14 (20 Oct 2026): holiday list for Settings > Holiday List. Sample list of the fixed-date Philippine holidays of 2025-11 to 2026-12, to be kept by the CDMS administrator (ADMIN role);
+  // [MOCK] JBAP answer Q14 (20 Oct 2026): holiday list for Master > Holiday List. Sample list of the fixed-date Philippine holidays of 2025-11 to 2026-12, to be kept by the CDMS administrator (ADMIN role);
   // check it against the official proclamation (moving holidays such as Holy Week and Eid are not listed). Working days skip these dates, both types, as well as weekends.
   D.holidays = [
     { date: '2025-11-01', name: "All Saints' Day", type: 'Special non-working day' },

@@ -117,14 +117,14 @@ test('sidebar: Approval is a top menu right after Report and before FAD, with Re
   assert.match(s, /<button type="button" class="mi" data-group="Approval" aria-expanded="false" aria-controls="grp-Approval"><svg/);
   assert.match(s, new RegExp(`<a class="mis is-active" href="#/approval/rebate-approval" aria-current="page">Rebate Approval<span class="ptag mini new"[^>]*>New</span><span class="cnt">${pend}</span></a>`));
   assert.ok(pend >= 2 && pend < ap(P).rows().length);
-  assert.match(s, /only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active/);
+  assert.match(s, /only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval, FAD, SMD, VWD, Master › Holiday List and Log Activity are active/);
   assert.strictEqual(P.routeOf('approval/rebate-approval'), 'approval/rebate-approval');
   P.setProposed(true); assert.strictEqual(P.routeOf('approval/rebate-approval'), 'approval/rebate-approval'); assert.ok(P.shown(ap(P)));
   assert.match(P.pageHead(ap(P)), /Home<\/a>›<span>Approval<\/span>›<b>Rebate Approval<\/b>/);
 });
 test('Log Activity: Approval is a Module option, has its own empty note, and shows the President\'s decisions', () => {
   const P = load(), log = P.byId['log-activity'];
-  assert.deepStrictEqual(log.filters.find(f => f.key === 'module').options(), ['FAD', 'SMD', 'VWD', 'Auction', 'Approval', 'Settings']);
+  assert.deepStrictEqual(log.filters.find(f => f.key === 'module').options(), ['FAD', 'SMD', 'VWD', 'Auction', 'Approval', 'Master']);
   assert.match(log.rule, /every rebate decision of the President in Approval/);
   P.U(log.id).applied = { module: ['Approval'] }; assert.match(log.emptyNote(), /Approval logs an entry each time the President approves or rejects a rebate/);
   P.recordRebateDecision(ap(P), ap(P).rows().find(r => r.rebate_status === 'Pending approval'), 'Approved');

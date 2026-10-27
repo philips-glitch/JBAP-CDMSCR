@@ -8,7 +8,7 @@ const SAMPLE = [
   ['2026-06-12', 'Independence Day', 'Regular holiday'], ['2026-08-21', 'Ninoy Aquino Day', 'Special non-working day'], ['2026-08-31', 'National Heroes Day', 'Regular holiday'],
   ['2026-11-01', "All Saints' Day", 'Special non-working day'], ['2026-11-30', 'Bonifacio Day', 'Regular holiday'], ['2026-12-08', 'Feast of the Immaculate Conception', 'Special non-working day'],
   ['2026-12-25', 'Christmas Day', 'Regular holiday'], ['2026-12-30', 'Rizal Day', 'Regular holiday'], ['2026-12-31', 'Last Day of the Year', 'Special non-working day']];
-const hs = P => P.byId['settings/holidays'];
+const hs = P => P.byId['master/holidays'];
 
 test('[MOCK] D.holidays: the 18 fixed-date Philippine holidays of 2025-11 to 2026-12, regular and special, as briefed', () => {
   const P = load();
@@ -47,7 +47,7 @@ test('everything built on working days follows the list: buyer, payment-to-selle
   assert.strictEqual(P.enrichV(Object.assign({}, v, { dispatch: '2026-08-19', deadline_reset: '2026-09-30' })).dispatch_deadline, '2026-09-30', 'a reset date is used as given');
 });
 
-test('adding a holiday moves a deadline, removing it moves it back; both are logged under Settings', () => {
+test('adding a holiday moves a deadline, removing it moves it back; both are logged under Master', () => {
   const P = load(), scr = hs(P), v = () => P.enrichV({ auction: 215, awarding: '2026-09-07', status: 'Sold', seller: 'SBC', price: 100000 });
   assert.strictEqual(v().buyer_deadline, '2026-09-10', 'Mon 7 Sep + 3 working days');
   const before = P.S.log.length;
@@ -61,8 +61,8 @@ test('adding a holiday moves a deadline, removing it moves it back; both are log
   assert.strictEqual(scr.rows().length, 18);
   const log = P.S.log.slice(before);
   assert.deepStrictEqual(log.map(e => [e.module, e.screen, e.action, e.field, e.old, e.new]), [
-    ['Settings', 'Holiday List', 'Create', 'Date', '', '09/09/2026'], ['Settings', 'Holiday List', 'Create', 'Holiday', '', 'Sample local holiday'], ['Settings', 'Holiday List', 'Create', 'Type', '', 'Special non-working day'],
-    ['Settings', 'Holiday List', 'Delete', 'Date', '09/09/2026', ''], ['Settings', 'Holiday List', 'Delete', 'Holiday', 'Sample local holiday', ''], ['Settings', 'Holiday List', 'Delete', 'Type', 'Special non-working day', '']]);
+    ['Master', 'Holiday List', 'Create', 'Date', '', '09/09/2026'], ['Master', 'Holiday List', 'Create', 'Holiday', '', 'Sample local holiday'], ['Master', 'Holiday List', 'Create', 'Type', '', 'Special non-working day'],
+    ['Master', 'Holiday List', 'Delete', 'Date', '09/09/2026', ''], ['Master', 'Holiday List', 'Delete', 'Holiday', 'Sample local holiday', ''], ['Master', 'Holiday List', 'Delete', 'Type', 'Special non-working day', '']]);
   assert.ok(log.every(e => /^Holiday 09\/09\/2026/.test(e.record)), 'the record names the holiday: ' + log[0].record);
   assert.strictEqual(P.recordHolidayRemove(scr, '2026-09-09'), false, 'removing a date that is not listed does nothing');
   assert.strictEqual(P.S.log.length, before + 6, 'and logs nothing');
@@ -91,9 +91,9 @@ test('holidayError: date required and readable, not already listed, name require
   assert.strictEqual(P.holidayError(Object.assign({}, ok, { date: '2026-08-22' })), null, 'a holiday on a Saturday is allowed (it just changes nothing)');
 });
 
-test('Settings > Holiday List screen: columns, sort, filters, rule text; no New mark since 26 Oct 2026', () => {
+test('Master > Holiday List screen: columns, sort, filters, rule text; no New mark since 26 Oct 2026', () => {
   const P = load(), scr = hs(P);
-  assert.ok(scr && !scr.isNew && P.shown(scr)); assert.strictEqual(scr.dept, 'Settings'); assert.strictEqual(scr.title, 'Holiday List');
+  assert.ok(scr && !scr.isNew && P.shown(scr)); assert.strictEqual(scr.dept, 'Master'); assert.strictEqual(scr.title, 'Holiday List');
   assert.deepStrictEqual(P.colsOf(scr).filter(c => c.type !== 'rowbtn').map(c => c.label), ['Date', 'Day', 'Holiday', 'Type']);
   assert.deepStrictEqual(scr.cols.find(c => c.type === 'rowbtn').btn, 'Remove');
   assert.deepStrictEqual(scr.sort, ['date', 'asc']);
@@ -131,7 +131,7 @@ test('Add holiday form: typed date, name, type, Add holiday button; Remove is a 
   assert.match(h, /type="submit" class="btn pr">[\s\S]*Add holiday<\/button>/);
   const t = P.dataCard(scr, 'Holiday List'); assert.match(t, /data-act="removeHoliday" data-rid="2026-08-31" aria-label="Remove National Heroes Day 08\/31\/2026"/);
   assert.strictEqual(typeof P.ACTIONS.removeHoliday, 'function');
-  assert.match(P.pageHead(scr), /Home<\/a>›<span>Settings<\/span>›<b>Holiday List<\/b>/);
+  assert.match(P.pageHead(scr), /Home<\/a>›<span>Master<\/span>›<b>Holiday List<\/b>/);
   assert.doesNotMatch(P.pageHead(scr), /<h1>Holiday List<span class="ptag new"/);
 });
 
@@ -144,28 +144,29 @@ test('Add holiday form keeps what was typed, with the message, when it is refuse
   assert.match(h, /id="hl-date"[^>]*aria-invalid="true"/);
 });
 
-test('sidebar: Settings is a top menu with Holiday List, after the other top menus and before Log Activity', () => {
-  const P = load(), side = P.sideHtml('settings/holidays');
-  assert.match(side, /<button type="button" class="mi" data-group="Settings" aria-expanded="false" aria-controls="grp-Settings">/);
-  assert.ok(side.indexOf('data-disabled="Staff"') < side.indexOf('data-group="Settings"') && side.indexOf('data-group="Settings"') < side.indexOf('href="#/log-activity"'), 'between Staff and Log Activity');
-  assert.match(side, /<a class="mis is-active" href="#\/settings\/holidays" aria-current="page">Holiday List<span class="cnt">18<\/span><\/a>/);
-  assert.doesNotMatch(side, /data-disabled="Settings"/);
-  assert.match(side, /only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active/);
-  assert.match(P.homeLayout(), /VWD menus that replace the MS Access post-auction forms, plus Settings › Holiday List./);
+test('sidebar: Holiday List sits in the existing Master menu (27 Oct 2026), between Cars and Auction; no Settings menu', () => {
+  const P = load(), side = P.sideHtml('master/holidays');
+  assert.match(side, /<button type="button" class="mi" data-group="Master" aria-expanded="false" aria-controls="grp-Master"><img src="assets\/ic-master.png" alt="">Master<span class="caret"><\/span><\/button>/);
+  assert.ok(side.indexOf('data-disabled="Cars"') < side.indexOf('data-group="Master"') && side.indexOf('data-group="Master"') < side.indexOf('data-group="Auction"'), 'where Master sits in CDMS');
+  assert.match(side, /<a class="mis is-active" href="#\/master\/holidays" aria-current="page">Holiday List<span class="cnt">18<\/span><\/a>/);
+  assert.doesNotMatch(side, /data-disabled="Master"/); assert.doesNotMatch(side, /Settings/, 'no Settings menu any more');
+  assert.match(side, /only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval, FAD, SMD, VWD, Master › Holiday List and Log Activity are active/);
+  assert.match(P.homeLayout(), /VWD menus that replace the MS Access post-auction forms, plus Master › Holiday List./);
 });
 
-test('route: #/settings/holidays opens the screen, with or without the switch', () => {
-  const P = load(); assert.strictEqual(P.routeOf('settings/holidays'), 'settings/holidays'); P.setProposed(true); assert.strictEqual(P.routeOf('settings/holidays'), 'settings/holidays');
+test('route: #/master/holidays opens the screen, with or without the switch; the old #/settings/holidays link goes there', () => {
+  const P = load(); assert.strictEqual(P.routeOf('master/holidays'), 'master/holidays'); P.setProposed(true); assert.strictEqual(P.routeOf('master/holidays'), 'master/holidays');
+  assert.strictEqual(P.routeOf('master/holidays'), 'master/holidays');
 });
 
-test('Log Activity: Module filter offers Approval and Settings, Action filter offers Delete; a removal shows as Delete', () => {
+test('Log Activity: Module filter offers Approval and Master, Action filter offers Delete; a removal shows as Delete', () => {
   const P = load(), log = P.byId['log-activity'];
-  assert.deepStrictEqual(log.filters.find(f => f.key === 'module').options(), ['FAD', 'SMD', 'VWD', 'Auction', 'Approval', 'Settings']);
+  assert.deepStrictEqual(log.filters.find(f => f.key === 'module').options(), ['FAD', 'SMD', 'VWD', 'Auction', 'Approval', 'Master']);
   assert.deepStrictEqual(log.filters.find(f => f.key === 'action').options(), ['Update', 'Create', 'Cancel', 'Delete']);
   P.recordHolidayAdd(hs(P), { date: '2026-09-09', name: 'X', type: 'Regular holiday' }); P.recordHolidayRemove(hs(P), '2026-09-09');
   const row = log.rows().find(r => r.action === 'Delete'), cell = P.cellHtml(log, row, log.cols.find(c => c.key === 'action'), false);
   assert.match(cell, /<span class="st cx">Delete<\/span>/);
-  assert.match(log.rule, /Settings/);
+  assert.match(log.rule, /holiday added or removed in Master/);
 });
 
 test('Add holiday form: every error shown is tied to its control with aria-describedby (none when there is no error)', () => {
