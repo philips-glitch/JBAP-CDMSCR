@@ -93,7 +93,7 @@ const syncHolidays = () => { HOLIDAY_DATES = new Set(S.holidays.map(h => h.date)
 if (S) syncHolidays();
 const SELLER = D ? Object.fromEntries(D.sellers.map(s => [s.code, s])) : {};
 const UI = {};          // per-screen UI state: filters, sort, page, edits, errors, message
-const OPEN = { Customer: false, Report: false, Approval: false, FAD: false, SMD: false, VWD: false, Settings: false };
+const OPEN = { Customer: false, Auction: false, Report: false, Approval: false, FAD: false, SMD: false, VWD: false, Settings: false };
 
 // ─── Proposed improvements switch (spec 2026-10-15) ──────────────────
 // [BEHAVIOR] Off = the CR scope exactly; on = LOGIQUE's proposals P3–P6 (P1 withdrawn after JBAP's feedback of 15 Oct 2026; P2 withdrawn after JBAP's feedback of 26 Oct 2026). A link with ?proposed=1 opens with the switch on.
@@ -654,18 +654,26 @@ const SCREENS = [
     queue: true, ready: { key: 'for_print', when: r => !r.bill_date },
     ruleP: ['P4', 'Lots not billed yet arrive pre-ticked for billing.'] },
 
-  // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch; live data on SAAF, Unreleased Unit, Return to Seller and SMD Manager Approval) =====================
-  // JBAP feedback (26 Oct 2026): SMD › Result Price stands in for the Result Price module that CDMS already has. SMD types the rebate before awarding (the President decides it in Approval › Rebate Approval) and cancels a sold lot with Cancel sale
-  { dept: 'SMD', slug: 'result-price', title: 'Result Price', actions: VFSU, isNew: true,
-    rule: 'Stands in for the existing CDMS Result Price module (JBAP, 26 Oct 2026). SMD types the rebate of a sold lot before awarding; it then waits for the President in Approval › Rebate Approval. Cancel sale cancels a sold lot that is not released, with Waived? and a justification.',
-    rows: () => sold().filter(v => !v.release), sort: ['auction_lot', 'desc'],
-    cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 210 }), C('Seller', 'seller', 'code'),
-      C('Customer Name', 'customer', 'text', { w: 220 }), C('Result Price', 'price', 'money'), C('Rebate', 'rebate', 'money', { edit: 'money', lockWhen: r => !!r.awarding }),
-      C('Rebate Status', 'rebate_status', 'text'), C('Awarding Date', 'awarding', 'date'), C('Cancel', 'cancel', 'rowbtn', { act: 'cancelSale', btn: 'Cancel sale' })],
-    filters: [AUCTION_FILTER, { key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, { key: 'customer', keys: ['customer', 'cid'], label: 'Customer Name / Buyer ID', w: 'w2' }, { key: 'plate', label: 'Plate Number' }],
+  // ===================== Auction (existing CDMS menu) =====================
+  // JBAP (26 and 27 Oct 2026): Result Price already exists in CDMS under Auction (Set Result Price). Its layout is kept; the fields added on 26 Oct carry the New badge:
+  // the Rebate (sent to the President in Approval › Rebate Approval) and, when Auction Status is set to Cancelled, Waived? and a justification. Update saves one row.
+  { id: 'auction/result-price', dept: 'Auction', title: 'Result Price', actions: VFSU, isNew: true,
+    rule: 'The existing CDMS screen Auction › Result Price (Set Result Price), with the fields added after JBAP feedback of 26 Oct 2026. On a sold lot, type a Rebate (only before awarding) or set Auction Status to Cancelled, then press Update on that row. A rebate waits for the President in Approval › Rebate Approval. A cancellation asks Date Cancelled, Waived? and a justification; the lot then shows as Cancelled here and in Report › Cancellation Monitoring, and if the fee is not waived it is billed in FAD › Cancellation Billing & Payment. Prototype: columns the sample data does not hold (Start Price, Winner Confirmation, Offer Status, KYC Status) stay blank.',
+    rows: () => V().filter(v => v.status).map(v => Object.assign(v, { status_set: v.status, just_log: (S.cancels.find(c => String(c.auction) === String(v.auction) && String(c.lot) === String(v.lot)) || {}).just || '' })),
+    sort: ['auction_lot', 'desc'],
+    cols: [C('Update', 'upd', 'rowbtn', { act: 'rpUpdate', btn: 'Update', aria: r => `lot ${r.lot} ${r.plate}`, showWhen: r => r.status === 'Sold' && !r.release }),
+      C('Auction Status', 'status_set', 'text', { edit: 'select', options: ['Sold', 'Cancelled'], isNew: true, lockWhen: r => r.status !== 'Sold' || !!r.release }),
+      C('Auction No.', 'auction', 'code'), C('Lot No.', 'lot', 'code'), C('Model', 'model', 'text', { w: 170 }), C('Plate Number', 'plate', 'code'), C('Seller', 'seller', 'code'),
+      C('Buyer ID', 'cid', 'code'), C('Buyer Name', 'customer', 'text', { w: 180 }), C('Start Price', 'start_price', 'money'), C('Minimum Bid Price', 'min_bid', 'money'), C('Highest Offer Price', 'highest_offer', 'money'),
+      C('Rebate', 'rebate', 'money', { edit: 'money', isNew: true, lockWhen: r => !!r.awarding || r.status !== 'Sold' }), C('Rebate Status', 'rebate_status', 'text', { isNew: true }),
+      C('Winner Confirmation', 'winner_conf', 'text'), C('Offer Status', 'offer_status', 'text'), C('KYC Status', 'kyc_status', 'text'), C('Justification Log', 'just_log', 'text', { w: 200 })],
+    filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'lot', label: 'Lot No.', w: 'w1' }, { key: 'plate', label: 'Plate No.' },
+      { key: 'status', label: 'Auction Status', type: 'select', w: 'w1', options: () => ['Sold', 'Not Sold', 'Cancelled'] }],
     validate: (r, e) => ({ rebate: rebateAmountError(r, e) }),
     onSave: (r, keys, prev) => keys.includes('rebate') ? applyRebateRequest(r, prev) : [],   // a saved amount goes to the President: status, request date and the cleared decision are logged with it
-    buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Rebates sent to the President for approval.' },
+    buttons: [], savedNote: 'Rebate sent to the President for approval.' },
+
+  // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch; live data on SAAF, Unreleased Unit, Return to Seller and SMD Manager Approval) =====================
   // JBAP answer Q11 (20 Oct 2026): SMD's update screen for the SAAF is standard (it was proposal P5); live data, unlike SMD's four legacy-sample screens
   { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU,
     rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch in SMD still show the legacy sample). Tick For SAAF and press Email SAAF: one email per seller from sales@. Enter Seller Approved when the seller replies; the date shows in FAD Pending Awarding (JBAP answer Q11).',
@@ -786,9 +794,9 @@ const SCREENS = [
     cols: [C('Seller', 'seller', 'code'), C('In Yard', 'in_yard', 'int'), C('Listed', 'listed', 'int'), C('Not Listed', 'not_listed', 'int'), C('Awarded', 'awarded', 'int'), C('For Release', 'for_release', 'int'), C('For Return', 'for_return', 'int')],
     filters: [{ key: 'parking', label: 'Parking Location', type: 'select', options: () => ['OPEN PARKING', 'STEEL PARKING', 'IMET PARKING', 'Not recorded'], match: () => true }],   // rows() applies the pick (it chooses the units, not the rows), so the generic filter lets every row through
     totals: rows => Object.fromEntries([['seller', 'Total'], ...['in_yard', 'listed', 'not_listed', 'awarded', 'for_release', 'for_return'].map(k => [k, intf(sumBy(rows, k))])]) },
-  // JBAP feedback (19 Oct 2026, Q69): the list of every cancellation for FAD and SMD (the old FAD and SMD Cancellation Monitoring links open it, and so does the old FAD Cancellation Entry link: JBAP, 26 Oct 2026, cancellations are made in SMD › Result Price)
+  // JBAP feedback (19 Oct 2026, Q69): the list of every cancellation for FAD and SMD (the old FAD and SMD Cancellation Monitoring links open it, and so does the old FAD Cancellation Entry link: JBAP, 26 Oct 2026, cancellations are made in Auction › Result Price)
   { id: 'report/cancellation-monitoring', dept: 'Report', title: 'Cancellation Monitoring', actions: VFS,
-    rule: 'Every cancellation, view only, for FAD and SMD (proposal, Q69). New cancellations are made with Cancel sale in SMD › Result Price. Prototype: Seller is blank for cancellations whose lot is not in the sample data.',
+    rule: 'Every cancellation, view only, for FAD and SMD (proposal, Q69). New cancellations are made with Cancel sale in Auction › Result Price. Prototype: Seller is blank for cancellations whose lot is not in the sample data.',
     rows: CX, sort: ['dcancel', 'desc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 220 }), C('Buyer ID', 'cid', 'code'), C('Plate Number', 'plate', 'code'), C('Seller', 'seller', 'code'),
       C('Date Cancelled', 'dcancel', 'date'), C('Waived?', 'waived', 'rocheck'), C('Justification', 'just', 'text', { w: 240 }), C('Penalty', 'penalty', 'money'), C('Billing Date', 'bill_date', 'date'),
@@ -859,7 +867,7 @@ const SCREENS = [
     cols: [C('Date/Time', 'at', 'datetime'), C('User', 'user', 'code'), C('Module', 'module', 'code'), C('Screen', 'screen', 'text', { w: 170 }), C('Action', 'action', 'action'),
       C('Record', 'record', 'text', { w: 230 }), C('Field', 'field', 'text', { w: 190 }), C('Old Value', 'old', 'logval', { w: 160 }), C('New Value', 'new', 'logval', { w: 160 })],
     filters: [{ key: 'date', label: 'Date', type: 'daterange', w: 'w2' }, { key: 'user', label: 'User', type: 'select', w: 'w1', options: () => [...new Set(S.log.map(l => l.user))].sort() },
-      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD', 'Approval', 'Settings'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Delete'] },
+      { key: 'module', label: 'Module', type: 'select', w: 'w1', options: () => ['FAD', 'SMD', 'VWD', 'Auction', 'Approval', 'Settings'] }, { key: 'action', label: 'Action', type: 'select', w: 'w1', options: () => ['Update', 'Create', 'Cancel', 'Delete'] },
       { key: 'record', label: 'Record / Plate' }],
     emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them, sends a SAAF, saves a rebate, cancels a sale in Result Price or adds a sales action on a customer page.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : m[0] === 'Approval' ? 'No activity yet: Approval logs an entry each time the President approves or rejects a rebate.' : null; } },
 ];
@@ -938,10 +946,11 @@ function sideHtml(route) {
   const logOn = route === LOG_ID;
   const log = `<a class="mi ${logOn ? 'is-active' : ''}" href="#/${LOG_ID}" ${logOn ? 'aria-current="page"' : ''}>${deptSvg('LOG')}Log Activity</a>`;
   return TOP_BEFORE.map(x => TOP_MENUS[x[1]] ? topMenu(x[1], route) : disabledItem(x)).join('') + groups + TOP_AFTER.map(disabledItem).join('') + topMenu('settings', route) + log +
-    '<p class="side-note">Prototype: only Customer Inquiry, Sales Actions, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active. Other menus are disabled.</p>';
+    '<p class="side-note">Prototype: only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active. Other menus are disabled.</p>';
 }
 // Top-level menus outside FAD / SMD / VWD: Customer (Customer Inquiry; a customer page keeps it highlighted) and Report. Items show their record count.
 const TOP_MENUS = { customer: { dept: 'Customer', disabled: [], on: (s, r) => r === s.id || (s.id === CUST_ID && !!custRoute(r)) },
+  auction: { dept: 'Auction', disabled: [], on: (s, r) => r === s.id },   // Auction (existing CDMS menu, JBAP 27 Oct 2026): Result Price
   report: { dept: 'Report', disabled: [], on: (s, r) => r === s.id },
   approval: { dept: 'Approval', disabled: [], icon: 'APP', on: (s, r) => r === s.id },   // Approval (JBAP, 26 Oct 2026): Rebate Approval for the President; its icon is drawn inline
   settings: { dept: 'Settings', disabled: [], icon: 'SET', on: (s, r) => r === s.id } };   // Settings (JBAP answer Q14): after the other menus, before Log Activity; its icon is drawn inline
@@ -1205,8 +1214,10 @@ const MOVED = { 'FAD/result-summary': 'report/result-summary', 'SMD/result-summa
   'FAD/cancellation-monitoring': 'report/cancellation-monitoring', 'SMD/cancellation-monitoring': 'report/cancellation-monitoring', 'FAD/cancellation-payment': 'FAD/cancellation-billing',
   // JBAP feedback (26 Oct 2026): Rebate Monitoring and Liability to Seller moved to Report; Rebate Payable is back in FAD (the SMD link opens it)
   'FAD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-monitoring': 'report/rebate-monitoring', 'SMD/rebate-payable': 'FAD/rebate-payable', 'FAD/liability-to-seller': 'report/liability-to-seller',
-  // JBAP feedback (26 Oct 2026): cancellations are made with Cancel sale in SMD › Result Price; every cancellation is listed in Report › Cancellation Monitoring
-  'FAD/cancellation-entry': 'report/cancellation-monitoring' };
+  // JBAP feedback (26 Oct 2026): cancellations are made with Cancel sale in Auction › Result Price; every cancellation is listed in Report › Cancellation Monitoring
+  'FAD/cancellation-entry': 'report/cancellation-monitoring',
+  // JBAP (27 Oct 2026): Result Price is the existing CDMS screen under Auction, not an SMD screen
+  'SMD/result-price': 'auction/result-price' };
 const moved = h => Object.hasOwn(MOVED, h) ? MOVED[h] : null;   // own keys only: '#/constructor' is neither a moved nor a known screen
 const routeOf = h => { const t = moved(h) || h, scr = Object.hasOwn(byId, t) ? byId[t] : null; return scr && shown(scr) ? t : custRoute(t) ? t : ''; };   // a proposed screen opens only with the switch on
 function route() {
@@ -1339,7 +1350,7 @@ function applyEdits(scr, ids) {
       const val = e[k], col = scr.cols.find(c => c.key === k), nv = val === '' ? null : (col?.edit === 'money' && val !== null ? Number(val) : val);
       const ch = [col?.label || k, col?.edit, r._raw[k], nv]; r._raw[k] = nv; return ch;
     });
-    if (scr.onSave) changes.push(...(scr.onSave(r, keys, prev) || []));   // [BEHAVIOR] a screen can set more fields on the lot when its edit is saved (SMD › Result Price: a saved rebate goes to the President) and gives the extra log rows
+    if (scr.onSave) changes.push(...(scr.onSave(r, keys, prev) || []));   // [BEHAVIOR] a screen can set more fields on the lot when its edit is saved (Auction › Result Price: a saved rebate goes to the President) and gives the extra log rows
     logChange(scr, 'Update', r, changes);
     keys.forEach(k => delete e[k]); if (!Object.keys(e).length) delete ui.edits[id]; n++;
   });
@@ -1477,7 +1488,7 @@ function byBuyer(rows) {
   const g = new Map(); rows.forEach(r => { const k = r.cid || r.customer || r.id; if (!g.has(k)) g.set(k, { buyer: { customer: r.customer, cid: r.cid, email: r.email }, lots: [] }); g.get(k).lots.push(r); });
   return [...g.values()];
 }
-// [BEHAVIOR] JBAP feedback (26 Oct 2026): the first problem with a Cancel sale entry in SMD › Result Price, or null when it can be recorded.
+// [BEHAVIOR] JBAP feedback (26 Oct 2026): the first problem with a Cancel sale entry in Auction › Result Price, or null when it can be recorded.
 // f.date: ISO date, '' = blank, null = not a date; f.waived: the Waived? choice; f.just: the justification (required when the fee is waived).
 function cancelSaleError(v, f) {
   if (!f.date) return 'Date Cancelled is required.';
@@ -1486,7 +1497,7 @@ function cancelSaleError(v, f) {
   if (f.waived && !String(f.just || '').trim()) return 'Justification is required when the fee is waived.';
   return null;
 }
-// [BEHAVIOR] Records a cancellation made with Cancel sale in SMD › Result Price (the penalty billing and the lists that show it are unchanged)
+// [BEHAVIOR] Records a cancellation made with Cancel sale in Auction › Result Price (the penalty billing and the lists that show it are unchanged)
 function recordCancellation(scr, v, f) {
   if (v._raw.status !== 'Sold') return false;   // [BEHAVIOR] a lot is cancelled once
   logChange(scr, 'Cancel', v, [['Status', 'text', v._raw.status, 'Cancelled'], ['Date Cancelled', 'date', null, f.date],
@@ -1820,7 +1831,19 @@ const ACTIONS = {
         recordHolidayRemove(scr, h.date); closeModal(); render(); $('#content')?.focus(); toast(`Holiday removed: ${fmtDate(h.date)}, ${esc(h.name)}.`);
       } }] });
   },
-  // [BEHAVIOR] JBAP feedback (26 Oct 2026): SMD › Result Price › Cancel sale. Date Cancelled (typed, default today), Waived? (Yes / No, default No) and a Justification (required when waived); the checks are cancelSaleError's
+  // [BEHAVIOR] JBAP feedback (26 Oct 2026): Auction › Result Price › Cancel sale. Date Cancelled (typed, default today), Waived? (Yes / No, default No) and a Justification (required when waived); the checks are cancelSaleError's
+  // [BEHAVIOR] Auction › Result Price › Update: saves one row. Auction Status set to Cancelled opens the cancellation dialog; a typed Rebate goes to the President.
+  rpUpdate(scr, el) {
+    const ui = U(scr.id), id = el.dataset.rid, v = scr.rows().find(r => r.id === id); if (!v) return;
+    const e = ui.edits[id] || {};
+    if (e.status_set === 'Cancelled') return ACTIONS.cancelSale(scr, el);
+    delete e.status_set;
+    if (!('rebate' in e)) { if (!Object.keys(e).length) delete ui.edits[id]; render(); toast('Nothing to update on this row: type a Rebate or set Auction Status to Cancelled.', 'warn'); return; }
+    const err = scr.validate(v, e).rebate;
+    if (err) { ui.errors[id] = { rebate: err }; render(); toast(`Lot ${esc(v.lot)}: Rebate ${esc(err)}`, 'warn'); return; }
+    delete ui.errors[id]; applyEdits(scr, [id]); render();
+    toast(v._raw.rebate_status === 'Pending approval' ? `Rebate of lot ${esc(v.lot)} sent to the President for approval.` : `Lot ${esc(v.lot)} updated.`);
+  },
   cancelSale(scr, el) {
     const v = scr.rows().find(r => r.id === el.dataset.rid); if (!v) return;
     openModal({ title: `Cancel sale: ${v.plate}`, icon: 'ban',
@@ -1829,14 +1852,14 @@ const ACTIONS = {
         <div class="fld"><span class="lbl" id="cs-w-l">Waived?</span><div role="radiogroup" aria-labelledby="cs-w-l" style="display:flex;gap:22px"><label class="chkline"><input type="radio" class="chk" name="cs-waived" id="cs-w-yes" value="yes">Yes</label><label class="chkline"><input type="radio" class="chk" name="cs-waived" id="cs-w-no" value="no" checked>No</label></div></div>
         <div class="fld full"><label for="cs-just">Justification</label><textarea class="ctl" id="cs-just" placeholder="Required when the fee is waived"></textarea></div>
         <div class="fld full"><span class="err" id="cs-err" role="alert"></span></div></div>
-        <p class="note">The lot leaves Result Price and shows in Report › Cancellation Monitoring. If the fee is not waived, the penalty of PHP ${money(CANCEL_PENALTY)} is billed in FAD › Cancellation Billing & Payment.</p>`,
+        <p class="note">The lot shows as Cancelled in Result Price and in Report › Cancellation Monitoring. If the fee is not waived, the penalty of PHP ${money(CANCEL_PENALTY)} is billed in FAD › Cancellation Billing & Payment.</p>`,
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Cancel sale', kind: 'dg', icon: 'ban', onClick: () => {
         const f = { date: parseDateInput($('#cs-date').value, TODAY), waived: $('#cs-w-yes').checked, just: $('#cs-just').value.trim() }, err = cancelSaleError(v, f);
         const bad = !err ? null : /^Justification/.test(err) ? 'just' : 'date';
         $('#cs-date').classList.toggle('is-invalid', bad === 'date'); $('#cs-just').classList.toggle('is-invalid', bad === 'just');
         $('#cs-err').textContent = err || '';
         if (err) { $(`#cs-${bad}`).focus(); return; }
-        const done = recordCancellation(scr, v, f); closeModal(); render();
+        const done = recordCancellation(scr, v, f); delete U(scr.id).edits[v.id]; delete U(scr.id).errors[v.id]; closeModal(); render();
         toast(done ? `Sale of ${esc(v.plate)} cancelled.${f.waived ? ' The fee is waived.' : ' The penalty is in Cancellation Billing & Payment.'}` : `Lot ${esc(v.lot)} of Auction ${v.auction} is already cancelled.`, done ? '' : 'warn');
       } }] });
     $('#cs-date')?.focus();   // openModal focuses the first input (a read-only field)
