@@ -25,7 +25,7 @@ test('Typing a rebate sends it for approval; changing an approved one sends it a
   assert.strictEqual(r._raw.rebate, null); assert.ok(!r._raw.rebate_status);
 });
 test('Rebate locked once awarded; validation as before', () => {
-  const P = load(), scr = rp(P), awarded = live(scr).find(x => x.awarding), open = live(scr).find(x => !x.awarding);
+  const P = load(), scr = rp(P), awarded = live(scr).find(x => x.awarding), open = live(scr).find(x => !x.awarding && !x.rebate);
   const col = scr.cols.find(c => c.key === 'rebate'); assert.ok(col.lockWhen(awarded) && !col.lockWhen(open));
   assert.ok(scr.validate(open, { rebate: '-1' }).rebate); assert.ok(scr.validate(open, { rebate: String(open.price + 1) }).rebate);
 });
@@ -59,14 +59,14 @@ test('saving a rebate is logged under SMD with the status, the request date and 
   assert.strictEqual(r._raw.rebate, 0); assert.ok(!r._raw.rebate_status && !r._raw.rebate_requested, 'a 0 rebate is no rebate');
 });
 test('the rebate cell is a number box until the lot is awarded; Auction Status and Update on sold lots not released; the layout of CDMS Set Result Price', () => {
-  const P = load(), scr = rp(P), open = live(scr).find(x => !x.awarding), awarded = live(scr).find(x => x.awarding), col = k => scr.cols.find(c => c.key === k);
+  const P = load(), scr = rp(P), open = live(scr).find(x => !x.awarding && !x.rebate), awarded = live(scr).find(x => x.awarding), col = k => scr.cols.find(c => c.key === k);
   assert.match(P.cellHtml(scr, open, col('rebate'), true), /<input type="number"[^>]*data-key="rebate"/);
   assert.doesNotMatch(P.cellHtml(scr, awarded, col('rebate'), true), /<input/, 'locked once awarded');
   assert.doesNotMatch(P.cellHtml(scr, open, col('rebate_status'), true), /<input/);
   for (const r of [open, awarded]) { assert.match(P.cellHtml(scr, r, col('upd'), true), new RegExp(`data-act="rpUpdate" data-rid="${r.id}"[^>]*>Update<`)); assert.match(P.cellHtml(scr, r, col('status_set'), true), /<select[^>]*data-key="status_set"/); }
   const done = scr.rows().find(x => x.status !== 'Sold'); assert.strictEqual(P.cellHtml(scr, done, col('upd'), true), '<td class="c"></td>'); assert.doesNotMatch(P.cellHtml(scr, done, col('status_set'), true), /<select/);
   assert.deepStrictEqual(scr.cols.map(c => c.label), ['Update', 'Auction Status', 'Auction No.', 'Lot No.', 'Model', 'Plate Number', 'Seller', 'Buyer ID', 'Buyer Name', 'Start Price', 'Minimum Bid Price', 'Highest Offer Price', 'Rebate', 'Rebate Status', 'Winner Confirmation', 'Offer Status', 'KYC Status', 'Justification Log']);
-  assert.deepStrictEqual(scr.filters.map(f => f.key), ['seller', 'auction', 'lot', 'plate', 'status']); assert.deepStrictEqual(scr.sort, ['auction_lot', 'desc']);
+  assert.deepStrictEqual(scr.filters.map(f => f.key), ['seller', 'auction', 'lot', 'plate', 'status']); assert.strictEqual(scr.sort, undefined);
   assert.deepStrictEqual(scr.cols.filter(c => c.isNew).map(c => c.key), ['status_set', 'rebate', 'rebate_status'], 'only the new fields carry the New badge');
   assert.ok(P.ACTIONS.cancelSale && P.ACTIONS.rpUpdate && !P.ACTIONS.confirmCdmsCancel && !P.ACTIONS.entryClear, 'the Cancellation Entry actions are gone');
 });
@@ -98,4 +98,14 @@ test('the P2 sample and screen are gone: no CDMS cancellation list, proposals P3
   const src = ['app.js', 'data-extra.js', 'index.html'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
   assert.doesNotMatch(src, /cdmsCancels|cdmsCancelPanel|confirmCdmsCancel|entryLayout|entryFind|entryCancel|Cancelled in CDMS/);
   P.location.hash = '#/FAD/cancellation-entry'; assert.strictEqual(P.route(), 'report/cancellation-monitoring');
+});
+test('merged with the parallel version: a pending or approved rebate is locked (a rejected one can be retyped), Winner Confirmation prints, lots that can take a rebate come first, Home has an Auction card', () => {
+  const P = load(), scr = rp(P), col = scr.cols.find(c => c.key === 'rebate'), open = live(scr).find(x => !x.awarding && !x.rebate);
+  for (const [st, locked] of [['Pending approval', true], ['Approved', true], ['Rejected', false]]) assert.strictEqual(!!col.lockWhen({ ...open, rebate: 5000, rebate_status: st }), locked, st);
+  assert.ok(col.lockWhen({ ...open, rebate: 5000, rebate_status: null }), 'an Access rebate with no status counts as approved');
+  const sold = scr.rows().find(x => x.status === 'Sold'), notSold = scr.rows().find(x => x.status !== 'Sold'), win = scr.cols.find(c => c.key === 'winner');
+  assert.match(P.cellHtml(scr, sold, win, true), /data-act="printWinner"[^>]*>Print</); assert.strictEqual(P.cellHtml(scr, notSold, win, true), '<td class="c"></td>');
+  const can = r => r.status === 'Sold' && !r.release && !r.awarding, rows = scr.rows(), firstNo = rows.findIndex(r => !can(r));
+  assert.ok(firstNo > 0 && rows.slice(firstNo).every(r => !can(r)), 'the lots that can take a rebate come first'); assert.strictEqual(scr.sort, undefined);
+  assert.match(P.homeLayout(), /<b>Auction<\/b>[^]*?Result Price/);
 });

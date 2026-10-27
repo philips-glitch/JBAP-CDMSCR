@@ -375,6 +375,8 @@ const notFuture = d => d && d > TODAY ? `cannot be after today (${fmtDate(TODAY)
 const notBefore = (d, ref, refLabel) => d && ref && d < ref ? `cannot be before ${refLabel} (${fmtDate(ref)})` : null;
 // [BEHAVIOR] JBAP feedback (26 Oct 2026): SMD types the rebate in Result Price and the President approves or rejects it in Approval › Rebate Approval. Only an approved rebate counts:
 // Pending Awarding shows it, the BAAF rebate attachment, Report › Rebate Monitoring and FAD › Rebate Payable use it. A lot with a rebate and no status is Access data (awarded before this): its rebate counts as approved.
+// Locked in Result Price while it waits for the President or once approved (a rebate with no status is Access data that counts as approved); only a rejected one or none can be typed
+const rebateLocked = v => !!v.rebate && v.rebate_status !== 'Rejected';
 const REBATE_PENDING = "The rebate is waiting for the President's approval.";
 const approvedRebate = v => !v.rebate ? null : (!v.rebate_status || v.rebate_status === 'Approved') ? v.rebate : null;
 // [BEHAVIOR] JBAP feedback (26 Oct 2026): SMD types the rebate in Result Price and it waits for the President. The fields a saved amount sets on the lot:
@@ -658,15 +660,15 @@ const SCREENS = [
   // JBAP (26 and 27 Oct 2026): Result Price already exists in CDMS under Auction (Set Result Price). Its layout is kept; the fields added on 26 Oct carry the New badge:
   // the Rebate (sent to the President in Approval › Rebate Approval) and, when Auction Status is set to Cancelled, Waived? and a justification. Update saves one row.
   { id: 'auction/result-price', dept: 'Auction', title: 'Result Price', actions: VFSU, isNew: true,
-    rule: 'The existing CDMS screen Auction › Result Price (Set Result Price), with the fields added after JBAP feedback of 26 Oct 2026. On a sold lot, type a Rebate (only before awarding) or set Auction Status to Cancelled, then press Update on that row. A rebate waits for the President in Approval › Rebate Approval. A cancellation asks Date Cancelled, Waived? and a justification; the lot then shows as Cancelled here and in Report › Cancellation Monitoring, and if the fee is not waived it is billed in FAD › Cancellation Billing & Payment. Prototype: columns the sample data does not hold (Start Price, Winner Confirmation, Offer Status, KYC Status) stay blank.',
+    rule: 'The existing CDMS screen Auction › Result Price (Set Result Price), with the fields added after JBAP feedback of 26 Oct 2026. On a sold lot, type a Rebate (only before awarding) or set Auction Status to Cancelled, then press Update on that row. A rebate waits for the President in Approval › Rebate Approval. A cancellation asks Date Cancelled, Waived? and a justification; the lot then shows as Cancelled here and in Report › Cancellation Monitoring, and if the fee is not waived it is billed in FAD › Cancellation Billing & Payment. A rebate that is waiting for the President or approved cannot be retyped here; a rejected one can. Winner Confirmation › Print is a preview. Prototype: columns the sample data does not hold (Start Price, Offer Status, KYC Status) stay blank, and the lots that can take a rebate come first.',
     rows: () => V().filter(v => v.status).map(v => Object.assign(v, { status_set: v.status, just_log: (S.cancels.find(c => String(c.auction) === String(v.auction) && String(c.lot) === String(v.lot)) || {}).just || '' })),
-    sort: ['auction_lot', 'desc'],
+    // no default sort: the rows keep the data order, which puts the lots that can take a rebate first (data-extra.js)
     cols: [C('Update', 'upd', 'rowbtn', { act: 'rpUpdate', btn: 'Update', aria: r => `lot ${r.lot} ${r.plate}`, showWhen: r => r.status === 'Sold' && !r.release }),
       C('Auction Status', 'status_set', 'text', { edit: 'select', options: ['Sold', 'Cancelled'], isNew: true, lockWhen: r => r.status !== 'Sold' || !!r.release }),
       C('Auction No.', 'auction', 'code'), C('Lot No.', 'lot', 'code'), C('Model', 'model', 'text', { w: 170 }), C('Plate Number', 'plate', 'code'), C('Seller', 'seller', 'code'),
       C('Buyer ID', 'cid', 'code'), C('Buyer Name', 'customer', 'text', { w: 180 }), C('Start Price', 'start_price', 'money'), C('Minimum Bid Price', 'min_bid', 'money'), C('Highest Offer Price', 'highest_offer', 'money'),
-      C('Rebate', 'rebate', 'money', { edit: 'money', isNew: true, lockWhen: r => !!r.awarding || r.status !== 'Sold' }), C('Rebate Status', 'rebate_status', 'text', { isNew: true }),
-      C('Winner Confirmation', 'winner_conf', 'text'), C('Offer Status', 'offer_status', 'text'), C('KYC Status', 'kyc_status', 'text'), C('Justification Log', 'just_log', 'text', { w: 200 })],
+      C('Rebate', 'rebate', 'money', { edit: 'money', isNew: true, lockWhen: r => !!r.awarding || r.status !== 'Sold' || rebateLocked(r) }), C('Rebate Status', 'rebate_status', 'text', { isNew: true }),
+      C('Winner Confirmation', 'winner', 'rowbtn', { act: 'printWinner', btn: 'Print', aria: r => `winner confirmation of lot ${r.lot} ${r.plate}`, showWhen: r => r.status === 'Sold' }), C('Offer Status', 'offer_status', 'text'), C('KYC Status', 'kyc_status', 'text'), C('Justification Log', 'just_log', 'text', { w: 200 })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'lot', label: 'Lot No.', w: 'w1' }, { key: 'plate', label: 'Plate No.' },
       { key: 'status', label: 'Auction Status', type: 'select', w: 'w1', options: () => ['Sold', 'Not Sold', 'Cancelled'] }],
     validate: (r, e) => ({ rebate: rebateAmountError(r, e) }),
@@ -1197,13 +1199,13 @@ function proposedPanels() {
 function homeLayout() {
   const card = d => {
     const subs = SCREENS.filter(s => s.dept === d && shown(s)).map(s => `<li><a href="#/${s.id}">${esc(menuTitle(s))}${tagMini(s)}${newMini(s)}<span class="cnt">${countOf(s).toLocaleString()}</span></a></li>`).join('');
-    const sub = { FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch. Live data: Result Price, Seller Awarding Acknowledgement, Unreleased Unit, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Monitoring and summary reports for FAD, SMD and VWD: results, auctions, inventory, cancellations, rebates, liability to sellers' }[d];
-    const icon = d === 'Report' ? '<img src="assets/ic-report.png" alt="" width="20" height="20">' : deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox');
+    const sub = { Auction: 'Result Price: type the rebate of a sold lot (sent to the President) and cancel a sale (Waived?)', FAD: 'Post-auction processing: awarding, payments, billing, rebates, cancellations', SMD: 'Legacy sample data: Pending Awarding, Unpaid, Seller Acknowledgement, For Dispatch. Live data: Result Price, Seller Awarding Acknowledgement, Unreleased Unit, Return to Seller, SMD Manager Approval', VWD: 'Units for dispatch and release; VWD records the vehicle release', Report: 'Monitoring and summary reports for FAD, SMD and VWD: results, auctions, inventory, cancellations, rebates, liability to sellers' }[d];
+    const icon = d === 'Report' || d === 'Auction' ? `<img src="assets/ic-${d.toLowerCase()}.png" alt="" width="20" height="20">` : deptSvg(d).replace('viewBox', 'width="20" height="20" viewBox');
     return `<section class="hcard"><div class="card-h"><div class="ico">${icon}</div><b>${d}</b></div><p class="sub" style="margin-top:8px">${sub}</p><ul>${subs}</ul></section>`;
   };
   return `<div class="home"><nav class="crumb" aria-label="Breadcrumb"><b>Home</b></nav><h1>Post-Auction Menus</h1>
     <p class="lead">Clickable prototype of the new Customer Inquiry, Report, FAD, SMD and VWD menus that replace the MS Access post-auction forms, plus Settings › Holiday List. Data is sample data and resets when you refresh the page. Demo date: <b>${fmtDate(TODAY)}</b>.</p>
-    ${PROPOSED ? proposedPanels() : ''}<div class="hgrid">${['FAD', 'SMD', 'VWD', 'Report'].map(card).join('')}</div></div>`;
+    ${PROPOSED ? proposedPanels() : ''}<div class="hgrid">${['Auction', 'FAD', 'SMD', 'VWD', 'Report'].map(card).join('')}</div></div>`;
 }
 
 // ─── Router ───────────────────────────────────────────────────────────
@@ -1833,6 +1835,7 @@ const ACTIONS = {
   },
   // [BEHAVIOR] JBAP feedback (26 Oct 2026): Auction › Result Price › Cancel sale. Date Cancelled (typed, default today), Waived? (Yes / No, default No) and a Justification (required when waived); the checks are cancelSaleError's
   // [BEHAVIOR] Auction › Result Price › Update: saves one row. Auction Status set to Cancelled opens the cancellation dialog; a typed Rebate goes to the President.
+  printWinner(scr, el) { const v = scr.rows().find(r => r.id === el.dataset.rid); if (v) toast(`Winner Confirmation of ${esc(v.plate)} is a preview; nothing is printed.`); },
   rpUpdate(scr, el) {
     const ui = U(scr.id), id = el.dataset.rid, v = scr.rows().find(r => r.id === id); if (!v) return;
     const e = ui.edits[id] || {};

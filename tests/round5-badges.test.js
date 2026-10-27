@@ -10,7 +10,7 @@ const NEW_ITEMS = ['buttons FAD/document-monitoring emailDoas', 'buttons FAD/doc
   'cols FAD/pending-awarding rebate_ok', 'cols FAD/pending-awarding rebate_status',
   'cols auction/result-price status_set', 'cols auction/result-price rebate', 'cols auction/result-price rebate_status'];
 const NEW_SIDEBAR = ['Document Monitoring', 'Liability to Seller', 'Rebate Approval', 'Rebate Monitoring', 'Rebate Payable', 'Result Price', 'Sales Actions', 'Vehicle Dispatch'];
-const NEW_HOME = ['Document Monitoring', 'Liability to Seller', 'Rebate Monitoring', 'Rebate Payable', 'Vehicle Dispatch › For Dispatch', 'Vehicle Dispatch › Return to Seller Approval'];
+const NEW_HOME = ['Document Monitoring', 'Liability to Seller', 'Rebate Monitoring', 'Rebate Payable', 'Result Price', 'Vehicle Dispatch › For Dispatch', 'Vehicle Dispatch › Return to Seller Approval'];
 const MARK = /class="ptag[^"]*\bnew\b/g;
 const marks = html => (html.match(MARK) || []).length;
 const sorted = a => [...a].sort();

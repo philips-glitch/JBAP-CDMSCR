@@ -76,4 +76,6 @@
     { id: 'N002', plate: 'NEW1002', model: 'MITSUBISHI MIRAGE G4 GLX', color: 'RED', year: 2020, seller: 'EWB', parking: 'OPEN PARKING', entry_date: '2026-10-06', source: 'inspection' },
     { id: 'N003', plate: 'NEW1003', model: 'NISSAN NAVARA 2.5 EL', color: 'GRAY', year: 2019, seller: 'ORIX', parking: 'OPEN PARKING', entry_date: '2026-10-07', source: 'inspection' },
   ];
+  // [MOCK] JBAP feedback (26 Oct 2026): Auction › Result Price opens with the lots that can take a rebate (sold, not released, not awarded yet) so JBAP notices the Rebate column; the order is the data's own, the page has no default sort
+  D.vehicles.sort((a, b) => { const can = v => v.status === 'Sold' && !v.release && !v.awarding; return can(b) - can(a); });   // stable: each group keeps its order
 })(window.MOCK_DATA);
