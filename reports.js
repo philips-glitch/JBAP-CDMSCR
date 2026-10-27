@@ -159,15 +159,21 @@ const REPORTS = {
       <h3>Documents</h3><div class="cols2">${list}</div>
       <h3>Acknowledgement</h3>${rptSign(['Received by (signature over printed name)', 'Date / time received'])}`);
   },
-  // JBAP answer Q11 (standard, was P5): Seller Awarding Acknowledgement Form. [MOCK] layout in the BAAF style until JBAP shares a sample (spec 2026-10-15 §6)
+  // [BEHAVIOR] JBAP answer Q11 + sample form (27 Oct 2026): Seller Acknowledgement Awarding Form, one per auction and seller (the lots must share both).
+  // Columns as JBAP's paper form; CDMS keeps no transmission or mileage, so those cells are left for the seller to see blank. Brand = first word of Make / Model.
+  // Signature lines carry role titles only, no names. Blank rows pad the table to at least 8 lines, as on the form.
   saaf(code, lots, date) {
-    const rows = lots.map(r => `<tr><td>${esc(r.adate)}</td><td class="c">${esc(r.lot)}</td><td>${esc(r.model)}</td><td class="c">${esc(r.plate)}</td><td class="r">${money(r.price)}</td></tr>`).join('');
-    return rptPage('portrait', `<h1>Seller Awarding Acknowledgement Form</h1><p class="fn">Layout to be confirmed: JBAP has not shared a SAAF sample yet.</p>
-      <div class="kv"><b>Date</b><span>${longDate(date)}</span><b>Seller</b><span>${esc(SELLER[code]?.name || code)}</span></div>
-      <table><thead><tr><th>Auction Date</th><th>Lot</th><th>Make / Model</th><th>Plate Number</th><th class="r">Awarded Price</th></tr></thead><tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="4">Total</td><td class="r">${money(rptSum(lots, 'price'))}</td></tr></tfoot></table>
-      <p>We acknowledge the award of the vehicles listed above at the awarded prices and authorize JBAP to send the notice of awarding to the winning buyers.</p>
-      ${rptSign([`Prepared by: ${CO().roles.smdStaff}`, "Seller's authorized representative"])}`);
+    const cell = (v, cls = '') => `<td${cls ? ` class="${cls}"` : ''}>${esc(v ?? '')}</td>`, au = lots[0]?.auction ?? '';
+    const rows = lots.map(r => { const mm = makeModel(r.model);
+      return `<tr>${cell(r.lot, 'c')}${cell(r.year, 'c')}${cell(mm.make)}${cell(mm.model)}${cell('')}${cell(r.color)}${cell('')}${cell(r.cs_no)}${cell(r.plate, 'c')}
+        <td class="r">${r.min_bid == null ? '' : money(r.min_bid)}</td><td class="r">${money(r.price)}</td>${cell(r.customer)}${cell(r.cid, 'c')}${cell(r.adate)}</tr>`; }).join('');
+    const pad = '<tr>' + '<td>&nbsp;</td>'.repeat(14) + '</tr>';
+    const heads = ['LOT NUMBER', 'YEAR', 'BRAND', 'MODEL', 'TRANSMISSION', 'COLOR', 'MILEAGE', 'CS NUMBER', 'PLATE NUMBER', 'MINIMUM BID PRICE', 'WINNING BID PRICE', 'BUYER NAME', 'JBAP CUSTOMER ID', 'AUCTION DATE'];
+    return rptPage('landscape saaf', `<div class="saaf-h"><img src="assets/logo.png" alt="JBA Philippines"><h1>SELLER ACKNOWLEDGEMENT AWARDING FORM</h1></div>
+      <table class="saaf-kv"><tbody><tr><th scope="row">SELLER</th><td>${esc(SELLER[code]?.name || code)}</td></tr><tr><th scope="row">AUCTION NUMBER</th><td>${esc(au)}</td></tr></tbody></table>
+      <table><thead><tr>${heads.map(h => `<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${rows}${pad.repeat(Math.max(0, 8 - lots.length))}</tbody></table>
+      <p class="saaf-t">WE HEREBY RELEASE JBA PHILIPPINES INC. ("JBAP") FROM THE OBLIGATIONS THAT MAY ARISE FROM THE ACCEPTANCE OF VEHICLES BY THE SAID BUYERS REFLECTED IN THIS FORM. THIS ALSO GUARANTEES THE RELEASE OF THE VEHICLE AS SOON AS THE PAYMENT IS RELEASED TO THE SELLER BY JBAP. THIS FORM FURTHER CONFIRMS THAT THE MINIMUM KYC REQUIREMENTS PROVIDED HAVE BEEN ACCOMPLISHED AND ACCEPTED BY THE SELLER.</p>
+      ${rptSign(['Printed name and signature / Seller Representative', 'Sales and Marketing Head', 'Finance and Admin Head'])}<p class="fn">Date sent: ${longDate(date)}</p>`);
   },
   // Wish 4: Vehicle Dispatch Clearance Form (Return to Seller), one per seller; the SMD and FAD Managers approve in CDMS (proposal, Q76)
   returnClearance(code, units, issued) {

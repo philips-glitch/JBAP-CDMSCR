@@ -21,7 +21,7 @@ test('SAAF sample data loads with the switch off: 4 approved, 3 sent and waiting
   const P = load(), scr = P.byId['SMD/saaf'], rows = scr.rows();
   assert.strictEqual(P.isProposed(), false);
   assert.strictEqual(rows.filter(r => r.saaf_approved).length, 4); assert.strictEqual(rows.filter(r => r.saaf_sent && !r.saaf_approved).length, 3);
-  assert.deepStrictEqual(P.colsOf(scr).map(c => c.key + (c.edit ? '*' : '')), ['seller', 'auction', 'lot', 'plate', 'model', 'price', 'for_saaf*', 'saaf_sent', 'saaf_approved*']);
+  assert.deepStrictEqual(P.colsOf(scr).map(c => c.key + (c.edit ? '*' : '')), ['lot', 'plate', 'model', 'customer', 'price', 'for_saaf*', 'saaf_sent', 'saaf_approved*']);
   assert.deepStrictEqual((scr.buttons || []).filter(P.shown).map(b => b.act), ['emailSaaf', 'save']);
   assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf'), [], 'switch off: nothing is pre-ticked for the SAAF');
   const sent = rows.find(r => r.id === 'V087'); P.U(scr.id).edits[sent.id] = { saaf_approved: P.TODAY };
@@ -63,11 +63,48 @@ test('approval date: not before SAAF Sent, not without a SAAF, not in the future
   assert.match(scr.validate(sent, { saaf_approved: '2026-12-01' }).saaf_approved, /after today/);
   assert.strictEqual(scr.validate(sent, { saaf_approved: P.TODAY }).saaf_approved, null);
 });
-test('SAAF form: seller, lots, total, placeholder note; no buyer names', () => {
-  const P = load(), lots = P.byId['SMD/saaf'].rows().filter(r => r.seller === 'SBC').slice(0, 2);
+test('SAAF form follows JBAP\'s paper form: title, seller and auction number, the 14 columns, release text, three role signatures', () => {
+  const P = load(), lots = P.byId['SMD/saaf'].rows().filter(r => r.seller === 'SBC' && String(r.auction) === '219');
+  assert.ok(lots.length > 1, 'sample: several SBC lots in Auction 219');
   const h = P.REPORTS.saaf('SBC', lots, P.TODAY);
-  assert.match(h, /Seller Awarding Acknowledgement Form/); assert.match(h, /Layout to be confirmed/); assert.match(h, /SMD staff/);
-  for (const r of lots) { assert.ok(h.includes(r.plate)); assert.ok(!r.customer || !h.includes(r.customer)); }
+  assert.match(h, /SELLER ACKNOWLEDGEMENT AWARDING FORM/); assert.match(h, /assets\/logo\.png/);
+  assert.match(h, /<th scope="row">SELLER<\/th><td>[^<]+<\/td>/); assert.match(h, /<th scope="row">AUCTION NUMBER<\/th><td>219<\/td>/);
+  const heads = [...h.matchAll(/<th scope="col">([^<]+)<\/th>/g)].map(m => m[1]);
+  assert.deepStrictEqual(heads, ['LOT NUMBER', 'YEAR', 'BRAND', 'MODEL', 'TRANSMISSION', 'COLOR', 'MILEAGE', 'CS NUMBER', 'PLATE NUMBER', 'MINIMUM BID PRICE', 'WINNING BID PRICE', 'BUYER NAME', 'JBAP CUSTOMER ID', 'AUCTION DATE']);
+  for (const r of lots) { assert.ok(h.includes(r.plate)); if (r.cid) assert.ok(h.includes(r.cid)); }
+  assert.match(h, /WE HEREBY RELEASE JBA PHILIPPINES INC\. \("JBAP"\)/); assert.match(h, /MINIMUM KYC REQUIREMENTS/);
+  for (const s of ['Printed name and signature / Seller Representative', 'Sales and Marketing Head', 'Finance and Admin Head']) assert.ok(h.includes(s), s);
+  assert.doesNotMatch(h, /Layout to be confirmed/);
+  const brand = lots[0].model.split(' ')[0]; assert.ok(h.includes(`<td>${brand}</td>`), 'Brand = first word of Make/Model');
+  const rowsN = (P.REPORTS.saaf('SBC', lots.slice(0, 1), P.TODAY).match(/<tr>/g) || []).length; assert.ok(rowsN >= 1 + 2 + 8, 'blank lines pad the table to 8 rows');
+});
+test('auction list: one row per auction and seller, newest first, filtered by Seller; the vehicle list shows only the pair clicked', () => {
+  const P = load(), scr = P.byId['SMD/saaf'], ui = P.U(scr.id), rows = scr.rows();
+  const pairs = new Set(rows.map(P.saafKey)); const list = P.saafAuctions(scr);
+  assert.strictEqual(list.length, pairs.size); assert.ok(list.length > 1);
+  for (let i = 1; i < list.length; i++) assert.ok(Number(list[i - 1].auction) >= Number(list[i].auction), 'newest auction first');
+  assert.strictEqual(list.reduce((a, x) => a + x.lots, 0), rows.length, 'every waiting lot is in one pair');
+  assert.deepStrictEqual(P.colsOf(scr).filter(c => c.key === 'seller' || c.key === 'auction'), [], 'the vehicle list does not repeat Seller and Auction No.');
+  assert.strictEqual(scr.filters[0].key, 'seller', 'Seller is the first filter');
+  assert.match(P.dataCard(scr, scr.detailTitle()), /Click an Auction No\./, 'nothing picked: the vehicle list asks for a click');
+  assert.strictEqual(scr.detailTitle(), 'Vehicle list');
+  ui.applied.seller = ['SBC']; const sbc = P.saafAuctions(scr); assert.ok(sbc.length && sbc.every(a => a.seller === 'SBC'), 'filtered by Seller');
+  const pick = sbc.find(a => String(a.auction) === '219'); ui.pick = pick.key;
+  assert.match(P.saafAuctionCard(scr), /class="is-sel"[^]*?aria-pressed="true"[^>]*>219</);
+  assert.strictEqual(scr.detailTitle(), 'Vehicles: Auction 219, SBC');
+  const shown = [...P.dataCard(scr, 'x').matchAll(/data-tr="([^"]+)"/g)].map(m => m[1]).sort();
+  assert.deepStrictEqual(shown, rows.filter(r => P.saafKey(r) === pick.key).map(r => r.id).sort());
+  ui.applied.seller = ['EWB']; assert.strictEqual(P.saafPick(scr), null, 'a filter that hides the pair drops the pick');
+});
+test('Email SAAF sends one SAAF for the auction and seller picked, and only its ticked lots', () => {
+  const P = load(), scr = P.byId['SMD/saaf'], ui = P.U(scr.id), rows = scr.rows();
+  rows.forEach(r => { ui.edits[r.id] = { for_saaf: !r.saaf_approved }; });   // ticks on every pair
+  assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf'), [], 'nothing picked: nothing to send');
+  try { P.ACTIONS.emailSaaf(scr); } catch (e) { /* DOM stub */ }
+  assert.match(ui.msg.html, /Click an Auction No\./);
+  const key = rows.find(r => r.seller === 'SBC' && String(r.auction) === '219').auction + '|SBC'; ui.pick = key;
+  const sel = P.selectedRows(scr, 'for_saaf');
+  assert.ok(sel.length > 1 && sel.every(r => P.saafKey(r) === key), 'only the lots of Auction 219, SBC');
 });
 test('Pending Awarding shows Seller Approved with the switch off and on, read only; the pre-tick of approved lots needs the switch', () => {
   const P = load(), scr = P.byId['FAD/pending-awarding'];
@@ -90,6 +127,7 @@ test('F2: an approved lot cannot be ticked for SAAF and Email SAAF skips it', ()
   assert.strictEqual(!!col.disabledWhen?.(approved), true, 'the tick is disabled on an approved lot');
   assert.strictEqual(!!col.disabledWhen?.(sent), false, 'a sent lot awaiting the seller can still be re-sent');
   // only the approved lot is ticked: Email SAAF finds nothing to send (the harness DOM stub throws after the message is set)
+  P.U(scr.id).pick = P.saafKey(approved);   // the vehicle list of the approved lot's auction and seller
   rows.forEach(r => { P.U(scr.id).edits[r.id] = { for_saaf: r.id === 'V102' }; });
   assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf').map(r => r.id), ['V102'], 'the approved lot is ticked');
   try { P.ACTIONS.emailSaaf(scr); } catch (e) { /* DOM stub */ }
@@ -109,7 +147,8 @@ test('the SAAF screen has no pre-tick (switch off or on); its P6 count is the lo
   assert.strictEqual(P.queueCounts(scr).ready, all - 8);
   assert.match(P.homeLayout(), new RegExp('Seller Awarding Acknowledgement<span class="cnt">' + (all - 8) + '</span>'), 'Waiting for you on Home shows the same number');
   const eight = P.sideHtml(''); assert.match(eight, new RegExp('aria-label="Seller Awarding Acknowledgement: ' + (all - 8) + ' waiting, 0 overdue"'));
-  scr.rows().forEach(x => { P.U(scr.id).edits[x.id] = { for_saaf: x.id === 'V087' }; });   // a saved or typed tick still works
+  P.U(scr.id).pick = P.saafKey(scr.rows().find(x => x.id === 'V087'));
+  scr.rows().forEach(x => { P.U(scr.id).edits[x.id] = { for_saaf: x.id === 'V087' }; });   // a saved or typed tick still works (on the auction picked)
   assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf').map(x => x.id), ['V087']);
 });
 test('the P4 text and the README P4 row name the lists still tagged P4 (Pending Awarding\'s pre-tick is tagged P5)', () => {
