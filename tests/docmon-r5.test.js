@@ -28,10 +28,10 @@ test('Change date: reason required, same checks, logged with the reason', () => 
 });
 test('DOC_DATE_FIELDS are the date columns of the screen, in the screen order; each of them locks when filled', () => {
   const P = load(), scr = dm(P);
-  assert.deepStrictEqual(P.DOC_DATE_FIELDS.map(f => f[0]), ['ewb_callout', 'ewb_signed', 'rcv_doas', 'buyer_doas', 'seller_doas', 'orig_docs', 'to_buyer']);
+  assert.deepStrictEqual(P.DOC_DATE_FIELDS.map(f => f[0]), ['rcv_doas', 'buyer_doas', 'seller_doas', 'orig_docs', 'to_buyer']);
   assert.deepStrictEqual(scr.cols.filter(c => c.lockWhen).map(c => [c.key, c.label]), P.DOC_DATE_FIELDS);
   assert.ok(scr.cols.filter(c => c.lockWhen).every(c => c.edit === 'date'));
-  const text = scr.cols.filter(c => c.edit === 'text' || c.edit === 'check'); assert.deepStrictEqual(text.map(c => c.key), ['ewb_place', 'doc_remarks', 'for_doas_email', 'print_doc_trans']); assert.ok(text.every(c => !c.lockWhen), 'EWB HO/Store, For DOAS Email?, Remarks and Print Transmittal stay editable');
+  const text = scr.cols.filter(c => c.edit === 'text' || c.edit === 'check'); assert.deepStrictEqual(text.map(c => c.key), ['doc_remarks', 'for_doas_email', 'print_doc_trans']); assert.ok(text.every(c => !c.lockWhen), 'For DOAS Email?, Remarks and Print Transmittal stay editable');
 });
 test('Cells: a filled date shows as text, a blank one as a typed box; a saved date locks, an unsaved one stays editable', () => {
   const P = load(), scr = dm(P), col = k => scr.cols.find(c => c.key === k);
@@ -63,22 +63,20 @@ test('Change date errors: no date, not a date, same date, before Buyer Paid, in 
   assert.match(P.changeDateError(r, 'rcv_doas', r.rcv_doas, 'typo'), /same as the current date/);
   assert.match(P.changeDateError(r, 'rcv_doas', '2000-01-01', 'typo'), /^New date cannot be before Buyer Paid \(/);
   assert.match(P.changeDateError(r, 'rcv_doas', '2999-01-01', 'typo'), /^New date cannot be after today \(/);
-  const ewb = dm(P).rows().find(x => x.doas === 'branch' && x.ewb_callout && x.ewb_signed);
-  assert.match(P.changeDateError(ewb, 'ewb_signed', '2026-01-01', 'typo'), /before/, 'EWB: before the call-out or Buyer Paid');
 });
 test('Change date: saves the date, logs old to new and the reason as the newest rows, and the status and aging follow', () => {
-  const P = load(), scr = dm(P), r = scr.rows().find(x => x.doas === 'branch' && x.ewb_callout && !x.ewb_signed && !x.orig_docs);
-  assert.ok(r, 'sample: an EWB lot called out, not signed'); assert.strictEqual(r.doc_status, 'DOAS for Signing');
-  const old = r.ewb_callout, ni = P.TODAY, n = P.S.log.length;
-  assert.strictEqual(P.changeDateError(r, 'ewb_callout', ni, ' Called on the right day '), null);
-  P.recordDateChange(scr, r, 'ewb_callout', ni, ' Called on the right day ');
+  const P = load(), scr = dm(P), r = scr.rows().find(x => x.doas === 'jbap' && x.rcv_doas && !x.buyer_doas && !x.seller_doas && !x.orig_docs);
+  assert.ok(r, 'sample: a DOAS for Signing lot'); assert.strictEqual(r.doc_status, 'DOAS for Signing');
+  const old = r.rcv_doas, ni = P.TODAY, n = P.S.log.length;
+  assert.strictEqual(P.changeDateError(r, 'rcv_doas', ni, ' Called on the right day '), null);
+  P.recordDateChange(scr, r, 'rcv_doas', ni, ' Called on the right day ');
   const rows = P.S.log.slice(n); assert.strictEqual(rows.length, 2);
   assert.deepStrictEqual(rows.map(l => [l.module, l.screen, l.action, l.field, l.old, l.new]), [
-    ['FAD', 'Document Monitoring', 'Update', 'EWB Call Out', P.fmtDate(old), P.fmtDate(ni)],
+    ['FAD', 'Document Monitoring', 'Update', 'Receipt of DOAS', P.fmtDate(old), P.fmtDate(ni)],
     ['FAD', 'Document Monitoring', 'Update', 'Change reason', '', 'Called on the right day']]);
   assert.strictEqual(P.S.log.at(-1).field, 'Change reason'); assert.strictEqual(P.S.log.at(-1).record, rows[0].record);
-  const after = scr.rows().find(x => x.id === r.id); assert.strictEqual(after.ewb_callout, ni); assert.strictEqual(after.doc_status, 'DOAS for Signing');
-  assert.strictEqual(after.doas_aging, P.workdaysBetween(after.buyer_paid, P.TODAY), 'EWB: aging counts from Buyer Paid');
+  const after = scr.rows().find(x => x.id === r.id); assert.strictEqual(after.rcv_doas, ni); assert.strictEqual(after.doc_status, 'DOAS for Signing');
+  assert.strictEqual(after.doas_aging, null, 'DOAS at JBAP: no DOAS Aging once the DOAS is received');
 });
 test('Status of EWB lots: the call-out starts DOAS for Signing, a buyer-paid EWB lot with no seller payment is listed', () => {
   const P = load(), rows = dm(P).rows(), ewb = rows.filter(r => r.doas === 'branch');

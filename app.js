@@ -424,9 +424,11 @@ function docValidate(r, e) {
 }
 // [BEHAVIOR] JBAP feedback (26 Oct 2026): a date that is filled in on Document Monitoring is read-only. Change date (with a required reason) is the way to correct it:
 // the new date gets the screen's own checks (docValidate) and the date and the reason are logged. DOC_DATE_FIELDS = the date columns, [key, label].
-const DOC_DATE_FIELDS = [['ewb_callout', 'EWB Call Out'], ['ewb_signed', 'Date DOAS Signed (EWB)'], ['rcv_doas', 'Receipt of DOAS'], ['buyer_doas', 'JBAP Receipt of Signed DOAS'],
+const DOC_DATE_FIELDS = [['rcv_doas', 'Receipt of DOAS'], ['buyer_doas', 'JBAP Receipt of Signed DOAS'],
   ['seller_doas', 'Seller Receipt of Signed DOAS'], ['orig_docs', 'JBAP Receipt of Documents'], ['to_buyer', 'Buyer Receipt of Documents']];
-const docDateLabel = key => (DOC_DATE_FIELDS.find(f => f[0] === key) || [])[1] || key;
+// the EWB dates are no longer list columns (27 Oct 2026) but JBAP's sheet still fills them, so their names stay for the date-order messages
+const EWB_DATE_LABELS = { ewb_callout: 'EWB Call Out', ewb_signed: 'Date DOAS Signed (EWB)' };
+const docDateLabel = key => (DOC_DATE_FIELDS.find(f => f[0] === key) || [])[1] || EWB_DATE_LABELS[key] || key;
 const CHANGE_REASON_ERR = 'A reason is required.';
 // The first problem with a Change date entry, or null when it can be saved (iso: ISO date, '' = blank, null = not a date).
 // docValidate runs on the row with the new value merged in. It checks the new date itself (not in the future, not before Buyer Paid, in order with the earlier dates) and the later dates
@@ -566,7 +568,7 @@ const SCREENS = [
     rows: () => V().filter(v => v.status === 'Sold' && (doasOf(v) === 'branch' ? !!v.buyer_paid : !!v.pay_seller)), sort: ['auction_lot', 'asc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Lot', 'lot', 'code'), C('Customer Name', 'customer', 'text', { w: 190 }), C('Seller', 'seller', 'code'), C('Plate Number', 'plate', 'code'),
       C('Seller Payment', 'pay_seller', 'date'),
-      docDate('ewb_callout', EWB_NA), docDate('ewb_signed', EWB_NA), C('EWB HO/Store', 'ewb_place', 'text', { edit: 'text', na: EWB_NA }),
+      // EWB Call Out, Date DOAS Signed (EWB) and EWB HO/Store removed from the list (user request, 27 Oct 2026); the dates JBAP's sheet holds still count for the EWB status
       docDate('rcv_doas', NO_DOAS), C('DOAS Aging', 'doas_aging', 'int', { na: NO_DOAS }),
       docDate('buyer_doas', NO_DOAS), docDate('seller_doas', NO_DOAS),
       docDate('orig_docs'), docDate('to_buyer'), C('Docs Aging', 'docs_aging', 'int'),

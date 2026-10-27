@@ -80,14 +80,14 @@ test('rows: sold lots paid to the seller (EWB: buyer paid), TFS included; the Op
 });
 test('JBAP column order, the editable fields and n/a cells', () => {
   const s = scr();
-  assert.deepStrictEqual(s.cols.map(c => c.label).slice(5, 18), ['Seller Payment', 'EWB Call Out', 'Date DOAS Signed (EWB)', 'EWB HO/Store', 'Receipt of DOAS', 'DOAS Aging',
+  assert.deepStrictEqual(s.cols.map(c => c.label).slice(5, 15), ['Seller Payment', 'Receipt of DOAS', 'DOAS Aging',
     'JBAP Receipt of Signed DOAS', 'Seller Receipt of Signed DOAS', 'JBAP Receipt of Documents', 'Buyer Receipt of Documents', 'Docs Aging', 'Status', 'Remarks']);
-  assert.deepStrictEqual(s.cols.filter(c => c.edit && c.edit !== 'check').map(c => c.key), ['ewb_callout', 'ewb_signed', 'ewb_place', 'rcv_doas', 'buyer_doas', 'seller_doas', 'orig_docs', 'to_buyer', 'doc_remarks']);
+  assert.deepStrictEqual(s.cols.filter(c => c.edit && c.edit !== 'check').map(c => c.key), ['rcv_doas', 'buyer_doas', 'seller_doas', 'orig_docs', 'to_buyer', 'doc_remarks']);
   const col = k => s.cols.find(c => c.key === k), sbc = P.enrichV(lot('SBC')), ewb = P.enrichV(lot('EWB')), tfs = P.enrichV(lot('TFS'));
-  assert.ok(col('ewb_signed').na(sbc) && !col('ewb_signed').na(ewb));
+  for (const k of ['ewb_callout', 'ewb_signed', 'ewb_place']) assert.strictEqual(col(k), undefined, `${k} removed from the list (27 Oct 2026)`); void ewb;
   assert.ok(col('rcv_doas').na(tfs) && !col('rcv_doas').na(sbc) && col('doas_aging').na(tfs));
-  const h = P.cellHtml(s, sbc, col('ewb_signed'), true); assert.match(h, /n\/a/); assert.doesNotMatch(h, /<input/);
-  assert.match(P.cellHtml(s, ewb, col('ewb_signed'), true), /class="cell-in dt/);
+  const h = P.cellHtml(s, tfs, col('rcv_doas'), true); assert.match(h, /n\/a/); assert.doesNotMatch(h, /<input/);
+  assert.match(P.cellHtml(s, sbc, col('rcv_doas'), true), /class="cell-in dt/);
 });
 test('VWD release: an EWB lot signed at EWB counts as signed', () => {
   assert.strictEqual(P.releaseBlock(P.enrichV(lot('EWB', { ewb_signed: '2026-09-10' }))), null);
