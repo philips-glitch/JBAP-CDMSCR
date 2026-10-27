@@ -117,14 +117,14 @@ test('sidebar: Approval is a top menu right after Report and before FAD, with Re
   assert.match(s, /<button type="button" class="mi" data-group="Approval" aria-expanded="false" aria-controls="grp-Approval"><svg/);
   assert.match(s, new RegExp(`<a class="mis is-active" href="#/approval/rebate-approval" aria-current="page">Rebate Approval<span class="ptag mini new"[^>]*>New</span><span class="cnt">${pend}</span></a>`));
   assert.ok(pend >= 2 && pend < ap(P).rows().length);
-  assert.match(s, /only Customer Inquiry, Sales Actions, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active/);
+  assert.match(s, /only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval, FAD, SMD, VWD, Settings and Log Activity are active/);
   assert.strictEqual(P.routeOf('approval/rebate-approval'), 'approval/rebate-approval');
   P.setProposed(true); assert.strictEqual(P.routeOf('approval/rebate-approval'), 'approval/rebate-approval'); assert.ok(P.shown(ap(P)));
   assert.match(P.pageHead(ap(P)), /Home<\/a>›<span>Approval<\/span>›<b>Rebate Approval<\/b>/);
 });
 test('Log Activity: Approval is a Module option, has its own empty note, and shows the President\'s decisions', () => {
   const P = load(), log = P.byId['log-activity'];
-  assert.deepStrictEqual(log.filters.find(f => f.key === 'module').options(), ['FAD', 'SMD', 'VWD', 'Approval', 'Settings']);
+  assert.deepStrictEqual(log.filters.find(f => f.key === 'module').options(), ['Auction', 'FAD', 'SMD', 'VWD', 'Approval', 'Settings']);
   assert.match(log.rule, /every rebate decision of the President in Approval/);
   P.U(log.id).applied = { module: ['Approval'] }; assert.match(log.emptyNote(), /Approval logs an entry each time the President approves or rejects a rebate/);
   P.recordRebateDecision(ap(P), ap(P).rows().find(r => r.rebate_status === 'Pending approval'), 'Approved');
@@ -211,7 +211,7 @@ test('Rebate Monitoring keeps its read-only Rebate Approved (President) date rig
   assert.match(rm.rule, /Download report saves an Excel file/, 'the earlier sentences stay');
 });
 test('Result Price: a rebate with no status (Access data) on a lot not awarded is sent for approval when it is saved, even with the same amount', () => {
-  const P = load(), rp = P.byId['SMD/result-price'], raw = P.S.veh.find(v => v.id === 'V102');
+  const P = load(), rp = P.byId['Auction/result-price'], raw = P.S.veh.find(v => v.id === 'V102');
   Object.assign(raw, { rebate_status: null, rebate_requested: null, rebate_approved: null });   // as Access has it: a rebate and no status
   const r = rp.rows().find(x => x.id === 'V102'); assert.ok(r && !r.awarding && r.rebate === 15000);
   P.U(rp.id).edits[r.id] = { rebate: '15000.00' }; assert.deepStrictEqual(P.validateEdits(rp), []); P.applyEdits(rp);

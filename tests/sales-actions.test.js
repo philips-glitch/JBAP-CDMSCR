@@ -127,7 +127,7 @@ test('the Customer page keeps the Customer Inquiry highlighted; the Sales Action
   assert.ok(item(own, 'customer/sales-actions')[1] && !item(own, 'customer-inquiry')[1], 'the list highlights Sales Actions');
   assert.ok(!item(page, 'customer/sales-actions')[1] && item(page, 'customer-inquiry')[1], 'a customer page, even on its Sales Actions tab, is Customer Inquiry');
   assert.match(own, /Sales Actions<span class="ptag mini new"[^>]*>New<\/span><span class="cnt">7<\/span>/, 'New mark and the number of actions');
-  assert.match(P.sideHtml('customer-inquiry'), /only Customer Inquiry, Sales Actions, Report/);
+  assert.match(P.sideHtml('customer-inquiry'), /only Customer Inquiry, Sales Actions, Auction › Result Price, Report/);
 });
 
 test('routing: customer/sales-actions is the list screen, not a customer page of a buyer called "sales-actions"; the customer tab still routes', () => {

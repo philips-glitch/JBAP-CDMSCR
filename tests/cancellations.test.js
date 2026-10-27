@@ -43,7 +43,7 @@ test('Cancellation Entry is gone (JBAP, 26 Oct 2026): every cancellation is in R
   assert.deepStrictEqual(scr.filters.map(f => f.key), ['auction', 'customer', 'plate', 'seller', 'waived']);
   P.U(scr.id).applied = { waived: ['Yes'] }; const y = P.applyFilters(scr, scr.rows()); assert.ok(y.length && y.every(r => r.waived));
   P.U(scr.id).applied = { waived: ['No'] }; const n = P.applyFilters(scr, scr.rows()); assert.ok(n.length && n.every(r => !r.waived));
-  assert.match(scr.rule, /Cancel sale in SMD › Result Price/); assert.doesNotMatch(scr.rule, /Cancellation Entry/);
+  assert.match(scr.rule, /Cancel sale in Auction › Result Price/); assert.doesNotMatch(scr.rule, /Cancellation Entry/);
 });
 test('39 screens (39 with the Proposed improvements switch off: the SAAF screen is standard since JBAP answer Q11)', () => {
   const P = load(); assert.strictEqual(P.SCREENS.length, 39); assert.strictEqual(P.SCREENS.filter(P.shown).length, 39);

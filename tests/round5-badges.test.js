@@ -3,7 +3,7 @@ const { load } = require('./harness');
 // Guard for the New badge (user, 26 Oct 2026): it marks only what was added or changed after JBAP's feedback of 26 Oct 2026 (round 5).
 // The sets below are the whole inventory, written out on purpose: a badge that appears on anything else, or one that goes missing, fails here.
 // To mark a new item in a later round, change the code and this list together (and README: the "New badge" bullet).
-const NEW_SCREENS = ['FAD/for-dispatch', 'FAD/return-approval', 'FAD/document-monitoring', 'FAD/rebate-payable', 'SMD/result-price',
+const NEW_SCREENS = ['FAD/for-dispatch', 'FAD/return-approval', 'FAD/document-monitoring', 'FAD/rebate-payable', 'Auction/result-price',
   'approval/rebate-approval', 'customer/sales-actions', 'report/liability-to-seller', 'report/rebate-monitoring'];
 const NEW_ITEMS = ['buttons FAD/document-monitoring emailDoas', 'buttons FAD/document-monitoring printDocTrans',
   'cols FAD/document-monitoring change_date', 'cols FAD/document-monitoring for_doas_email',
