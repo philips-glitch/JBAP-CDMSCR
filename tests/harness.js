@@ -2,7 +2,7 @@
 const fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..');
 // Top-level names from app.js / reports.js that tests may use (missing ones are returned as undefined).
-const EXPORTS = ['saafApprovedError', 'recordSaafApproved', 'saafKey', 'saafPick', 'saafAuctions', 'saafAuctionCard', 'D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enrichV', 'ACTIONS', 'logChange', 'TODAY',
+const EXPORTS = ['buyerFromText', 'salesActionForm', 'salesActionError', 'saafApprovedError', 'recordSaafApproved', 'saafKey', 'saafPick', 'saafAuctions', 'saafAuctionCard', 'D', 'S', 'SELLER', 'byId', 'U', 'V', 'sold', 'B', 'CX', 'enrichV', 'ACTIONS', 'logChange', 'TODAY',
   'sellerMoney', 'dispatchReady', 'releaseOf', 'docValidate', 'cancelSplit', 'recordCancellationBilling', 'recordBillingTransmittal',
   'recordDispatch', 'releaseBlock', 'recordRelease', 'recordDocTransmittal', 'REPORTS', 'DOC_TYPES', 'longDate', 'shortDate', 'cancelLetterGroups',
   'addWorkdays', 'fmtDate',

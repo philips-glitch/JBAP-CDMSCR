@@ -336,16 +336,26 @@ function recordHolidayRemove(scr, date) {
 
 // ─── Sales Actions (Customer page › Sales Actions and Customer › Sales Actions; JBAP, 26 Oct 2026) ──
 // [BEHAVIOR] SMD records what it did to follow up with a buyer: Date, Action, Notes and an optional Next Follow-up. The fields are LOGIQUE's proposal. The list lives in S.salesActions (a session copy of D.salesActions);
-// the prototype has no login, so By is "SMD user". Adding is on the customer page only; Customer › Sales Actions lists every action, view only. An add is logged under module SMD, action Create.
+// the prototype has no login, so By is "SMD user". Actions are added on the customer page (tab Sales Actions) or on Customer › Sales Actions, where the buyer is picked first (27 Oct 2026).
+// An add is logged under module SMD, action Create.
 const SALES_ACTIONS = ['Call', 'Email', 'Visit', 'Meeting', 'Other'];
 const SALES_BY = 'SMD user';
 const buyerName = cid => buyerIndex().get(cid)?.name || '';
 const salesNewestFirst = (a, b) => b.date.localeCompare(a.date);   // the sort is stable: of two actions on one date, the one added last stays on top
 const salesActionsOf = cid => S.salesActions.filter(a => a.cid === cid).sort(salesNewestFirst);
 const salesActionRows = () => { const idx = buyerIndex(); return S.salesActions.map(a => Object.assign({}, a, { customer: idx.get(a.cid)?.name || '' })).sort(salesNewestFirst); };
-// The problem with each field of the Add sales action form, or null. f.date and f.follow_up: ISO date, '' (blank) or null (not a date).
+// [BEHAVIOR] The buyer typed on Customer › Sales Actions: a Buyer ID (any case), "Buyer ID - Name" as the list offers it, or a name that only one buyer has. Returns the Buyer ID or null.
+function buyerFromText(text) {
+  const t = String(text || '').trim(); if (!t) return null;
+  const idx = buyerIndex(), id = t.split(/\s+[–-]\s+/)[0].toUpperCase();
+  if (idx.has(id)) return id;
+  const byName = [...idx.values()].filter(b => b.name && b.name.toUpperCase() === t.toUpperCase());
+  return byName.length === 1 ? byName[0].cid : null;
+}
+// The problem with each field of the Add sales action form, or null. f.date and f.follow_up: ISO date, '' (blank) or null (not a date); f.cid only on the menu screen (undefined on the customer page).
 function salesActionError(f) {
   const e = {};
+  if ('cid' in f && !f.cid) e.cid = 'Choose a buyer from the list (Buyer ID or name).';
   if (!f.date) e.date = 'Type the date as mm/dd/yyyy.';
   else if (f.date > TODAY) e.date = 'Date cannot be after today.';
   if (!SALES_ACTIONS.includes(f.action)) e.action = 'Choose the action.';
@@ -836,9 +846,9 @@ const SCREENS = [
     totals: rows => ({ customer: `${rows.length} buyers`, lots: intf(sumBy(rows, 'lots')), total_bought: money(sumBy(rows, 'total_bought')), unpaid: intf(sumBy(rows, 'unpaid')), cancels: intf(sumBy(rows, 'cancels')) }) },
 
   // ===================== Customer › Sales Actions (JBAP feedback, 26 Oct 2026: "include it in the scope"; the fields are LOGIQUE's proposal) =====================
-  // View only: actions are added on the customer page, tab Sales Actions. A buyer's name and Buyer ID open that tab.
-  { id: 'customer/sales-actions', dept: 'Customer', title: 'Sales Actions', actions: VFS, isNew: true,
-    rule: 'Every sales action SMD recorded on a customer page, newest first (JBAP, 26 Oct 2026; fields are our proposal). Add actions on the customer page, tab Sales Actions. Follow-up due = Next Follow-up on or before today.',
+  // Add sales action above the list (27 Oct 2026: pick the buyer, then Date, Action, Notes, Next Follow-up); also on the customer page, tab Sales Actions. A buyer's name and Buyer ID open that tab.
+  { id: 'customer/sales-actions', dept: 'Customer', title: 'Sales Actions', actions: VFSU, isNew: true, layout: 'salesactions',
+    rule: 'Every sales action SMD recorded, newest first (JBAP, 26 Oct 2026; fields are our proposal). Add one here (pick the buyer by Buyer ID or name) or on the customer page, tab Sales Actions. Follow-up due = Next Follow-up on or before today.',
     rows: salesActionRows, sort: ['date', 'desc'],
     cols: [C('Date', 'date', 'date'), C('Buyer ID', 'cid', 'code', { tab: 'sales-actions' }), C('Customer Name', 'customer', 'text', { w: 240, tab: 'sales-actions' }), C('Action', 'action', 'text'),
       C('Notes', 'notes', 'text', { w: 300, wrap: true }), C('Next Follow-up', 'follow_up', 'date'), C('By', 'by', 'text')],
@@ -963,9 +973,11 @@ function sideHtml(route) {
   const logOn = route === LOG_ID;
   const log = `<a class="mi ${logOn ? 'is-active' : ''}" href="#/${LOG_ID}" ${logOn ? 'aria-current="page"' : ''}>${deptSvg('LOG')}Log Activity</a>`;
   return TOP_BEFORE.map(x => TOP_MENUS[x[1]] ? topMenu(x[1], route) : disabledItem(x)).join('') + groups + TOP_AFTER.map(disabledItem).join('') + log +
-    '<p class="side-note">Prototype: only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval, FAD, SMD, VWD, Master › Holiday List and Log Activity are active. Other menus are disabled.</p>';
+    '<p class="side-note">Prototype: only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval by President, FAD, SMD, VWD, Master › Holiday List and Log Activity are active. Other menus are disabled.</p>';
 }
 // Top-level menus outside FAD / SMD / VWD: Customer (Customer Inquiry; a customer page keeps it highlighted) and Report. Items show their record count.
+// [BEHAVIOR] User request (27 Oct 2026): the Approval menu reads "Approval by President" (sidebar, breadcrumb, page title). Its module in Log Activity stays "Approval".
+const DEPT_LABEL = { Approval: 'Approval by President' }, deptLabel = d => DEPT_LABEL[d] || d;
 const TOP_MENUS = { customer: { dept: 'Customer', disabled: [], on: (s, r) => r === s.id || (s.id === CUST_ID && !!custRoute(r)) },
   auction: { dept: 'Auction', disabled: [], on: (s, r) => r === s.id },   // Auction (existing CDMS menu, JBAP 27 Oct 2026): Result Price
   report: { dept: 'Report', disabled: [], on: (s, r) => r === s.id },
@@ -976,7 +988,7 @@ function topMenu(key, route) {
   const items = SCREENS.filter(s => s.dept === m.dept && shown(s)).map(s => { const on = m.on(s, route);
     return `<a class="mis ${on ? 'is-active' : ''}" href="#/${s.id}" ${on ? 'aria-current="page"' : ''}>${esc(s.title)}${tagMini(s)}${newMini(s)}<span class="cnt">${countOf(s).toLocaleString()}</span></a>`; }).join('');
   const off = m.disabled.map(t => `<button type="button" class="mis is-disabled" aria-disabled="true" data-disabled="${esc(t)}" title="Not part of this prototype">${esc(t)}</button>`).join('');
-  return `<button type="button" class="mi" data-group="${m.dept}" aria-expanded="${open}" aria-controls="grp-${m.dept}">${m.icon ? deptSvg(m.icon) : `<img src="assets/ic-${key}.png" alt="">`}${m.dept}<span class="caret"></span></button>
+  return `<button type="button" class="mi" data-group="${m.dept}" aria-expanded="${open}" aria-controls="grp-${m.dept}">${m.icon ? deptSvg(m.icon) : `<img src="assets/ic-${key}.png" alt="">`}${esc(deptLabel(m.dept))}<span class="caret"></span></button>
     <div class="lvs" id="grp-${m.dept}" ${open ? '' : 'hidden'}>${items}${off}</div>`;
 }
 function renderSide(route) { $('#menu').innerHTML = sideHtml(route); }
@@ -986,7 +998,7 @@ function pageHead(scr) {
   const extra = PROPOSED && scr.ruleP ? ` ${tagHtml({ tag: scr.ruleP[0] })} ${esc(scr.ruleP[1])}` : '';   // [BEHAVIOR] what the switch changes on this screen
   const g = groupOf(scr);   // [BEHAVIOR] a grouped screen: the menu entry names the page, each screen is a tab (a link with its own URL)
   const tabs = g ? `<nav class="tabs" aria-label="${esc(scr.group)} tabs">${g.map(s => `<a href="#/${s.id}" class="tab${s === scr ? ' is-active' : ''}"${s === scr ? ' aria-current="page"' : ''}>${esc(s.title)}${newMini(s)}<span class="cnt">${countOf(s).toLocaleString()}</span></a>`).join('')}</nav>` : '';
-  return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›${scr.top ? '' : `<span>${scr.dept}</span>›`}${g && scr.group !== scr.title ? `<span>${esc(scr.group)}</span>›` : ''}<b>${esc(scr.title)}</b></nav>
+  return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›${scr.top ? '' : `<span>${esc(deptLabel(scr.dept))}</span>›`}${g && scr.group !== scr.title ? `<span>${esc(scr.group)}</span>›` : ''}<b>${esc(scr.title)}</b></nav>
     <div class="hrow"><h1>${esc(g ? scr.group : scr.title)}${tagHtml(g && !scr.tag ? g.find(x => x.tag) || scr : scr)}${newHtml(g ? { isNew: g.some(x => x.isNew) } : scr)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>${tabs}
     <p class="rule">${IC.info}<span>${esc(scr.rule)}${extra}</span></p>`;
 }
@@ -1171,27 +1183,33 @@ function holidayAdd(scr) {
   toast(`Holiday added: ${fmtDate(f.date)}, ${esc(f.name.trim())}. Deadlines and aging now skip that date.`);
 }
 // [BEHAVIOR] Customer page › Sales Actions: the Add sales action form above the buyer's list. What was typed stays, with its messages, when it is refused (salesDraft, one per buyer); focus goes to the first field with a problem.
+// On Customer › Sales Actions (cid null) the form also asks for the buyer: type a Buyer ID or name, the list suggests the buyers (salesDraft key '*').
 const salesDraft = {};
 function salesActionForm(cid) {
-  const f = salesDraft[cid] || { date: TODAY, action: 'Call', notes: '', follow_up: '', errors: {} };
+  const f = salesDraft[cid || '*'] || { buyer: '', date: TODAY, action: 'Call', notes: '', follow_up: '', errors: {} };
   const er = k => f.errors[k] ? `<span class="err" id="sa-${k}-err" role="alert">${esc(f.errors[k])}</span>` : '';
   const bad = k => f.errors[k] ? `aria-invalid="true" aria-describedby="sa-${k}-err"` : '', inv = k => f.errors[k] ? ' is-invalid' : '';
+  const buyers = cid ? '' : `<div class="fld w2"><label for="sa-cid">Buyer (Buyer ID or name)</label><input class="ctl${inv('cid')}" id="sa-cid" list="sa-buyers" autocomplete="off" placeholder="Type a Buyer ID or name" value="${esc(f.buyer || '')}" ${bad('cid')}>${er('cid')}
+      <datalist id="sa-buyers">${[...buyerIndex().values()].sort((a, b) => a.name.localeCompare(b.name)).map(b => `<option value="${esc(b.cid)} - ${esc(b.name)}"></option>`).join('')}</datalist></div>`;
   return `<h3 class="sa-h" id="sa-form-h">Add sales action</h3>
-    <form class="fb" data-form="salesaction" novalidate aria-labelledby="sa-form-h"><div class="fld"><label for="sa-date">Date</label>${dateField('sa-date', f.date, bad('date'), inv('date').trim())}${er('date')}</div>
+    <form class="fb" data-form="salesaction" novalidate aria-labelledby="sa-form-h">${buyers}<div class="fld"><label for="sa-date">Date</label>${dateField('sa-date', f.date, bad('date'), inv('date').trim())}${er('date')}</div>
     <div class="fld"><label for="sa-action">Action</label><select class="ctl${inv('action')}" id="sa-action" ${bad('action')}>${SALES_ACTIONS.map(a => `<option${a === f.action ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select>${er('action')}</div>
     <div class="fld w3"><label for="sa-notes">Notes</label><textarea class="ctl${inv('notes')}" id="sa-notes" rows="3" ${bad('notes')}>${esc(f.notes)}</textarea>${er('notes')}</div>
     <div class="fld"><label for="sa-follow_up">Next Follow-up (optional)</label>${dateField('sa-follow_up', f.follow_up, bad('follow_up'), inv('follow_up').trim())}${er('follow_up')}</div>
     <div class="btns"><button type="submit" class="btn pr">${IC.save}Add sales action</button></div></form>`;
 }
-function salesActionAdd(cid) {
-  const rawDate = $('#sa-date').value.trim(), rawFollow = $('#sa-follow_up').value.trim();
-  const f = { date: parseDateInput(rawDate, TODAY), action: $('#sa-action').value, notes: $('#sa-notes').value.trim(), follow_up: parseDateInput(rawFollow, TODAY) }, errors = salesActionError(f);
+function salesActionAdd(cid) {   // cid null: Customer › Sales Actions, the buyer comes from the form
+  const rawDate = $('#sa-date').value.trim(), rawFollow = $('#sa-follow_up').value.trim(), rawBuyer = cid ? '' : $('#sa-cid').value.trim();
+  const f = { date: parseDateInput(rawDate, TODAY), action: $('#sa-action').value, notes: $('#sa-notes').value.trim(), follow_up: parseDateInput(rawFollow, TODAY) };
+  if (!cid) f.cid = buyerFromText(rawBuyer);
+  const errors = salesActionError(f), key = cid || '*';
   if (errors) {
-    salesDraft[cid] = { date: f.date === null ? rawDate : f.date, action: f.action, notes: f.notes, follow_up: f.follow_up === null ? rawFollow : f.follow_up, errors };
-    render(); $(`#sa-${['date', 'action', 'notes', 'follow_up'].find(k => errors[k])}`)?.focus(); return;
+    salesDraft[key] = { buyer: rawBuyer, date: f.date === null ? rawDate : f.date, action: f.action, notes: f.notes, follow_up: f.follow_up === null ? rawFollow : f.follow_up, errors };
+    render(); $(`#sa-${['cid', 'date', 'action', 'notes', 'follow_up'].find(k => errors[k])}`)?.focus(); return;
   }
-  recordSalesAction(cid, f); delete salesDraft[cid]; render(); $('#sa-date')?.focus();   // back to the first field, ready for the next action
-  toast(`Sales action added for ${esc(buyerName(cid))}: ${esc(f.action)} on ${fmtDate(f.date)}.`);
+  const who = cid || f.cid;
+  recordSalesAction(who, f); delete salesDraft[key]; render(); $(cid ? '#sa-date' : '#sa-cid')?.focus();   // back to the first field, ready for the next action
+  toast(`Sales action added for ${esc(buyerName(who))}: ${esc(f.action)} on ${fmtDate(f.date)}.`);
 }
 // Read-only table for the customer page (no sorting, paging or editing)
 function plainTable(cols, rows, totals, empty) {
@@ -1288,9 +1306,9 @@ function render() {
   const c = $('#content');
   if (cust) { c.innerHTML = customerPage(cust.cid, cust.tab); document.title = `${cust.cid} | Customer | CDMS Prototype`; return; }
   if (!scr) { c.innerHTML = homeLayout(); document.title = 'CDMS Prototype | Post-Auction Menus'; return; }
-  document.title = `${scr.title} | ${scr.top ? '' : `${scr.dept} | `}CDMS Prototype`;
+  document.title = `${scr.title} | ${scr.top ? '' : `${deptLabel(scr.dept)} | `}CDMS Prototype`;
   let html = pageHead(scr);
-  if (scr.layout === 'query') html += queryCard(scr); if (scr.layout === 'holidays') html += holidayForm(scr); if (scr.filters && scr.actions.includes('Filter')) html += filterCard(scr); if (scr.layout === 'saaf') html += saafAuctionCard(scr); html += dataCard(scr, scr.detailTitle?.() || scr.listTitle || scr.title + ' list');
+  if (scr.layout === 'query') html += queryCard(scr); if (scr.layout === 'holidays') html += holidayForm(scr); if (scr.layout === 'salesactions') html += `<section class="card" aria-label="Add sales action">${salesActionForm(null)}</section>`; if (scr.filters && scr.actions.includes('Filter')) html += filterCard(scr); if (scr.layout === 'saaf') html += saafAuctionCard(scr); html += dataCard(scr, scr.detailTitle?.() || scr.listTitle || scr.title + ' list');
   c.innerHTML = html;
 }
 
@@ -2013,7 +2031,7 @@ function bind() {
   const content = $('#content'), menu = $('#menu');
   menu.addEventListener('click', ev => {
     const g = ev.target.closest('[data-group]'); if (g) { OPEN[g.dataset.group] = !OPEN[g.dataset.group]; renderSide(route()); return; }
-    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, Sales Actions, Report, Approval, FAD, SMD, VWD, Master › Holiday List and Log Activity are active.`, 'warn'); return; }
+    const d = ev.target.closest('[data-disabled]'); if (d) { toast(`“${esc(d.dataset.disabled)}” is not part of this prototype. Only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval by President, FAD, SMD, VWD, Master › Holiday List and Log Activity are active.`, 'warn'); return; }
     if (ev.target.closest('.mis, a.mi')) document.body.classList.remove('nav-open');
   });
   content.addEventListener('change', ev => {
@@ -2034,7 +2052,7 @@ function bind() {
   });
   content.addEventListener('submit', ev => {
     ev.preventDefault();
-    if (ev.target.dataset.form === 'salesaction') { const c = custRoute(route()); if (c) salesActionAdd(c.cid); return; }   // the customer page has no screen of its own
+    if (ev.target.dataset.form === 'salesaction') { const c = custRoute(route()); if (c) salesActionAdd(c.cid); else if (route() === 'customer/sales-actions') salesActionAdd(null); return; }   // the customer page has no screen of its own
     const scr = currentScr(); if (!scr) return; const ui = U(scr.id), form = ev.target.dataset.form;
     if (form === 'filter') {
       content.querySelectorAll('[data-filter]').forEach(i => { ui.filters[i.dataset.filter] = i.value; });

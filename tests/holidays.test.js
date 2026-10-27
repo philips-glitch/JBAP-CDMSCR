@@ -150,7 +150,7 @@ test('sidebar: Holiday List sits in the existing Master menu (27 Oct 2026), betw
   assert.ok(side.indexOf('data-disabled="Cars"') < side.indexOf('data-group="Master"') && side.indexOf('data-group="Master"') < side.indexOf('data-group="Auction"'), 'where Master sits in CDMS');
   assert.match(side, /<a class="mis is-active" href="#\/master\/holidays" aria-current="page">Holiday List<span class="cnt">18<\/span><\/a>/);
   assert.doesNotMatch(side, /data-disabled="Master"/); assert.doesNotMatch(side, /Settings/, 'no Settings menu any more');
-  assert.match(side, /only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval, FAD, SMD, VWD, Master › Holiday List and Log Activity are active/);
+  assert.match(side, /only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval by President, FAD, SMD, VWD, Master › Holiday List and Log Activity are active/);
   assert.match(P.homeLayout(), /VWD menus that replace the MS Access post-auction forms, plus Master › Holiday List./);
 });
 

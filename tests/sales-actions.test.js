@@ -11,9 +11,9 @@ test('Customer page Sales Actions tab and add form', () => {
   assert.strictEqual(P.S.salesActions.length, n + 1); assert.strictEqual(P.S.log.at(-1).module, 'SMD'); assert.strictEqual(P.S.log.at(-1).action, 'Create');
   assert.match(P.customerPage(cid, 'sales-actions'), /Asked about pull-out/);
 });
-test('Customer › Sales Actions list is enabled, view only, newest first, with filters', () => {
+test('Customer › Sales Actions list is enabled, newest first, with filters; Update = the Add sales action form (27 Oct 2026)', () => {
   const P = load(), scr = P.byId['customer/sales-actions'];
-  assert.ok(scr && scr.isNew && scr.dept === 'Customer'); assert.deepStrictEqual(scr.actions, ['View', 'Filter', 'Sort']);
+  assert.ok(scr && scr.isNew && scr.dept === 'Customer'); assert.deepStrictEqual(scr.actions, ['View', 'Filter', 'Sort', 'Update']);
   const rows = scr.rows(); assert.ok(rows.length >= 6);
   assert.ok(rows.every((r, i) => i === 0 || rows[i - 1].date >= r.date));
   assert.deepStrictEqual(scr.filters.map(f => f.key), ['customer', 'action', 'date', 'due']);
@@ -168,15 +168,28 @@ test('list filters: Customer Name / Buyer ID, Action (several), Date range, Foll
   const f = P.filterCard(scr); assert.match(f, /Follow-up due/); assert.match(f, /Customer Name \/ Buyer ID/);
 });
 
-test('an action added on the customer page shows in Customer › Sales Actions and the count of the menu; view only there', () => {
+test('an action added on the customer page shows in Customer › Sales Actions and the count of the menu; the list itself has no row buttons', () => {
   const P = load(), scr = P.byId['customer/sales-actions'];
   P.recordSalesAction('B0193', { date: P.TODAY, action: 'Other', notes: 'Left a message', follow_up: '' });
   const r = scr.rows()[0]; assert.strictEqual(r.notes, 'Left a message'); assert.strictEqual(r.customer, P.buyerOf('B0193').name); assert.strictEqual(r.by, 'SMD user'); assert.strictEqual(scr.rows().length, 8);
   assert.match(P.sideHtml('x'), /Sales Actions<span class="ptag mini new"[^>]*>New<\/span><span class="cnt">8<\/span>/);
-  assert.match(P.dataCard(scr, 'Sales Actions list'), /Left a message/); assert.doesNotMatch(P.dataCard(scr, 'x'), /data-form="salesaction"|data-act=/, 'no add form or button on the list');
+  assert.match(P.dataCard(scr, 'Sales Actions list'), /Left a message/); assert.doesNotMatch(P.dataCard(scr, 'x'), /data-form="salesaction"|data-act=/, 'the add form sits above the list, not in it');
   assert.match(P.customerPage('B0193', 'sales-actions'), /Left a message/);
-  assert.ok(!scr.actions.includes('Update')); assert.ok(!scr.buttons);
+  assert.ok(!scr.buttons);
   const log = P.byId['log-activity']; assert.match(log.rule, /sales action added on a customer page is logged under SMD/);
   P.U(log.id).applied = { module: ['SMD'] }; assert.match(log.emptyNote(), /adds a sales action on a customer page/);
   assert.ok(log.rows().some(l => l.screen === 'Sales Actions' && l.module === 'SMD'));
+});
+test('Add sales action on Customer › Sales Actions: pick the buyer by Buyer ID or name, the same checks as the customer page (27 Oct 2026)', () => {
+  const P = load(), form = P.salesActionForm(null);
+  assert.match(form, /<label for="sa-cid">Buyer \(Buyer ID or name\)<\/label><input class="ctl" id="sa-cid" list="sa-buyers"/);
+  assert.match(form, /<option value="B0193 - [^"]+"><\/option>/, 'the list suggests each buyer as "Buyer ID - Name"');
+  assert.doesNotMatch(P.salesActionForm('B0193'), /sa-cid/, 'the customer page form has no buyer field');
+  const name = P.buyerOf('B0193').name;
+  assert.strictEqual(P.buyerFromText('b0193'), 'B0193'); assert.strictEqual(P.buyerFromText(`B0193 - ${name}`), 'B0193'); assert.strictEqual(P.buyerFromText(name.toLowerCase()), 'B0193');
+  assert.strictEqual(P.buyerFromText('NOBODY'), null); assert.strictEqual(P.buyerFromText(''), null);
+  const ok = { date: P.TODAY, action: 'Call', notes: 'x', follow_up: '' };
+  assert.match(P.salesActionError({ ...ok, cid: null }).cid, /Choose a buyer/); assert.strictEqual(P.salesActionError({ ...ok, cid: 'B0193' }), null);
+  assert.strictEqual(P.salesActionError(ok), null, 'the customer page passes no cid field');
+  const P2 = load(); P2.recordSalesAction('B0193', ok); assert.strictEqual(P2.byId['customer/sales-actions'].rows().length, 8);
 });

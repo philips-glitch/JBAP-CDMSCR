@@ -114,13 +114,14 @@ test('Rebate Approval: the Decided date is the approval or the rejection date, t
 test('sidebar: Approval is a top menu right after Report and before FAD, with Rebate Approval (New) and the pending count', () => {
   const P = load(), s = P.sideHtml('approval/rebate-approval'), pend = ap(P).rows().filter(r => r.rebate_status === 'Pending approval').length;
   assert.ok(s.indexOf('data-group="Report"') < s.indexOf('data-group="Approval"') && s.indexOf('data-group="Approval"') < s.indexOf('data-group="FAD"'));
-  assert.match(s, /<button type="button" class="mi" data-group="Approval" aria-expanded="false" aria-controls="grp-Approval"><svg/);
+  assert.match(s, /<button type="button" class="mi" data-group="Approval" aria-expanded="false" aria-controls="grp-Approval"><svg[^]*?<\/svg>Approval by President<span class="caret">/, 'the menu reads Approval by President (27 Oct 2026)');
+  assert.match(P.pageHead(ap(P)), /<span>Approval by President<\/span>›<b>Rebate Approval<\/b>/, 'and so does the breadcrumb');
   assert.match(s, new RegExp(`<a class="mis is-active" href="#/approval/rebate-approval" aria-current="page">Rebate Approval<span class="ptag mini new"[^>]*>New</span><span class="cnt">${pend}</span></a>`));
   assert.ok(pend >= 2 && pend < ap(P).rows().length);
-  assert.match(s, /only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval, FAD, SMD, VWD, Master › Holiday List and Log Activity are active/);
+  assert.match(s, /only Customer Inquiry, Sales Actions, Auction › Result Price, Report, Approval by President, FAD, SMD, VWD, Master › Holiday List and Log Activity are active/);
   assert.strictEqual(P.routeOf('approval/rebate-approval'), 'approval/rebate-approval');
   P.setProposed(true); assert.strictEqual(P.routeOf('approval/rebate-approval'), 'approval/rebate-approval'); assert.ok(P.shown(ap(P)));
-  assert.match(P.pageHead(ap(P)), /Home<\/a>›<span>Approval<\/span>›<b>Rebate Approval<\/b>/);
+  assert.match(P.pageHead(ap(P)), /Home<\/a>›<span>Approval by President<\/span>›<b>Rebate Approval<\/b>/);
 });
 test('Log Activity: Approval is a Module option, has its own empty note, and shows the President\'s decisions', () => {
   const P = load(), log = P.byId['log-activity'];
