@@ -10,7 +10,7 @@ test('seller code and Auction No. where JBAP asked', () => {
   for (const id of ['FAD/payment-seller', 'FAD/for-dispatch', 'FAD/unreleased-unit', 'SMD/for-dispatch', 'SMD/unreleased-unit', 'VWD/unreleased-unit-overdue'])
     assert.ok(keys(id).includes('auction') && !keys(id).includes('adate'), id);
   assert.deepStrictEqual(P.byId['FAD/payment-seller'].filters.map(f => f.key), ['seller', 'auction', 'customer', 'plate']);
-  assert.deepStrictEqual(P.byId['report/liability-to-seller'].sort, ['seller', 'asc']);
+  assert.deepStrictEqual(P.byId['report/liability-to-seller'].sort, ['auction', 'desc']);   // opens latest auction first (user request, 27 Oct 2026)
 });
 test('SMD snapshot rows get the seller code and the Auction No.', () => {
   const P = load();
@@ -41,4 +41,17 @@ test('TFSPH merged into TFS; seller names map through aliases', () => {
   assert.ok(P.V().filter(v => v.seller === 'TFS').length >= 23, 'the 12 former TFSPH lots are TFS');
   for (const [n, c] of [['TOYOTA FINANCIAL SERVICES CORP', 'TFS'], ['South Asialink Finance Corp.', 'ASIALINK'], ['JACCS FINANCE PHILIPPINES CORP', 'JACCS'],
     ['SECURITY BANK  CORPORATION', 'SBC'], ['EAST WEST BANKING CORPORATION', 'EWB'], ['NOBODY', null]]) assert.strictEqual(P.sellerCode(n), c, n);
+});
+test('every vehicle list opens latest auction first, lots in order within an auction (user request, 27 Oct 2026)', () => {
+  const P = load();
+  assert.deepStrictEqual(P.U('report/inventory-monitoring').sort, ['first_auction', 'desc'], 'Inventory Monitoring: by its First Auction Listed column');
+  for (const id of ['FAD/pending-awarding', 'FAD/document-monitoring', 'auction/result-price', 'VWD/for-dispatch', 'report/auction-monitoring']) {
+    const scr = P.byId[id]; assert.deepStrictEqual(P.U(id).sort, ['auction', 'desc'], id);
+    const ids = [...P.dataCard(scr, 'x').matchAll(/data-tr="([^"]+)"/g)].map(m => m[1]), byRid = Object.fromEntries(scr.rows().map(r => [r.id, r])), rows = ids.map(i => byRid[i]).filter(r => r && r.auction != null && r.auction !== '');
+    for (let i = 1; i < rows.length; i++) {
+      const a = Number(rows[i - 1].auction), b = Number(rows[i].auction);
+      assert.ok(a > b || (a === b && String(rows[i - 1].lot).localeCompare(String(rows[i].lot), 'en', { numeric: true }) <= 0), `${id}: row ${i} out of order`);
+    }
+  }
+  assert.deepStrictEqual(P.U('SMD/saaf').sort, ['lot', 'asc'], 'the SAAF vehicle list (one auction) keeps lot order');
 });

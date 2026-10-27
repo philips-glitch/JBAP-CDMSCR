@@ -87,7 +87,7 @@ test('Approval › Rebate Approval: rows, default filter, sort, columns, filters
   assert.deepStrictEqual(P.applyFilters(scr, all).map(r => r.id).sort(), pend.map(r => r.id).sort());
   P.U(scr.id).applied = { rebate_status: ['Approved', 'Rejected'] };
   assert.strictEqual(P.applyFilters(scr, all).length, all.length - pend.length, 'Approved and Rejected can be picked for history');
-  assert.deepStrictEqual(scr.sort, ['rebate_requested', 'asc']);
+  assert.deepStrictEqual(scr.sort, ['auction', 'desc']);   // opens latest auction first (user request, 27 Oct 2026)
   assert.deepStrictEqual(scr.cols.map(c => c.label), ['Auction No.', 'Lot', 'Plate Number', 'Make/Model', 'Seller', 'Customer Name', 'Result Price', 'Rebate', 'Requested', 'Rebate Status', 'Decided', 'Reason', 'Approve', 'Reject']);
   assert.deepStrictEqual(scr.filters.map(f => f.label), ['Rebate Status', 'Auction No.', 'Seller', 'Plate Number']);
   assert.deepStrictEqual(scr.filters[0].options(), ['Pending approval', 'Approved', 'Rejected']);

@@ -66,7 +66,7 @@ test('Cancellation Monitoring columns, sort, filters and totals', () => {
   assert.deepStrictEqual(scr.cols.map(c => c.label), ['Auction No.', 'Lot', 'Customer Name', 'Buyer ID', 'Plate Number', 'Seller', 'Date Cancelled', 'Waived?', 'Justification', 'Penalty', 'Billing Date', 'Date Paid', 'Cancellation Fee Remitted']);
   assert.deepStrictEqual(scr.cols.map(c => c.key), ['auction', 'lot', 'customer', 'cid', 'plate', 'seller', 'dcancel', 'waived', 'just', 'penalty', 'bill_date', 'paid_date', 'remitted']);
   assert.ok(rows.length && scr.cols.every(c => rows.some(r => c.key in r)), 'every column key is a field the cancellation rows carry');
-  assert.deepStrictEqual(scr.sort, ['dcancel', 'desc']);
+  assert.deepStrictEqual(scr.sort, ['auction', 'desc']);   // opens latest auction first (user request, 27 Oct 2026)
   assert.deepStrictEqual(scr.filters.map(f => f.key), ['auction', 'customer', 'plate', 'seller', 'waived']);
   const t = scr.totals(rows); assert.strictEqual(t.customer, `${rows.length} cancellations`);
   assert.strictEqual(t.penalty, P.CX().reduce((a, r) => a + r.penalty, 0).toLocaleString('en-US', { minimumFractionDigits: 2 }));
@@ -90,13 +90,13 @@ test('Cancellation Monitoring filters: Waived and Seller are multi-select, Custo
   assert.ok(rows.filter(r => !r.seller).length > 0 && pick({ seller: ['Not recorded', sellers[0]] }).length === rows.filter(r => !r.seller || r.seller === sellers[0]).length);
   assert.strictEqual(pick({}).length, rows.length);
 });
-test('Cancellation Monitoring: newest first, table shows the penalty total, no row buttons', () => {
+test('Cancellation Monitoring: latest auction first, table shows the penalty total, no row buttons', () => {
   const P = load(), scr = P.byId['report/cancellation-monitoring'], ui = P.U(scr.id);
-  assert.deepStrictEqual(ui.sort, ['dcancel', 'desc']);
+  assert.deepStrictEqual(ui.sort, ['auction', 'desc']);   // opens latest auction first (user request, 27 Oct 2026)
   const html = P.dataCard(scr, scr.title);
   assert.match(html, /<tfoot>/); assert.ok(html.includes(`${scr.rows().length} cancellations`)); assert.doesNotMatch(html, /data-act=/, 'view only: no buttons');
   for (const h of ['Auction No.', 'Buyer ID', 'Seller', 'Waived?', 'Penalty', 'Cancellation Fee Remitted']) assert.ok(html.includes(`<span>${h}</span>`), h);
-  const dates = P.sortRows(scr, P.applyFilters(scr, scr.rows())).map(r => r.dcancel); assert.ok(dates.length > 1 && dates.every((d, i) => i === 0 || dates[i - 1] >= d), 'Date Cancelled, newest first');
+  const aus = P.sortRows(scr, P.applyFilters(scr, scr.rows())).map(r => r.auction).filter(a => a != null && a !== '').map(Number); assert.ok(aus.length > 1 && aus.every((a, i) => i === 0 || aus[i - 1] >= a), 'Auction No., latest first');
 });
 test('Cancellation Monitoring and Inventory Summary: listed under Report in the sidebar and on Home, switch on or off (no New mark since 26 Oct 2026)', () => {
   const P = load();

@@ -34,7 +34,7 @@ test('Report › Rebate Monitoring is the live list of rebates: shared columns, 
   assert.ok(rm.rows().length > 0 && rm.rows().every(r => r.rebate && r.status === 'Sold'));
   assert.deepStrictEqual(rm.cols.map(c => c.key), ['auction', 'lot', 'plate', 'model', 'seller', 'customer', 'min_bid', 'highest_offer', 'rebate', 'rebate_approved', 'com', 'rebate_revenue', 'rebate_paid']);
   assert.ok(!rm.cols.some(c => c.edit) && !rm.actions.includes('Update'), 'view only');
-  assert.deepStrictEqual(rm.sort, ['auction_lot', 'desc']); assert.strictEqual(rm.totals(rm.rows()).plate, `${rm.rows().length} lots`);
+  assert.deepStrictEqual(rm.sort, ['auction', 'desc']);   // opens latest auction first (user request, 27 Oct 2026) assert.strictEqual(rm.totals(rm.rows()).plate, `${rm.rows().length} lots`);
   // live: a rebate recorded on a sold lot shows on the list at once
   const lot = P.sold().find(v => !v.rebate), n = rm.rows().length;
   P.S.veh.find(x => x.id === lot.id).rebate = 1234;

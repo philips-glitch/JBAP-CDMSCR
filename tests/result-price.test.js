@@ -66,7 +66,7 @@ test('the rebate cell is a number box until the lot is awarded; Auction Status a
   for (const r of [open, awarded]) { assert.match(P.cellHtml(scr, r, col('upd'), true), new RegExp(`data-act="rpUpdate" data-rid="${r.id}"[^>]*>Update<`)); assert.match(P.cellHtml(scr, r, col('status_set'), true), /<select[^>]*data-key="status_set"/); }
   const done = scr.rows().find(x => x.status !== 'Sold'); assert.strictEqual(P.cellHtml(scr, done, col('upd'), true), '<td class="c"></td>'); assert.doesNotMatch(P.cellHtml(scr, done, col('status_set'), true), /<select/);
   assert.deepStrictEqual(scr.cols.map(c => c.label), ['Update', 'Auction Status', 'Auction No.', 'Lot No.', 'Model', 'Plate Number', 'Seller', 'Buyer ID', 'Buyer Name', 'Start Price', 'Minimum Bid Price', 'Highest Offer Price', 'Rebate', 'Rebate Status', 'Winner Confirmation', 'Offer Status', 'KYC Status', 'Justification Log']);
-  assert.deepStrictEqual(scr.filters.map(f => f.key), ['seller', 'auction', 'lot', 'plate', 'status']); assert.strictEqual(scr.sort, undefined);
+  assert.deepStrictEqual(scr.filters.map(f => f.key), ['seller', 'auction', 'lot', 'plate', 'status']); assert.deepStrictEqual(scr.sort, ['auction', 'desc']);   // opens latest auction first (user request, 27 Oct 2026); rows() keeps the rebate-eligible lots first
   assert.deepStrictEqual(scr.cols.filter(c => c.isNew).map(c => c.key), ['status_set', 'rebate', 'rebate_status'], 'only the new fields carry the New badge');
   assert.ok(P.ACTIONS.cancelSale && P.ACTIONS.rpUpdate && !P.ACTIONS.confirmCdmsCancel && !P.ACTIONS.entryClear, 'the Cancellation Entry actions are gone');
 });
@@ -106,6 +106,6 @@ test('merged with the parallel version: a pending or approved rebate is locked (
   const sold = scr.rows().find(x => x.status === 'Sold'), notSold = scr.rows().find(x => x.status !== 'Sold'), win = scr.cols.find(c => c.key === 'winner');
   assert.match(P.cellHtml(scr, sold, win, true), /data-act="printWinner"[^>]*>Print</); assert.strictEqual(P.cellHtml(scr, notSold, win, true), '<td class="c"></td>');
   const can = r => r.status === 'Sold' && !r.release && !r.awarding, rows = scr.rows(), firstNo = rows.findIndex(r => !can(r));
-  assert.ok(firstNo > 0 && rows.slice(firstNo).every(r => !can(r)), 'the lots that can take a rebate come first'); assert.strictEqual(scr.sort, undefined);
+  assert.ok(firstNo > 0 && rows.slice(firstNo).every(r => !can(r)), 'the lots that can take a rebate come first'); assert.deepStrictEqual(scr.sort, ['auction', 'desc']);   // opens latest auction first (user request, 27 Oct 2026); rows() keeps the rebate-eligible lots first
   assert.match(P.homeLayout(), /<b>Auction<\/b>[^]*?Result Price/);
 });

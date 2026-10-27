@@ -879,6 +879,15 @@ const SCREENS = [
     emptyNote: () => { const m = filterVals(U(LOG_ID).applied.module); return m.length !== 1 ? null : m[0] === 'SMD' ? 'No activity yet: SMD logs an entry when it clears units for Return to Seller, approves them, sends a SAAF, saves a rebate, cancels a sale in Result Price or adds a sales action on a customer page.' : m[0] === 'VWD' ? 'No activity yet: VWD logs an entry each time it releases or returns a vehicle.' : m[0] === 'Settings' ? 'No activity yet: Settings logs an entry each time a holiday is added or removed.' : m[0] === 'Approval' ? 'No activity yet: Approval logs an entry each time the President approves or rejects a rebate.' : null; } },
 ];
 SCREENS.forEach(s => { s.id ||= `${s.dept}/${s.slug}`; });
+// [BEHAVIOR] User request (27 Oct 2026): every vehicle list opens with the latest auction first, lots in order within an auction (sortRows); a column header still re-sorts.
+// Not here: SAAF's vehicle list (one auction), Result Summary (one row per auction, already latest first), SMD Seller Acknowledgement (legacy sample, no auction number) and the lists that are not vehicles.
+const LATEST_FIRST = ['FAD/pending-awarding', 'FAD/unpaid', 'FAD/payment-seller', 'FAD/seller-acknowledgement', 'FAD/for-dispatch', 'FAD/return-approval', 'FAD/document-monitoring',
+  'FAD/security-bond', 'FAD/unreleased-unit', 'FAD/rebate-payable', 'FAD/commission-billing', 'FAD/cancellation-billing', 'auction/result-price', 'SMD/pending-awarding', 'SMD/unpaid',
+  'SMD/for-dispatch', 'SMD/unreleased-unit', 'SMD/return-to-seller', 'SMD/return-approval', 'VWD/unreleased-unit', 'VWD/for-dispatch', 'VWD/unreleased-unit-overdue',
+  'VWD/for-return-to-seller', 'report/auction-monitoring', 'report/cancellation-monitoring', 'report/rebate-monitoring', 'report/liability-to-seller',
+  'approval/rebate-approval'];
+SCREENS.forEach(s => { if (LATEST_FIRST.includes(s.id)) s.sort = ['auction', 'desc']; });
+SCREENS.find(s => s.id === 'report/inventory-monitoring').sort = ['first_auction', 'desc'];   // its auction column is First Auction Listed (same number; units never listed come last)
 const byId = Object.fromEntries(SCREENS.map(s => [s.id, s]));
 
 function U(id) {
@@ -914,12 +923,13 @@ function applyFilters(scr, rows) {
 function sortRows(scr, rows) {
   const st = U(scr.id).sort; if (!st) return rows;
   const [k, dir] = st, m = dir === 'desc' ? -1 : 1;
+  const lotOrder = (a, b) => k === 'auction' ? String(a.lot ?? '').localeCompare(String(b.lot ?? ''), 'en', { numeric: true }) : 0;   // within one auction, lots in order
   return [...rows].sort((a, b) => {
     const x = a[k], y = b[k];
     const ex = x === null || x === undefined || x === '', ey = y === null || y === undefined || y === '';
-    if (ex && ey) return 0; if (ex) return 1; if (ey) return -1;          // blanks always last
-    if (typeof x === 'number' && typeof y === 'number') return (x - y) * m;
-    return String(x).localeCompare(String(y), 'en', { numeric: true }) * m;
+    if (ex && ey) return lotOrder(a, b); if (ex) return 1; if (ey) return -1;          // blanks always last
+    if (typeof x === 'number' && typeof y === 'number') return (x - y) * m || lotOrder(a, b);
+    return String(x).localeCompare(String(y), 'en', { numeric: true }) * m || lotOrder(a, b);
   });
 }
 
