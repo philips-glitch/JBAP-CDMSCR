@@ -58,9 +58,10 @@
     { id: 'SA-2', cid: 'B9034', date: '2026-09-15', action: 'Email', notes: 'Sent the vehicle dispatch form and the pick-up schedule.', follow_up: null, by: 'smd.staff' },
     { id: 'SA-1', cid: 'B9034', date: '2026-09-03', action: 'Call', notes: 'Asked if the buyer will join the next auction. The buyer will check the list of cars first.', follow_up: null, by: 'smd.staff' },
   ];
-  // [MOCK] Q11: SAAF state on Pending Awarding lots: 4 approved by the seller (ready for FAD), 3 sent and awaiting the seller, the rest not sent
-  const saaf = { V102: ['2026-08-20', '2026-08-24'], V103: ['2026-08-27', '2026-08-31'], V092: ['2026-09-03', '2026-09-07'], V096: ['2026-09-10', '2026-09-14'],
-    V087: ['2026-09-10', null], V097: ['2026-09-10', null], V017: ['2026-09-17', null] };
+  // [MOCK] Q11: SAAF state on Pending Awarding lots, one state per auction and seller (27 Oct 2026): Auctions 215, 216 and 217 of EWB approved by the seller (ready for FAD),
+  // Auction 218 of SBC (3 lots) sent and awaiting the seller, the rest not sent
+  const saaf = { V102: ['2026-08-20', '2026-08-24'], V103: ['2026-08-27', '2026-08-31'], V092: ['2026-09-03', '2026-09-07'],
+    V096: ['2026-09-10', null], V087: ['2026-09-10', null], V097: ['2026-09-10', null] };
   D.vehicles.forEach(v => { const s = saaf[v.id]; if (s) { v.saaf_sent = s[0]; v.saaf_approved = s[1]; } });
   // [MOCK] Wish 5: Date of Entry (CDMS Cars > Car List). Inferred: start of the lot's auction minus 7 to 21 days
   const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };

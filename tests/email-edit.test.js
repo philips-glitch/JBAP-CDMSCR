@@ -53,7 +53,7 @@ test('logEmailEdit logs "Email body edited" No → Yes on every lot of the email
 test('Every send handler logs the edited emails before it records the lots', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8'), rpt = fs.readFileSync(path.join(__dirname, '..', 'reports.js'), 'utf8');
   for (const act of ['emailBaaf', 'emailSaaf', 'emailDoas', 'emailDispatch', 'printReturn', 'printDocTrans']) {
-    const start = src.indexOf(`\n  ${act}(scr) {`), end = src.indexOf('\n  },', start), fn = src.slice(start, end);
+    const start = Math.max(src.indexOf(`\n  ${act}(scr) {`), src.indexOf(`\n  ${act}(scr, el) {`)), end = src.indexOf('\n  },', start), fn = src.slice(start, end);
     assert.ok(start > 0 && /logEmailEdits\(scr, /.test(fn), `${act} logs edited emails`);
     assert.ok(fn.indexOf('logEmailEdits(') < fn.search(/record(Awarding|SaafSent|DoasEmail|Dispatch|ReturnClearance|DocTransmittal)\(/), `${act}: edits are logged before the lots are recorded`);
   }
@@ -67,7 +67,8 @@ test('New badge sits beside Edit in every email preview, outside the button; the
   assert.ok(tools.includes('>Edit</button><span class="ptag mini new"'), 'right after the Edit button, outside it');
   assert.match(tools, /data-em-edit aria-label="Edit email to Some Buyer &lt;buyer@x&gt; \(JBAP TEST - SOME BUYER\)">Edit<\/button>/, 'the button name is unchanged');
   const all = P.SCREENS.flatMap(s => s.buttons || []);
-  for (const act of ['emailBaaf', 'emailDispatch', 'emailSaaf', 'printReturn']) { const b = all.filter(x => x.act === act); assert.ok(b.length, act); b.forEach(x => assert.ok(!x.isNew, `${act} opener has no New badge`)); }
+  for (const act of ['emailBaaf', 'emailDispatch', 'printReturn']) { const b = all.filter(x => x.act === act); assert.ok(b.length, act); b.forEach(x => assert.ok(!x.isNew, `${act} opener has no New badge`)); }
+  assert.doesNotMatch(P.saafAuctionCard(P.byId['SMD/saaf']), /ptag mini new/, 'the SAAF row buttons carry none either (27 Oct 2026: Email SAAF sits on each auction row)');
 });
 test('Each email body has its own name, the same recipient and subject as its Edit button', () => {
   const P = load(), a = P.REPORTS.email(mail({ to: 'finance@x; vwd@x', subject: 'RETURN TO SELLER - A' })), b = P.REPORTS.email(mail({ to: 'finance@x; vwd@x', subject: 'RETURN TO SELLER - B' }));
