@@ -224,7 +224,7 @@ function recordCancellationBilling(scr, rows) {
   const ui = U(scr.id);
   rows.forEach(r => {
     const amount = r._raw.amount ?? r.penalty;
-    logChange(scr, 'Update', r, [['Billing Date', 'date', r._raw.bill_date, TODAY], ['Amount', 'money', r._raw.amount, amount], ['For Print?', 'check', r._raw.for_print, false]]);
+    logChange(scr, 'Update', r, [['Billing Date', 'date', r._raw.bill_date, TODAY], ['Amount', 'money', r._raw.amount, amount], ['For Email?', 'check', r._raw.for_print, false]]);
     r._raw.bill_date = TODAY; r._raw.amount = amount; r._raw.for_print = false; delete ui.edits[r.id];
   });
 }
@@ -662,11 +662,11 @@ const SCREENS = [
     ruleP: ['P3', 'Collection Receipt is typed for now; it will come through JBAP\'s existing NOAH integration once it is re-routed from Access to CDMS.'] },
   // JBAP feedback (16 Oct 2026, #13): Cancellation Billing and Cancellation Payment in one screen
   { dept: 'FAD', slug: 'cancellation-billing', title: 'Cancellation Billing & Payment', actions: VSU,
-    rule: 'Cancelled lots with the fee not waived and no Date Paid. Penalty PHP 10,000 per lot: PHP 5,000 to the seller and PHP 5,000 to JBAP (EWB: all to JBAP). Tick For Email? and press Email cancellation billing: one email per buyer and auction from finance@ to the buyer, Cc sales@, with the Cancellation Fee Billing attached (JBAP, 28 Oct 2026); sending records the Billing Date and the amount due. When the buyer pays, enter Date Paid (and Amount) and save; paid lots leave the list.',
+    rule: 'Cancelled lots with the fee not waived and no Date Paid. Penalty PHP 10,000 per lot: PHP 5,000 to the seller and PHP 5,000 to JBAP (EWB: all to JBAP). Tick For Email? and press Email cancellation billing: one email per buyer and auction from finance@ to the buyer, Cc sales@, with the Cancellation Fee Billing attached (JBAP, 28 Oct 2026); sending records the Billing Date and the amount due. A lot already billed can be ticked too: it is resent as a copy (same Billing Date and amount, nothing recorded again). When the buyer pays, enter Date Paid (and Amount) and save; paid lots leave the list.',
     rows: () => CX().filter(c => !c.waived && !c.paid_date), sort: ['auction', 'desc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Plate', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 260 }), C('Date Cancelled', 'dcancel', 'date'),
       C('Penalty', 'penalty', 'money'), C('To Seller', 'pen_seller', 'money'), C('To JBAP', 'pen_jbap', 'money'),
-      C('For Email?', 'for_print', 'check', { edit: 'check', lockWhen: r => !!r.bill_date, isNew: true }), C('Billing Date', 'bill_date', 'date'),
+      C('For Email?', 'for_print', 'check', { edit: 'check', isNew: true }), C('Billing Date', 'bill_date', 'date'),
       C('Date Paid', 'paid_date', 'date', { edit: 'date', lockWhen: r => !r.bill_date }), C('Amount', 'amount', 'money', { edit: 'money', lockWhen: r => !r.bill_date })],
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), pen_seller: money(sumBy(rows, 'pen_seller')), pen_jbap: money(sumBy(rows, 'pen_jbap')) }),
     validate: (r, e) => { const d = 'paid_date' in e ? e.paid_date : r.paid_date, a = 'amount' in e ? e.amount : r.amount;
@@ -1743,22 +1743,25 @@ const ACTIONS = {
       } }] });
   },
   emailCancel(scr) {   // [BEHAVIOR] JBAP (28 Oct 2026): the cancellation billing is emailed to the buyer, laid out like JBAP's sample email
-    const rows = selectedRows(scr, 'for_print').filter(r => !r.bill_date);   // [BEHAVIOR] a billed lot is never billed again
+    // [BEHAVIOR] user (28 Oct 2026): every lot can be ticked; a billed lot is resent as a copy: its Billing Date and amount stay, nothing is recorded again
+    const rows = selectedRows(scr, 'for_print'), fresh = rows.filter(r => !r.bill_date), copies = rows.filter(r => r.bill_date);
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For Email?</b> on at least one record first.'); render(); return; }
     setMsg(scr, null); render();
     const lists = cancelLetterGroups(rows), co = D.meta.company, docs = {};
     const mails = lists.map((list, i) => {
       const b = { customer: list[0].customer, cid: list[0].cid, email: buyerEmail(list[0].cid) }, au = list[0].auction, when = auctionDays(au), file = `A${au} -${b.customer}.pdf`;
-      docs[i] = [file, () => REPORTS.cancellationLetter(b, list, TODAY)];
+      const billed = list.every(r => r.bill_date), date = billed ? list.map(r => r.bill_date).sort().at(-1) : TODAY;   // a copy keeps the date it was billed on
+      docs[i] = [file, () => REPORTS.cancellationLetter(b, list, date)];
       return REPORTS.email({ from: co.emails.finance, to: mailTo(b), cc: co.emails.sales, subject: `Billing for Cancelled Unit for Auction A${au} ${when}`, atts: [{ key: String(i), name: file }],
         body: `Dear ${esc(b.customer)},<br><br>Please see attached billing of your cancelled unit for Auction A${esc(au)} ${esc(when)}.<br><br>Thank you<br><br>Regards,<br>${esc(co.name)}` });
     }).join('');
     openModal({ title: `Email cancellation billing: ${lists.length} email(s), ${rows.length} lot(s)`, icon: 'mail', wide: true, body: mails,
-      note: 'Simulated: no email is actually sent. Sending sets the Cancellation Billing Date to today and the amount due to the penalty. The payment deadline stays blank until JBAP confirms it (Q33).',
+      note: `Simulated: no email is actually sent. Sending sets the Cancellation Billing Date to today and the amount due to the penalty${copies.length ? `; ${copies.length} lot(s) already billed are resent as a copy (Billing Date and amount unchanged)` : ''}. The payment deadline stays blank until JBAP confirms it (Q33).`,
       onAtt: key => openReport(docs[key][0], docs[key][1](), () => ACTIONS.emailCancel(scr)),
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Send ${lists.length} email(s)`, kind: 'pr', icon: 'mail', onClick: () => {
-        logEmailEdits(scr, lists); recordCancellationBilling(scr, rows);
-        closeModal(); render(); toast(`Cancellation billing sent: ${lists.length} email(s), ${rows.length} lot(s). Enter Date Paid on this screen when the buyer pays.`);
+        logEmailEdits(scr, lists); recordCancellationBilling(scr, fresh);
+        copies.forEach(r => { r._raw.for_print = false; clearTick(scr, r.id, 'for_print'); });   // a copy only drops its tick
+        closeModal(); render(); toast(`Cancellation billing sent: ${lists.length} email(s), ${fresh.length} lot(s) billed${copies.length ? `, ${copies.length} resent as a copy` : ''}. Enter Date Paid on this screen when the buyer pays.`);
       } }] });
   },
   // [BEHAVIOR] Rebate report: pick an auction range, then download an .xlsx (REPORTS.rebateWorkbook). It changes no data, so nothing is logged.

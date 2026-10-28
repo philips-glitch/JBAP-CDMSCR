@@ -7,7 +7,7 @@ test('Cancellation Billing & Payment: one screen for every unpaid fee, billed or
   assert.deepStrictEqual(scr.rows().map(r => r.id).sort(), P.CX().filter(c => !c.waived && !c.paid_date).map(c => c.id).sort());
   const billed = scr.rows().find(r => r.bill_date), unbilled = scr.rows().find(r => !r.bill_date);
   assert.ok(billed && unbilled);
-  assert.doesNotMatch(P.cellHtml(scr, billed, col('for_print'), true), /type="checkbox"/, 'billed: no tick');
+  assert.match(P.cellHtml(scr, billed, col('for_print'), true), /type="checkbox"(?![^>]*disabled)/, 'billed: tickable, resent as a copy (user, 28 Oct 2026)');
   assert.match(P.cellHtml(scr, unbilled, col('for_print'), true), /type="checkbox"/);
   assert.match(P.cellHtml(scr, billed, col('paid_date'), true), /data-key="paid_date"/);
   assert.doesNotMatch(P.cellHtml(scr, unbilled, col('paid_date'), true), /data-key="paid_date"/, 'unbilled: Date Paid locked');
@@ -20,15 +20,19 @@ test('billing keeps the lot on the screen; entering Date Paid removes it', () =>
   P.U(scr.id).edits[r.id] = { paid_date: P.TODAY }; assert.deepStrictEqual(P.validateEdits(scr), []);
   P.applyEdits(scr); assert.ok(!scr.rows().some(x => x.id === r.id), 'paid: removed');
 });
-test('Email cancellation billing never bills a lot that already has a Billing Date', () => {
+test('Email cancellation billing: every lot can be ticked; a billed lot is resent as a copy and never billed again', () => {
   const P = load(), scr = P.byId['FAD/cancellation-billing'], billed = scr.rows().find(x => x.bill_date);
   assert.ok(billed, 'a billed cancellation is listed');
-  P.CX().find(c => c.id === billed.id)._raw.for_print = true;   // a stray For Print? tick on a billed lot
+  const col = scr.cols.find(c => c.key === 'for_print'); assert.ok(!col.lockWhen, 'For Email? is open on every row (user, 28 Oct 2026)');
+  P.CX().find(c => c.id === billed.id)._raw.for_print = true;
   assert.ok(P.selectedRows(scr, 'for_print').some(r => r.id === billed.id), 'the tick is picked up');
-  const before = billed.bill_date;
-  try { P.ACTIONS.emailCancel(scr); } catch (e) { /* DOM stub: render() / openModal throw after the message is set */ }
-  const m = P.U(scr.id).msg; assert.ok(m && m.type === 'error' && /at least one record/.test(m.html), 'nothing left to bill: the error is shown, no letter is opened');
+  const before = billed.bill_date, amount = billed.amount, log0 = P.S.log.length;
+  try { P.ACTIONS.emailCancel(scr); } catch (e) { /* DOM stub: openModal */ }
+  assert.ok(!P.U(scr.id).msg, 'no error: the billed lot goes out as a copy');
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app.js'), 'utf8');
+  assert.match(src, /recordCancellationBilling\(scr, fresh\)/, 'only unbilled lots are recorded');
   assert.strictEqual(scr.rows().find(x => x.id === billed.id).bill_date, before, 'the Billing Date is untouched');
+  assert.strictEqual(scr.rows().find(x => x.id === billed.id).amount, amount); assert.strictEqual(P.S.log.length, log0);
 });
 test('Date Paid: not before the Billing Date; Amount more than 0', () => {
   const P = load(), scr = P.byId['FAD/cancellation-billing'], b = scr.rows().find(x => x.bill_date);
