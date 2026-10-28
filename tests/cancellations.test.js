@@ -20,13 +20,13 @@ test('billing keeps the lot on the screen; entering Date Paid removes it', () =>
   P.U(scr.id).edits[r.id] = { paid_date: P.TODAY }; assert.deepStrictEqual(P.validateEdits(scr), []);
   P.applyEdits(scr); assert.ok(!scr.rows().some(x => x.id === r.id), 'paid: removed');
 });
-test('Print cancellation billing never bills a lot that already has a Billing Date', () => {
+test('Email cancellation billing never bills a lot that already has a Billing Date', () => {
   const P = load(), scr = P.byId['FAD/cancellation-billing'], billed = scr.rows().find(x => x.bill_date);
   assert.ok(billed, 'a billed cancellation is listed');
   P.CX().find(c => c.id === billed.id)._raw.for_print = true;   // a stray For Print? tick on a billed lot
   assert.ok(P.selectedRows(scr, 'for_print').some(r => r.id === billed.id), 'the tick is picked up');
   const before = billed.bill_date;
-  try { P.ACTIONS.printCancel(scr); } catch (e) { /* DOM stub: render() / openModal throw after the message is set */ }
+  try { P.ACTIONS.emailCancel(scr); } catch (e) { /* DOM stub: render() / openModal throw after the message is set */ }
   const m = P.U(scr.id).msg; assert.ok(m && m.type === 'error' && /at least one record/.test(m.html), 'nothing left to bill: the error is shown, no letter is opened');
   assert.strictEqual(scr.rows().find(x => x.id === billed.id).bill_date, before, 'the Billing Date is untouched');
 });
@@ -48,4 +48,18 @@ test('Cancellation Entry is gone (JBAP, 26 Oct 2026): every cancellation is in R
 test('39 screens (39 with the Proposed improvements switch off: the SAAF screen is standard since JBAP answer Q11)', () => {
   const P = load(); assert.strictEqual(P.SCREENS.length, 39); assert.strictEqual(P.SCREENS.filter(P.shown).length, 39);
   assert.ok(!P.SCREENS.some(s => s.proposed), 'no screen is behind the switch any more (columns still can be)');
+});
+
+// JBAP (28 Oct 2026): the cancellation billing is emailed to the buyer, as JBAP's sample email
+test('Email cancellation billing: finance@ to the buyer, Cc sales@, JBAP\'s subject and body, the billing attached; sending records the Billing Date', () => {
+  const P = load(), scr = P.byId['FAD/cancellation-billing'];
+  assert.strictEqual(P.auctionDays(218), 'September 07-09, 2026'); assert.strictEqual(P.auctionDays(217), 'August 31 - September 02, 2026');
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app.js'), 'utf8'), fn = src.slice(src.indexOf('  emailCancel(scr) {'), src.indexOf('\n  },', src.indexOf('  emailCancel(scr) {')));
+  assert.match(fn, /from: co\.emails\.finance/); assert.match(fn, /cc: co\.emails\.sales/);
+  assert.match(fn, /Billing for Cancelled Unit for Auction A\$\{au\} \$\{when\}/); assert.match(fn, /Please see attached billing of your cancelled unit/);
+  assert.match(fn, /A\$\{au\} -\$\{b\.customer\}\.pdf/, 'attachment named as JBAP\'s sample');
+  assert.ok(fn.indexOf('logEmailEdits(') < fn.indexOf('recordCancellationBilling('), 'edited bodies are logged before the lots are billed');
+  assert.ok(!scr.buttons.some(b => b.act === 'printCancel'), 'Email replaces Print');
+  const r = scr.rows().find(x => !x.bill_date); P.recordCancellationBilling(scr, [r]);
+  assert.strictEqual(scr.rows().find(x => x.id === r.id).bill_date, P.TODAY);
 });

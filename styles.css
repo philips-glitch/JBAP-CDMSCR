@@ -252,6 +252,9 @@ tfoot td{font-weight:700;background:#eef1f8;border-top:2px solid var(--line-2);b
 .rpt .fn{font-size:10.5px;color:#555}
 .rpt .rbox{display:inline-block;width:12px;height:12px;border:1px solid #333;margin-right:6px;vertical-align:-2px;text-align:center;line-height:11px;font-size:10px}
 .cols2{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px}
+/* Cancellation Fee Billing: logo left, title in a box, as JBAP's sample (28 Oct 2026) */
+.rpt.cxl .cxl-h{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:16px}.rpt.cxl .cxl-h img{height:56px}
+.rpt.cxl .cxl-h h1{border:1px solid #333;padding:14px 28px;margin:0;font-weight:400;letter-spacing:.5px}
 /* SAAF: JBAP's paper form (27 Oct 2026) */
 .rpt.saaf .saaf-h{display:flex;align-items:center;gap:16px;margin-bottom:10px}.rpt.saaf .saaf-h img{height:44px}.rpt.saaf .saaf-h h1{flex:1;margin:0;text-align:center;padding-right:60px}
 .rpt.saaf .saaf-kv{width:auto;min-width:360px}.rpt.saaf .saaf-kv th{width:150px}

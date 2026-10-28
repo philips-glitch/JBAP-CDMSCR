@@ -31,7 +31,8 @@ test('commission billing: one billing per seller in one go', () => {
   sellers.forEach((code, i) => P.recordCommissionBilling(scr, code, `T-${i}`, P.TODAY, rows.filter(r => r.seller === code)));
   assert.strictEqual(P.S.billing.length, n + 2);
   const lots0 = rows.filter(r => r.seller === sellers[0]), b0 = P.S.billing.find(b => b.no === 'T-0');
-  assert.strictEqual(b0.total, Math.round(lots0.reduce((a, r) => a + r.ctotal, 0) * 100) / 100);
+  assert.strictEqual(b0.total, Math.round(lots0.reduce((a, r) => a + r.cbill, 0) * 100) / 100, 'Total = Commission + VAT − CWT (JBAP, 28 Oct 2026)');
+  assert.strictEqual(b0.cwt, Math.round(lots0.reduce((a, r) => a + r.cwt, 0) * 100) / 100, 'the billing keeps its CWT');
   assert.strictEqual(b0.customer, P.SELLER[sellers[0]].name);
   assert.ok(!scr.rows().some(r => sellers.includes(r.seller)), 'billed lots leave the list');
   // Log Activity: each billing is logged once as a Create (one entry per recorded field), each lot once as an Update with its billing number

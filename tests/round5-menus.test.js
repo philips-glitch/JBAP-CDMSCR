@@ -20,7 +20,7 @@ test('New badge marks only round-5 changes', () => {
   for (const id of ['FAD/rebate-payable', 'report/liability-to-seller', 'report/rebate-monitoring']) assert.ok(marked.includes(id), id);
   // badges of the 19 and 20 Oct rounds are gone (these screens are not changed in round 5)
   for (const id of ['SMD/saaf', 'master/holidays', 'report/inventory-summary', 'report/inventory-monitoring', 'SMD/unreleased-unit', 'VWD/for-return-to-seller']) assert.ok(!P.byId[id].isNew, id);
-  for (const id of ['SMD/unreleased-unit', 'SMD/return-to-seller', 'FAD/payment-seller', 'FAD/commission-billing']) assert.ok(!P.byId[id].cols.some(c => c.isNew), id);
+  for (const id of ['SMD/unreleased-unit', 'SMD/return-to-seller', 'FAD/payment-seller']) assert.ok(!P.byId[id].cols.some(c => c.isNew), id);   // Commission Billing is New again on 28 Oct 2026 (CWT)
 });
 test('Rebate Paid saved on FAD Rebate Payable is logged under FAD', () => {
   const P = load(), scr = P.byId['FAD/rebate-payable'], r = scr.rows()[0];

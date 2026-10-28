@@ -14,7 +14,12 @@ const CANCEL_PENALTY = 10000;    // cancellation penalty per lot (JBAP Q4)
 const LATEST_AUCTION = D ? Object.keys(D.auctions).filter(k => D.auctions[k][0] <= TODAY).sort((a, b) => a - b).pop() : null;
 const COMMISSION_RATE = 0.05;    // default commission rate (seller.commission_rate overrides)
 const VAT_RATE = 0.12;
-const WTAX_RATE = 0.15;          // withholding tax on the commission for NET sellers (Access Payment Seller sample; to confirm Q26)
+// [BEHAVIOR] JBAP feedback (28 Oct 2026, new BIR requirement): Creditable Withholding Tax rate per seller, from JBAP's table. It is withheld on the commission
+// (VAT excluded; to confirm). SBC, ORIX and ASIALINK are not in JBAP's table: 15% until JBAP confirms (CWT_TO_CONFIRM).
+const CWT_RATES = { INFOCOM: 0.15, MOL: 0.02, JOYCAL: 0.15, INSPIRO: 0.15, PNB: 0.15, AIFUL: 0.02, GDFI: 0.15, FGP: 0.02, AFC: 0.15, JBAP: 0, BPI: 0.15, BPICDT: 0.15, BRC: 0.15,
+  CBS: 0.15, OAFP: 0.15, PSBANK: 0.02, 'PRO OIL': 0, SAFC: 0.15, TAU: 0.02, TFS: 0.02, YULON: 0.02, 'C CREDIT': 0.15, JACCS: 0.15, ORICO: 0.15, EWB: 0.15, HERTZ: 0.15 };
+const CWT_DEFAULT = 0.15, CWT_TO_CONFIRM = ['SBC', 'ORIX', 'ASIALINK'];
+const cwtRate = code => CWT_RATES[String(code || '').toUpperCase()] ?? CWT_DEFAULT;
 const r2 = n => Math.round(n * 100) / 100;
 const BILL_DUE_DAYS = 10;        // Access DB: billing due date = billing date + 10 days
 const $ = (s, el = document) => el.querySelector(s);
@@ -151,14 +156,16 @@ const BOND_STATUSES = ['Pending Documents', 'Waiting ORCR', 'Pending Refund', 'C
 const REFUND_VIA = ['Deposit c/o JBAP', 'Cheque', 'Seller deposited to buyer'];   // JBAP's Security Bond sheet remarks
 // [BEHAVIOR] Security Bond status = the furthest step reached (JBAP's Security Bond sheet: same as the typed status on 93 of 98 lots)
 const bondStatus = v => v.bond_forfeited ? 'Forfeited' : v.bond_refund_buyer ? 'Complete' : v.bond_orcr_seller || v.bond_refund_jbap ? 'Pending Refund' : v.to_buyer ? 'Waiting ORCR' : 'Pending Documents';
-// [BEHAVIOR] Commission (÷1.12 when the seller's 5% includes VAT), VAT 12%, W/TAX 15% for NET sellers,
-// To JBAP = commission + VAT − W/TAX (0 for GROSS sellers), Payable to Seller = price + fee + security bond − To JBAP. Unrounded until displayed.
+// [BEHAVIOR] Commission (÷1.12 when the seller's 5% includes VAT), VAT 12%, CWT = commission × the seller's rate (JBAP, 28 Oct 2026; was a flat 15%),
+// To JBAP = commission + VAT − CWT for NET sellers (0 for GROSS sellers), Payable to Seller = price + fee + security bond − To JBAP.
+// Commission billing: Total (cbill) = commission + VAT − CWT; ctotal stays commission + VAT (as in the Access data). Unrounded until displayed.
 function sellerMoney(v) {
   const s = SELLER[v.seller] || {}, price = v.price;
-  if (price === null || price === undefined) return { com: null, cvat: null, ctotal: null, wtax: null, to_jbap: null, payable: null };
+  if (price === null || price === undefined) return { com: null, cvat: null, ctotal: null, cwt: null, cbill: null, cwt_rate: null, cwt_pct: '', wtax: null, to_jbap: null, payable: null };
   const rate = s.commission_rate ?? COMMISSION_RATE, com = s.vat_inclusive ? price * rate / (1 + VAT_RATE) : price * rate;
-  const vat = com * VAT_RATE, net = s.net !== false, wtax = net ? com * WTAX_RATE : 0, toJbap = net ? com + vat - wtax : 0;
-  return { com: r2(com), cvat: r2(r2(com + vat) - r2(com)), ctotal: r2(com + vat), wtax: r2(wtax), to_jbap: r2(toJbap), payable: r2(price + (v.transfer_fee || 0) + bondOf(v) - toJbap) };
+  const vat = com * VAT_RATE, net = s.net !== false, rateC = cwtRate(v.seller), cwt = com * rateC, wtax = net ? cwt : 0, toJbap = net ? com + vat - wtax : 0;
+  return { com: r2(com), cvat: r2(r2(com + vat) - r2(com)), ctotal: r2(com + vat), cwt: r2(cwt), cbill: r2(r2(com + vat) - r2(cwt)), cwt_rate: rateC, cwt_pct: `${Math.round(rateC * 100)}%`,
+    wtax: r2(wtax), to_jbap: r2(toJbap), payable: r2(price + (v.transfer_fee || 0) + bondOf(v) - toJbap) };
 }
 // [BEHAVIOR] JBAP feedback (16 Oct 2026, #19): a unit is listed ahead when its own auction, or the auction it is relisted in (next_auction), has not ended (Q77)
 const listedAhead = v => [v.auction, v.next_auction].some(a => a && (D.auctions[String(a)] || [])[1] >= TODAY);
@@ -200,8 +207,9 @@ function enrichV(v) {
 const V = () => S.veh.map(enrichV);
 const sold = () => V().filter(v => v.status === 'Sold');
 // id includes the position: Access has the same Billing # more than once (e.g. 428)
-const B = () => S.billing.map((b, i) => Object.assign({}, b, { _raw: b, id: `${b.no}#${i}`, bill: Math.round(b.total / 1.12 * 100) / 100,
-  vat: Math.round((b.total - b.total / 1.12) * 100) / 100, due: addDays(b.bdate, BILL_DUE_DAYS) }));
+// [BEHAVIOR] a billing made in CDMS keeps its commission, VAT and CWT (JBAP, 28 Oct 2026); an Access billing has only the total, so Bill Amount and VAT are worked back from it and CWT stays blank
+const B = () => S.billing.map((b, i) => Object.assign({}, b, { _raw: b, id: `${b.no}#${i}`, due: addDays(b.bdate, BILL_DUE_DAYS) },
+  b.cwt != null ? { bill: b.com, vat: b.vat, cwt: b.cwt } : { bill: Math.round(b.total / 1.12 * 100) / 100, vat: Math.round((b.total - b.total / 1.12) * 100) / 100, cwt: null }));
 // [BEHAVIOR] Cancellation penalty PHP 10,000 per lot: 5,000 to the seller and 5,000 to JBAP; EWB: all to JBAP (Q4). Waived lots: 0.
 function cancelSplit(c) { const p = c.waived ? 0 : CANCEL_PENALTY, toSeller = c.seller === 'EWB' ? 0 : p / 2; return { penalty: p, pen_seller: toSeller, pen_jbap: p - toSeller }; }
 // [BEHAVIOR] A cancellation without its own seller takes the seller of the vehicle with the same plate and auction.
@@ -628,25 +636,25 @@ const SCREENS = [
     buttons: [{ label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }], savedNote: 'Paid rebates removed from the list.' },
   // FAD › Billing: Commission Billing first, then Billing Monitoring and Unpaid Billing (tabs in this order; user requests of 15 and 16 Oct 2026)
   { dept: 'FAD', slug: 'commission-billing', title: 'Commission Billing', group: 'Billing', actions: VSU,
-    rule: 'Result price records with a Remittance Date and no commission billing yet. Tick Print?, then Print commission billing to record the NOAH billing number and date.',
+    rule: 'Result price records with a Remittance Date and no commission billing yet. Total = Commission + VAT − Creditable Withholding Tax (the seller\'s rate; JBAP, 28 Oct 2026, new BIR requirement). Tick Print?, then Print commission billing to record the NOAH billing number and date.',
     rows: () => sold().filter(v => v.pay_seller && !v.billed), sort: ['customer', 'asc'],
     cols: [C('Customer Name', 'customer', 'text', { w: 260 }), C('Seller', 'seller', 'code'), C('Auction No.', 'auction', 'code'), C('Auction Date', 'adate', 'code'), C('Plate Number', 'plate', 'code'), C('Print?', 'print_comm', 'check', { edit: 'check' }), C('Remittance Date', 'pay_seller', 'date'),
-      C('Winning Bid', 'price', 'money'), C('Commission', 'com', 'money'), C('VAT', 'cvat', 'money'), C('Total', 'ctotal', 'money')],
-    totals: rows => ({ plate: `${rows.length} units`, price: money(sumBy(rows, 'price')), com: money(sumBy(rows, 'com')), cvat: money(sumBy(rows, 'cvat')), ctotal: money(sumBy(rows, 'ctotal')) }),
+      C('Winning Bid', 'price', 'money'), C('Commission', 'com', 'money'), C('VAT', 'cvat', 'money'), C('CWT Rate', 'cwt_pct', 'code', { isNew: true }), C('Creditable Withholding Tax', 'cwt', 'money', { isNew: true }), C('Total', 'cbill', 'money', { isNew: true })],
+    totals: rows => ({ plate: `${rows.length} units`, price: money(sumBy(rows, 'price')), com: money(sumBy(rows, 'com')), cvat: money(sumBy(rows, 'cvat')), cwt: money(sumBy(rows, 'cwt')), cbill: money(sumBy(rows, 'cbill')) }),
     buttons: [{ label: 'Print commission billing', kind: 'ol', icon: 'print', act: 'printComm', count: 'print_comm' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     queue: true, ready: { key: 'print_comm', when: () => true },
     ruleP: ['P4', 'Every lot arrives pre-ticked. Printing records one billing per seller in one go, each with its own NOAH billing number (P3: typed until JBAP\'s NOAH integration is re-routed to CDMS).'] },
   { dept: 'FAD', slug: 'billing-monitoring', title: 'Billing Monitoring', group: 'Billing', actions: VSU, rule: 'All records from the billing table. New commission billings appear here after printing. Tick Print Transmittal? and print the billing transmittal to record the Transmittal Date.',
     rows: B, sort: ['bdate', 'desc'],
-    cols: [C('Billing #', 'no', 'code'), C('Customer', 'customer', 'text', { w: 320 }), C('Auction Date / Particulars', 'particular', 'text', { w: 230 }), C('Billing Date', 'bdate', 'date'), C('Total', 'total', 'money'),
+    cols: [C('Billing #', 'no', 'code'), C('Customer', 'customer', 'text', { w: 320 }), C('Auction Date / Particulars', 'particular', 'text', { w: 230 }), C('Billing Date', 'bdate', 'date'), C('Creditable Withholding Tax', 'cwt', 'money', { isNew: true }), C('Total', 'total', 'money'),
       C('Transmittal Date', 'trans', 'date'), C('Print Transmittal?', 'print_trans', 'check', { edit: 'check' })],
     buttons: [{ label: 'Print billing transmittal', kind: 'ol', icon: 'print', act: 'printTransmittal', count: 'print_trans' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     queue: true, ready: { key: 'print_trans', when: r => !r.trans },
     ruleP: ['P4', 'Billings with no Transmittal Date arrive pre-ticked.'] },
-  { dept: 'FAD', slug: 'unpaid-billing', title: 'Unpaid Billing', group: 'Billing', actions: VSU, rule: `Billing records with a blank Payment Date. Due date = billing date + ${BILL_DUE_DAYS} days.`,
+  { dept: 'FAD', slug: 'unpaid-billing', title: 'Unpaid Billing', group: 'Billing', actions: VSU, rule: `Billing records with a blank Payment Date. Due date = billing date + ${BILL_DUE_DAYS} days. Total = Bill Amount + VAT − Creditable Withholding Tax (billings made before the CWT, from Access, show no CWT).`,
     rows: () => B().filter(b => !b.pay), sort: ['bdate', 'asc'],
     cols: [C('Customer', 'customer', 'text', { w: 240 }), C('Auction Date / Particulars', 'particular', 'text', { w: 180 }), C('Billing Date', 'bdate', 'date'), C('Bill Amount', 'bill', 'money'),
-      C('VAT', 'vat', 'money'), C('Total', 'total', 'money'), C('Transmittal Date', 'trans', 'date'), C('Due Date', 'due', 'date', { late: true }),
+      C('VAT', 'vat', 'money'), C('Creditable Withholding Tax', 'cwt', 'money', { isNew: true }), C('Total', 'total', 'money'), C('Transmittal Date', 'trans', 'date'), C('Due Date', 'due', 'date', { late: true }),
       C('Payment Date', 'pay', 'date', { edit: 'date' }), C('Collection Receipt', 'cr', 'text', { edit: 'text', tag: 'P3' })],
     validate: (r, e) => { const p = 'pay' in e ? e.pay : r.pay, cr = 'cr' in e ? e.cr : r.cr;
       return { pay: notFuture(p) || notBefore(p, r.bdate, 'the Billing Date') || (!p && cr ? 'is required with a Collection Receipt' : null), cr: p && !cr ? 'is required with a Payment Date' : null }; },
@@ -654,16 +662,16 @@ const SCREENS = [
     ruleP: ['P3', 'Collection Receipt is typed for now; it will come through JBAP\'s existing NOAH integration once it is re-routed from Access to CDMS.'] },
   // JBAP feedback (16 Oct 2026, #13): Cancellation Billing and Cancellation Payment in one screen
   { dept: 'FAD', slug: 'cancellation-billing', title: 'Cancellation Billing & Payment', actions: VSU,
-    rule: 'Cancelled lots with the fee not waived and no Date Paid. Penalty PHP 10,000 per lot: PHP 5,000 to the seller and PHP 5,000 to JBAP (EWB: all to JBAP). Tick For Print? and print to bill: printing records the Billing Date and the amount due. When the buyer pays, enter Date Paid (and Amount) and save; paid lots leave the list.',
+    rule: 'Cancelled lots with the fee not waived and no Date Paid. Penalty PHP 10,000 per lot: PHP 5,000 to the seller and PHP 5,000 to JBAP (EWB: all to JBAP). Tick For Email? and press Email cancellation billing: one email per buyer and auction from finance@ to the buyer, Cc sales@, with the Cancellation Fee Billing attached (JBAP, 28 Oct 2026); sending records the Billing Date and the amount due. When the buyer pays, enter Date Paid (and Amount) and save; paid lots leave the list.',
     rows: () => CX().filter(c => !c.waived && !c.paid_date), sort: ['auction', 'desc'],
     cols: [C('Auction No.', 'auction', 'code'), C('Plate', 'plate', 'code'), C('Customer Name', 'customer', 'text', { w: 260 }), C('Date Cancelled', 'dcancel', 'date'),
       C('Penalty', 'penalty', 'money'), C('To Seller', 'pen_seller', 'money'), C('To JBAP', 'pen_jbap', 'money'),
-      C('For Print?', 'for_print', 'check', { edit: 'check', lockWhen: r => !!r.bill_date }), C('Billing Date', 'bill_date', 'date'),
+      C('For Email?', 'for_print', 'check', { edit: 'check', lockWhen: r => !!r.bill_date, isNew: true }), C('Billing Date', 'bill_date', 'date'),
       C('Date Paid', 'paid_date', 'date', { edit: 'date', lockWhen: r => !r.bill_date }), C('Amount', 'amount', 'money', { edit: 'money', lockWhen: r => !r.bill_date })],
     totals: rows => ({ penalty: money(sumBy(rows, 'penalty')), pen_seller: money(sumBy(rows, 'pen_seller')), pen_jbap: money(sumBy(rows, 'pen_jbap')) }),
     validate: (r, e) => { const d = 'paid_date' in e ? e.paid_date : r.paid_date, a = 'amount' in e ? e.amount : r.amount;
       return { paid_date: notFuture(d) || notBefore(d, r.bill_date, 'the Billing Date') || (!d && a && 'amount' in e ? 'is required with an Amount' : null), amount: d && !(Number(a) > 0) ? 'must be more than 0' : null }; },
-    buttons: [{ label: 'Print cancellation billing', kind: 'ol', icon: 'print', act: 'printCancel', count: 'for_print' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
+    buttons: [{ label: 'Email cancellation billing', kind: 'ol', icon: 'mail', act: 'emailCancel', count: 'for_print', isNew: true }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
     savedNote: 'Paid cancellations removed from the list.',
     queue: true, ready: { key: 'for_print', when: r => !r.bill_date },
     ruleP: ['P4', 'Lots not billed yet arrive pre-ticked for billing.'] },
@@ -1530,7 +1538,15 @@ function recordDeadlineExtension(scr, v, f) {
 }
 const RELEASE_ITEMS = ['No. of Keys', 'Copy of OR/CR', "Owner's Manual", 'Warranty booklet', 'Spare Tire', 'Tools', 'Jack', 'Radio', 'A/C', 'Accessories'];
 // [BEHAVIOR] One cancellation billing letter per buyer name, the name printed on the letter (cid is missing on some lots).
-const cancelLetterGroups = rows => { const g = {}; rows.forEach(r => (g[r.customer] ||= []).push(r)); return Object.values(g); };
+// [BEHAVIOR] JBAP's sample (28 Oct 2026): one cancellation billing per buyer and auction ("Billing for Cancelled Unit for Auction A218 September 07-09,2026")
+const cancelLetterGroups = rows => { const g = {}; rows.forEach(r => (g[`${r.cid || r.customer}|${r.auction}`] ||= []).push(r)); return Object.values(g); };
+const buyerEmail = cid => (cid && S.veh.find(v => v.cid === cid && v.email)?.email) || '';
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function auctionDays(au) {   // "September 07-09, 2026"; across two months "August 31 - September 02, 2026"
+  const a = D.auctions[String(au)]; if (!a) return '';
+  const [y1, m1, d1] = a[0].split('-'), [y2, m2, d2] = a[1].split('-'), M = m => MONTH_NAMES[+m - 1];
+  return m1 === m2 && y1 === y2 ? `${M(m1)} ${d1}-${d2}, ${y1}` : `${M(m1)} ${d1}${y1 !== y2 ? `, ${y1}` : ''} - ${M(m2)} ${d2}, ${y2}`;
+}
 // Removes one tick from a row's unsaved edits; other unsaved edits on the row stay pending
 const clearTick = (scr, id, key) => { const ed = U(scr.id).edits; if (ed[id]) { delete ed[id][key]; if (!Object.keys(ed[id]).length) delete ed[id]; } };
 // [BEHAVIOR] Saves the documents received and returns the ATF control number (HRAD-ATF-<running no.>); a reprint (the lot already has an ATF No.) keeps the number.
@@ -1582,7 +1598,8 @@ function recordCancellation(scr, v, f) {
 }
 // [BEHAVIOR] One commission billing per seller: adds the billing (Billing › Billing Monitoring and Unpaid Billing), marks the lots billed, logs both
 function recordCommissionBilling(scr, code, no, bd, rows) {
-  const bill = { no, customer: SELLER[code]?.name || code, particular: [...new Set(rows.map(r => r.adate))].join('; '), bdate: bd, total: Math.round(sumBy(rows, 'ctotal') * 100) / 100, trans: null, pay: null, cr: '' };
+  const r2s = k => Math.round(sumBy(rows, k) * 100) / 100;
+  const bill = { no, customer: SELLER[code]?.name || code, particular: [...new Set(rows.map(r => r.adate))].join('; '), bdate: bd, com: r2s('com'), vat: r2s('cvat'), cwt: r2s('cwt'), total: r2s('cbill'), trans: null, pay: null, cr: '' };
   S.billing.push(bill);
   logChange(scr, 'Create', bill, [['Customer', 'text', null, bill.customer], ['Billing Date', 'date', null, bd], ['Total', 'money', null, bill.total]]);
   const ed = U(scr.id).edits;
@@ -1725,15 +1742,23 @@ const ACTIONS = {
         printModal(); toast(`${many ? `${sellers.length} billings` : `Billing #${esc(entered[0])}`} recorded for ${rows.length} vehicle(s). See the Billing Monitoring and Unpaid Billing tabs.`);
       } }] });
   },
-  printCancel(scr) {
+  emailCancel(scr) {   // [BEHAVIOR] JBAP (28 Oct 2026): the cancellation billing is emailed to the buyer, laid out like JBAP's sample email
     const rows = selectedRows(scr, 'for_print').filter(r => !r.bill_date);   // [BEHAVIOR] a billed lot is never billed again
-    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For Print?</b> on at least one record first.'); render(); return; }
+    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For Email?</b> on at least one record first.'); render(); return; }
     setMsg(scr, null); render();
-    const body = cancelLetterGroups(rows).map(list => REPORTS.cancellationLetter({ customer: list[0].customer }, list, TODAY)).join('');
-    openModal({ title: 'Print cancellation billing', icon: 'print', wide: true, body, note: 'Recording sets the Cancellation Billing Date to today and the amount due to the penalty. The payment deadline stays blank until JBAP confirms it (Q33).',
-      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Record billing date & print', kind: 'pr', icon: 'print', onClick: () => {
-        recordCancellationBilling(scr, rows);
-        printModal(); closeModal(); render(); toast(`${rows.length} cancellation(s) billed. Enter Date Paid on this screen when the buyer pays.`);
+    const lists = cancelLetterGroups(rows), co = D.meta.company, docs = {};
+    const mails = lists.map((list, i) => {
+      const b = { customer: list[0].customer, cid: list[0].cid, email: buyerEmail(list[0].cid) }, au = list[0].auction, when = auctionDays(au), file = `A${au} -${b.customer}.pdf`;
+      docs[i] = [file, () => REPORTS.cancellationLetter(b, list, TODAY)];
+      return REPORTS.email({ from: co.emails.finance, to: mailTo(b), cc: co.emails.sales, subject: `Billing for Cancelled Unit for Auction A${au} ${when}`, atts: [{ key: String(i), name: file }],
+        body: `Dear ${esc(b.customer)},<br><br>Please see attached billing of your cancelled unit for Auction A${esc(au)} ${esc(when)}.<br><br>Thank you<br><br>Regards,<br>${esc(co.name)}` });
+    }).join('');
+    openModal({ title: `Email cancellation billing: ${lists.length} email(s), ${rows.length} lot(s)`, icon: 'mail', wide: true, body: mails,
+      note: 'Simulated: no email is actually sent. Sending sets the Cancellation Billing Date to today and the amount due to the penalty. The payment deadline stays blank until JBAP confirms it (Q33).',
+      onAtt: key => openReport(docs[key][0], docs[key][1](), () => ACTIONS.emailCancel(scr)),
+      footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: `Send ${lists.length} email(s)`, kind: 'pr', icon: 'mail', onClick: () => {
+        logEmailEdits(scr, lists); recordCancellationBilling(scr, rows);
+        closeModal(); render(); toast(`Cancellation billing sent: ${lists.length} email(s), ${rows.length} lot(s). Enter Date Paid on this screen when the buyer pays.`);
       } }] });
   },
   // [BEHAVIOR] Rebate report: pick an auction range, then download an .xlsx (REPORTS.rebateWorkbook). It changes no data, so nothing is logged.

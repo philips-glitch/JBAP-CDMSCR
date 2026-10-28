@@ -90,13 +90,14 @@ const REPORTS = {
       <tfoot><tr><td colspan="4">Total</td><td class="r">${money(rptSum(lots, 'price'))}</td><td class="r">${money(lots.reduce((a, r) => a + fb(r), 0))}</td><td class="r">${m(rptSum(lots, 'com'))}</td><td class="r">${m(rptSum(lots, 'cvat'))}</td><td class="r">${m(rptSum(lots, 'wtax'))}</td><td class="r">${money(rptSum(lots, 'payable'))}</td><td class="r">${money(rptSum(lots, 'to_jbap'))}</td></tr></tfoot></table>
       ${rptSign([`Prepared by: ${CO().roles.fadStaff}`, longDate(date)])}`);
   },
-  // 4. qryBillingSeller: Billing Computation (attachment to the seller's billing invoice)
+  // 4. qryBillingSeller: Billing Computation (attachment to the seller's billing invoice). JBAP (28 Oct 2026, new BIR requirement): Total = Commission + VAT − Creditable Withholding Tax
   billingComputation(code, billNo, billDate, lots) {
-    const rows = lots.map(r => `<tr><td>${esc(r.adate)}</td><td class="c">${esc(r.year || '')}</td><td class="c">${esc(r.plate)}</td><td>${esc(r.model)}</td><td>${esc(r.color || '')}</td><td>${esc(r.customer)}</td><td class="r">${money(r.price)}</td><td class="r">${money(r.com)}</td><td class="r">${money(r.cvat)}</td><td class="r">${money(r.ctotal)}</td></tr>`).join('');
+    const rows = lots.map(r => `<tr><td>${esc(r.adate)}</td><td class="c">${esc(r.year || '')}</td><td class="c">${esc(r.plate)}</td><td>${esc(r.model)}</td><td>${esc(r.color || '')}</td><td>${esc(r.customer)}</td><td class="r">${money(r.price)}</td><td class="r">${money(r.com)}</td><td class="r">${money(r.cvat)}</td><td class="r">${money(r.cwt)}</td><td class="r">${money(r.cbill)}</td></tr>`).join('');
     return rptPage('landscape', `<h2>${esc(CO().name.toUpperCase())}</h2><h1>Billing Computation</h1><p><b>${esc(SELLER[code]?.name || code)}</b></p>
-      <div class="kv"><b>Billing date</b><span>${fmtDate(billDate)}</span><b>Billing #</b><span>${esc(billNo)}</span></div>
-      <table><thead><tr><th>Auction Date</th><th>Year</th><th>Plate Number</th><th>Make / Model</th><th>Color</th><th>Customer Name</th><th class="r">Bid Price</th><th class="r">Commission</th><th class="r">VAT</th><th class="r">Total</th></tr></thead><tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="6">Grand total</td><td class="r">${money(rptSum(lots, 'price'))}</td><td class="r">${money(rptSum(lots, 'com'))}</td><td class="r">${money(rptSum(lots, 'cvat'))}</td><td class="r">${money(rptSum(lots, 'ctotal'))}</td></tr></tfoot></table>
+      <div class="kv"><b>Billing date</b><span>${fmtDate(billDate)}</span><b>Billing #</b><span>${esc(billNo)}</span><b>CWT rate</b><span>${esc(lots[0]?.cwt_pct || '')}</span></div>
+      <table><thead><tr><th>Auction Date</th><th>Year</th><th>Plate Number</th><th>Make / Model</th><th>Color</th><th>Customer Name</th><th class="r">Bid Price</th><th class="r">Commission</th><th class="r">VAT</th><th class="r">Creditable Withholding Tax</th><th class="r">Total</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="6">Grand total</td><td class="r">${money(rptSum(lots, 'price'))}</td><td class="r">${money(rptSum(lots, 'com'))}</td><td class="r">${money(rptSum(lots, 'cvat'))}</td><td class="r">${money(rptSum(lots, 'cwt'))}</td><td class="r">${money(rptSum(lots, 'cbill'))}</td></tr></tfoot></table>
+      <p class="fn">Total = Commission + VAT − Creditable Withholding Tax.</p>
       ${rptSign([`Prepared by: ${CO().roles.fadStaff}`, `Approved by: ${CO().roles.financeHead}`])}<p class="fn">${longDate(billDate)}</p>`);
   },
   // 5. BILLING TRANSMITTAL: Transmittal of Documents (attached to the printed invoices sent to the seller)
@@ -137,7 +138,7 @@ const REPORTS = {
   // 8. rptCancellationPenalty: Cancellation Fee Billing letter (one per buyer, emailed as PDF)
   cancellationLetter(b, rows, date) {
     const lines = rows.map(r => `<tr><td>${esc(r.adate)}</td><td>${esc(r.model || '')}</td><td class="c">${esc(r.year || '')}</td><td class="c">${esc(r.plate)}</td><td class="c">${fmtDate(r.dcancel)}</td></tr>`).join('');
-    return rptPage('portrait', `<h1>Cancellation Fee Billing</h1><p>${longDate(date)}</p><p><b>${esc(b.customer)}</b></p><p>Greetings from JBAP!</p>
+    return rptPage('portrait cxl', `<div class="cxl-h"><img src="assets/logo.png" alt="JBA Philippines"><h1>CANCELLATION FEE BILLING</h1></div><p>${longDate(date)}</p><p><b>${esc(b.customer)}</b></p><p>Greetings from JBAP!</p>
       <p>This is to request payment of the penalty fee indicated below for the units awarded to you and was subsequently cancelled.</p>
       <table><thead><tr><th>Auction Date</th><th>Make / Model</th><th>Year</th><th>Plate Number</th><th>Date Cancelled</th></tr></thead><tbody>${lines}</tbody></table>
       <div class="kv"><b># of units</b><span>${rows.length}</span><b>Penalty fee</b><span>${money(CANCEL_PENALTY)}</span><b>Grand total</b><span>${money(rptSum(rows, 'penalty'))}</span></div>

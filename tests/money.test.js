@@ -26,3 +26,28 @@ test('VAT on top for non-inclusive sellers (Q1, ORIX sample)', () => {
   assert.deepStrictEqual([m.com, m.cvat, m.ctotal], [11550, 1386, 12936]);
 });
 test('null price gives null money', () => { assert.strictEqual(P.sellerMoney({ seller: 'EWB', price: null }).to_jbap, null); });
+
+// JBAP feedback (28 Oct 2026, new BIR requirement): Creditable Withholding Tax per seller, from JBAP's table
+test('CWT: the seller\'s rate on the commission; Total = Commission + VAT − CWT; Payment to Seller uses the same rate', () => {
+  const P = load(), rows = P.byId['FAD/commission-billing'].rows();
+  const tfs = rows.find(r => r.seller === 'TFS'), ewb = rows.find(r => r.seller === 'EWB' && r.price);
+  assert.ok(tfs && ewb, 'sample: TFS and EWB lots to bill');
+  assert.strictEqual(tfs.cwt_rate, 0.02); assert.strictEqual(tfs.cwt_pct, '2%'); assert.strictEqual(ewb.cwt_rate, 0.15);
+  const r2 = n => Math.round(n * 100) / 100;
+  for (const v of rows.filter(r => r.price)) {
+    assert.strictEqual(v.cwt, r2(v.com * v.cwt_rate), v.plate + ' CWT on the commission only');
+    assert.strictEqual(v.cbill, r2(v.ctotal - v.cwt), v.plate + ' Total = Commission + VAT − CWT');
+  }
+  assert.strictEqual(P.cwtRate('SBC'), 0.15); assert.deepStrictEqual(P.CWT_TO_CONFIRM, ['SBC', 'ORIX', 'ASIALINK']);
+  assert.strictEqual(P.cwtRate('JBAP'), 0); assert.strictEqual(P.cwtRate('PRO OIL'), 0); assert.strictEqual(P.cwtRate('PSBank'), 0.02);
+  const net = P.V().find(v => v.seller === 'EWB' && v.price);   // NET seller: To JBAP = commission + VAT − CWT
+  assert.strictEqual(net.wtax, net.cwt); assert.ok(Math.abs(net.to_jbap - (net.com + net.com * 0.12 - net.com * 0.15)) < 0.011, 'To JBAP = Commission + VAT − CWT (to the cent)');
+  const gross = P.V().find(v => v.seller === 'TFS' && v.price); assert.strictEqual(gross.wtax, 0, 'GROSS seller: nothing withheld from the remittance');
+});
+test('billing records: a CDMS billing shows its CWT; an Access billing shows none and keeps its total', () => {
+  const P = load(), scr = P.byId['FAD/commission-billing'], rows = scr.rows().filter(r => r.seller === 'TFS');
+  const old = P.byId['FAD/billing-monitoring'].rows(); assert.ok(old.every(b => b.cwt === null), 'Access billings: CWT blank');
+  P.recordCommissionBilling(scr, 'TFS', 'T-CWT', P.TODAY, rows);
+  const b = P.byId['FAD/unpaid-billing'].rows().find(x => x.no === 'T-CWT');
+  assert.ok(b.cwt > 0); assert.strictEqual(Math.round((b.bill + b.vat - b.cwt) * 100) / 100, b.total);
+});

@@ -64,7 +64,9 @@ test('payable to seller: totals equal the screen totals', () => {
 test('billing computation: billing no, date and commission totals', () => {
   const rows = P.V().filter(r => ['NKC4711', 'NFM5719'].includes(r.plate));
   const h = P.REPORTS.billingComputation('SBC', '511', '2026-10-08', rows);
-  assert.match(h, /Billing Computation/); assert.match(h, /511/); assert.match(h, /10\/08\/2026/); assert.match(h, /37,550\.00/);
+  assert.match(h, /Billing Computation/); assert.match(h, /511/); assert.match(h, /10\/08\/2026/);
+  assert.match(h, /Creditable Withholding Tax/); assert.match(h, /CWT rate<\/b><span>15%/);
+  assert.match(h, /<td class="r">33,526\.79<\/td><td class="r">4,023\.21<\/td><td class="r">5,029\.02<\/td><td class="r">32,520\.98<\/td>/, 'grand total: Commission + VAT − CWT (15% of the commission)');
 });
 test('billing transmittal: report lists each billing and recording sets the transmittal date', () => {
   const scr = P.byId['FAD/billing-monitoring'], rows = scr.rows().filter(b => !b.trans).slice(0, 2);
@@ -112,13 +114,14 @@ test('Log Activity texts no longer call VWD view-only', () => {
 test('cancellation letter: penalty × units', () => {
   const rows = P.byId['FAD/cancellation-billing'].rows().slice(0, 2).map(r => Object.assign({}, r, { customer: 'TEST BUYER' }));
   const h = P.REPORTS.cancellationLetter({ customer: 'TEST BUYER' }, rows, '2026-10-08');
-  assert.match(h, /Cancellation Fee Billing/); assert.match(h, /20,000\.00/); assert.match(h, /8 October 2026/);
+  assert.match(h, /CANCELLATION FEE BILLING/); assert.match(h, /assets\/logo\.png/); assert.match(h, /20,000\.00/); assert.match(h, /8 October 2026/);
 });
-test('cancellation letters: one letter per buyer name, even when some lots have no cid', () => {
+test('cancellation billing: one per buyer and auction, as JBAP\'s sample (28 Oct 2026), even when some lots have no cid', () => {
   const rows = P.byId['FAD/cancellation-billing'].rows().filter(r => r.customer === 'ANGEL ANN CEREZO MONTES');
   assert.ok(rows.length >= 2, 'need at least two unbilled lots for this buyer');
-  assert.ok(rows.some(r => !r.cid) && rows.some(r => r.cid), 'lots should mix cid and no cid');
-  assert.strictEqual(P.cancelLetterGroups(rows).length, 1);
+  const groups = P.cancelLetterGroups(rows);
+  assert.strictEqual(groups.length, new Set(rows.map(r => r.auction)).size, 'one per auction');
+  for (const g of groups) assert.strictEqual(new Set(g.map(r => r.auction)).size, 1);
 });
 test('document transmittal: control number, checklist and saved documents', () => {
   const scr = P.byId['FAD/document-monitoring'], v = scr.rows().filter(r => r.status === 'Sold' && !r.atf_no)[0];
