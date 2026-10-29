@@ -701,16 +701,16 @@ const SCREENS = [
   // JBAP answer Q11 (20 Oct 2026): SMD's update screen for the SAAF is standard (it was proposal P5); live data, unlike SMD's four legacy-sample screens
   // [BEHAVIOR] JBAP (27 and 29 Oct 2026): the list page shows one row per auction and seller (filtered by Seller) with counts of vehicles (KYC Approved, SAAF Sent, Seller Approved)
   // and View detail; the detail page (#/SMD/saaf/<auction>/<seller>) lists that auction's vehicles. SMD ticks the vehicles to send: only a vehicle whose KYC Status is Approved
-  // (set in Auction › Result Price) and that the seller has not approved yet; one SAAF per send, sent again as often as needed. Seller Approved is entered per vehicle and shows
+  // (set in Auction › Result Price) and whose SAAF has not been sent yet: a vehicle's SAAF goes once (29 Oct 2026). Seller Approved is entered per vehicle and shows
   // in FAD › Pending Awarding. rows() stays all lots waiting (the count, FAD Pending Awarding); detail() narrows the vehicle list to the pair of the detail page.
   { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU, layout: 'saaf',
     rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch in SMD still show the legacy sample). One row per auction and seller, filtered by Seller; KYC Approved and Seller Approved count its vehicles. View detail opens the vehicles of that auction and seller to send the SAAF and record the seller\'s approval (JBAP answer Q11).',
-    detailRule: 'Tick For SAAF on the vehicles to send and press Email SAAF: one SAAF with the vehicles ticked, emailed to the seller from sales@. Only a vehicle whose KYC Status is Approved (set in Auction › Result Price) can be ticked; it can be sent again until the seller approves it. Enter Seller Approved when the seller replies and press Save changes (the box opens once the vehicle\'s SAAF is sent); the date shows in FAD › Pending Awarding.',
+    detailRule: 'Tick For SAAF on the vehicles to send and press Email SAAF: one SAAF with the vehicles ticked, emailed to the seller from sales@. Only a vehicle whose KYC Status is Approved (set in Auction › Result Price) can be ticked, and only until its SAAF is sent: a vehicle\'s SAAF goes once (SAAF Sent shows the date). Enter Seller Approved when the seller replies and press Save changes (the box opens once the vehicle\'s SAAF is sent); the date shows in FAD › Pending Awarding.',
     rows: () => sold().filter(v => !v.awarding), sort: ['lot', 'asc'],
     detail(rows) { const k = saafPick(this); return k ? rows.filter(r => saafKey(r) === k) : []; },
     cols: [C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 200 }), C('Buyer', 'customer', 'text', { w: 200 }),
       C('Winning Bid', 'price', 'money'), C('KYC Status', 'kyc_status', 'status'), C('KYC Approved', 'kyc_approved', 'date'),
-      C('For SAAF', 'for_saaf', 'check', { edit: 'check', dropStale: true, disabledWhen: r => !saafSendable(r) }),
+      C('For SAAF', 'for_saaf', 'check', { edit: 'check', dropStale: true, disabledWhen: r => !saafSendable(r) }), C('SAAF Sent', 'saaf_sent', 'date'),
       C('Seller Approved', 'saaf_approved', 'date', { edit: 'date', lockWhen: r => !r.saaf_sent })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ saaf_approved: saafApprovedError(r.saaf_sent, e.saaf_approved) }),
@@ -1154,7 +1154,7 @@ const SAAF_ID = 'SMD/saaf';
 const saafKey = r => `${r.auction}|${r.seller}`;
 const saafHref = key => { const [a, se] = key.split('|'); return `#/${SAAF_ID}/${encodeURIComponent(a)}/${encodeURIComponent(se)}`; };
 const saafLots = (scr, key) => scr.rows().filter(r => saafKey(r) === key);
-const saafSendable = r => r.kyc_status === 'Approved' && !r.saaf_approved;   // a SAAF goes only for a vehicle whose KYC is approved and that the seller has not approved yet
+const saafSendable = r => r.kyc_status === 'Approved' && !r.saaf_sent && !r.saaf_approved;   // a SAAF goes only for a vehicle whose KYC is approved, and only once (29 Oct 2026)
 const saafApprovedError = (sent, d) => notFuture(d) || (d && !sent ? 'needs the SAAF to be sent first' : notBefore(d, sent, 'SAAF Sent'));
 function saafPick(scr) { const k = U(scr.id).pick; return k && scr.rows().some(r => saafKey(r) === k) ? k : null; }
 // #/SMD/saaf/<auction>/<seller>: the pair's key when it still has lots waiting, else null
@@ -1691,9 +1691,9 @@ const ACTIONS = {
         closeModal(); render(); toast(`BAAF sent to ${Object.keys(groups).length} buyer(s). ${rows.length} vehicle(s) moved to Unpaid.${held.length ? ` ${held.length} held back (rebate waiting for the President).` : ''}`);
       } }] });
   },
-  emailSaaf(scr) {   // [BEHAVIOR] 29 Oct 2026: one SAAF with the vehicles ticked on the detail page (KYC Approved, not approved by the seller yet); a vehicle can be sent again
+  emailSaaf(scr) {   // [BEHAVIOR] 29 Oct 2026: one SAAF with the vehicles ticked on the detail page (KYC Approved, SAAF not sent yet); a vehicle's SAAF goes once
     const key = saafPick(scr), rows = key ? selectedRows(scr, 'for_saaf').filter(saafSendable) : [];
-    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For SAAF</b> on at least one vehicle whose KYC Status is Approved, then press Email SAAF.'); render(); return; }
+    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For SAAF</b> on at least one vehicle whose KYC Status is Approved and whose SAAF has not been sent yet, then press Email SAAF.'); render(); return; }
     setMsg(scr, null); render();
     const code = rows[0].seller, au = rows[0].auction, file = `SAAF ${au} ${code}.pdf`;
     const mail = REPORTS.email({ from: D.meta.company.emails.sales, to: `${SELLER[code]?.name || code} <${code.toLowerCase()}@sellers.example.com>`, cc: '',

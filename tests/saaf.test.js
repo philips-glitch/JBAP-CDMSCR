@@ -29,7 +29,7 @@ test('SAAF list page: one row per auction and seller with counts (KYC Approved, 
   assert.deepStrictEqual([at('221|EWB').lots, at('221|EWB').kyc], [20, 15], 'dummy data: Auction 221 of EWB has 20 lots, 15 KYC Approved');
   assert.match(card, /<a class="btn ol" href="#\/SMD\/saaf\/219\/SBC" aria-label="View detail: Auction 219, SBC">View detail<\/a>/);
   assert.doesNotMatch(card, /data-pair|data-act="emailSaaf"/, 'nothing to edit or send on the list');
-  assert.deepStrictEqual(P.colsOf(scr).map(c => c.key + (c.edit ? '*' : '')), ['lot', 'plate', 'model', 'customer', 'price', 'kyc_status', 'kyc_approved', 'for_saaf*', 'saaf_approved*'], 'the detail page columns (no SAAF Sent)');
+  assert.deepStrictEqual(P.colsOf(scr).map(c => c.key + (c.edit ? '*' : '')), ['lot', 'plate', 'model', 'customer', 'price', 'kyc_status', 'kyc_approved', 'for_saaf*', 'saaf_sent', 'saaf_approved*'], 'the detail page columns: SAAF Sent before Seller Approved');
   assert.deepStrictEqual((scr.buttons || []).filter(P.shown).map(b => b.act), ['emailSaaf', 'save']);
 });
 test('SAAF detail page: #/SMD/saaf/<auction>/<seller> lists only that auction and seller, ignores the list filters, links back; an unknown pair opens the list', () => {
@@ -111,16 +111,18 @@ test('auction list: one row per auction and seller, newest first, filtered by Se
   assert.strictEqual(scr.filters[0].key, 'seller', 'Seller is the first filter');
   ui.applied.seller = ['SBC']; const sbc = P.saafAuctions(scr); assert.ok(sbc.length && sbc.every(a => a.seller === 'SBC'), 'filtered by Seller');
 });
-test('Email SAAF on the detail page: one SAAF with the vehicles ticked; only KYC Approved vehicles the seller has not approved can be ticked; resend allowed', () => {
+test('Email SAAF on the detail page: one SAAF with the vehicles ticked; only KYC Approved vehicles whose SAAF was not sent can be ticked; a SAAF goes once', () => {
   const P = load(), scr = P.byId['SMD/saaf'], ui = P.U(scr.id), key = '219|SBC', lots = scr.rows().filter(r => P.saafKey(r) === key);
   const col = scr.cols.find(c => c.key === 'for_saaf'), byId = id => scr.rows().find(r => r.id === id);
   assert.ok(!col.disabledWhen(byId('V017')), 'KYC Approved: can be ticked'); assert.ok(col.disabledWhen(lots.find(r => r.kyc_status === 'Pending')), 'KYC Pending: cannot');
-  assert.ok(col.disabledWhen(byId('V102')), 'approved by the seller: cannot'); assert.ok(!col.disabledWhen(byId('V087')), 'sent, not approved yet: can be sent again');
+  assert.ok(col.disabledWhen(byId('V102')), 'approved by the seller: cannot'); assert.ok(col.disabledWhen(byId('V087')), 'sent, not approved yet: cannot be sent again (29 Oct 2026)');
   ui.pick = key; lots.forEach(r => { ui.edits[r.id] = { for_saaf: true }; });   // a stale tick on a Pending lot does not count
   assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf').map(r => r.id).sort(), ['V017', 'V093', 'V098']);
   try { P.ACTIONS.emailSaaf(scr); } catch (x) { /* DOM stub: openModal */ }
   const sent = lots.filter(r => ['V017', 'V093'].includes(r.id)); P.recordSaafSent(scr, sent);
   assert.ok(sent.every(r => r._raw.saaf_sent === P.TODAY && !r._raw.for_saaf)); assert.strictEqual(P.saafAuctions(scr).find(a => a.key === key).sent, 2);
+  const now = id => scr.rows().find(r => r.id === id); assert.ok(col.disabledWhen(now('V017')) && !col.disabledWhen(now('V098')), 'after the send the box is disabled; the unsent one stays tickable');
+  assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf').map(r => r.id), ['V098'], 'a tick left on a sent vehicle does not count');
   const P2 = load(), s2 = P2.byId['SMD/saaf']; P2.U(s2.id).pick = key;
   try { P2.ACTIONS.emailSaaf(s2); } catch (x) { /* DOM stub */ }
   assert.match(P2.U(s2.id).msg.html, /KYC Status is Approved/, 'nothing ticked: the message names the rule');
