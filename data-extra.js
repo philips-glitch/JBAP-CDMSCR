@@ -63,6 +63,9 @@
   const saaf = { V102: ['2026-08-20', '2026-08-24'], V103: ['2026-08-27', '2026-08-31'], V092: ['2026-09-03', '2026-09-07'],
     V096: ['2026-09-10', null], V087: ['2026-09-10', null], V097: ['2026-09-10', null] };
   D.vehicles.forEach(v => { const s = saaf[v.id]; if (s) { v.saaf_sent = s[0]; v.saaf_approved = s[1]; } });
+  // [MOCK] 29 Oct 2026: KYC approved in Auction › Result Price on the lots whose SAAF was sent (the day before) and on four lots ready to send (Auction 219 of SBC: V017, V093, V098; Auction 221 of TFS: V076)
+  const kyc = { V102: '2026-08-19', V103: '2026-08-26', V092: '2026-09-02', V096: '2026-09-09', V087: '2026-09-09', V097: '2026-09-09', V017: '2026-10-06', V093: '2026-10-06', V098: '2026-10-06', V076: '2026-10-07' };
+  D.vehicles.forEach(v => { if (kyc[v.id]) { v.kyc_status = 'Approved'; v.kyc_approved = kyc[v.id]; } });
   // [MOCK] Wish 5: Date of Entry (CDMS Cars > Car List). Inferred: start of the lot's auction minus 7 to 21 days
   const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   D.vehicles.forEach(v => { const a = D.auctions[String(v.auction)]; if (a && !v.entry_date) v.entry_date = addDays(a[0], -(7 + Number(v.id.slice(1)) % 15)); });   // [MOCK] only for lots without a usable date of entry from JBAP's parking inventory

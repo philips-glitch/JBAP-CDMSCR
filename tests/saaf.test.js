@@ -17,26 +17,30 @@ test('SAAF screen is standard (shown with the switch off, no P5 tag) and lists t
   assert.match(P.sideHtml(''), /href="#\/SMD\/saaf"[^>]*>Seller Awarding Acknowledgement<span class="cnt">\d+<\/span>/, 'no New mark since 26 Oct 2026');
   assert.match(P.homeLayout(), /href="#\/SMD\/saaf">Seller Awarding Acknowledgement<span class="cnt">/);
 });
-test('SAAF sample data loads with the switch off: 3 auctions approved, 1 sent and waiting; Seller Approved is saved per auction row for all its lots', () => {
-  const P = load(), scr = P.byId['SMD/saaf'], rows = scr.rows(), ui = P.U(scr.id);
+test('SAAF list page: one row per auction and seller with counts (KYC Approved, SAAF Sent, Seller Approved) and View detail; no vehicle table on the list', () => {
+  const P = load(), scr = P.byId['SMD/saaf'];
   assert.strictEqual(P.isProposed(), false);
-  const list = P.saafAuctions(scr);
-  assert.deepStrictEqual(list.filter(a => a.approved).map(a => a.key).sort(), ['215|EWB', '216|EWB', '217|EWB']);
-  assert.deepStrictEqual(list.filter(a => a.sent && !a.approved).map(a => a.key), ['218|SBC']);
-  assert.deepStrictEqual(P.colsOf(scr).map(c => c.key + (c.edit ? '*' : '')), ['lot', 'plate', 'model', 'customer', 'price'], 'the vehicle list is view only');
-  assert.deepStrictEqual((scr.buttons || []).filter(P.shown).map(b => b.act), []);
+  const list = P.saafAuctions(scr), at = k => list.find(a => a.key === k);
+  assert.deepStrictEqual([at('215|EWB').kyc, at('215|EWB').sent, at('215|EWB').approved], [1, 1, 1]);
+  assert.deepStrictEqual([at('218|SBC').kyc, at('218|SBC').sent, at('218|SBC').approved], [3, 3, 0]);
+  assert.deepStrictEqual([at('219|SBC').lots, at('219|SBC').kyc, at('219|SBC').sent, at('219|SBC').approved], [8, 3, 0, 0]);
   const card = P.saafAuctionCard(scr);
-  assert.match(card, /data-pair="218\|SBC"/, 'the sent auction has a Seller Approved box');
-  assert.doesNotMatch(card, /data-pair="219\|SBC"/, 'an auction whose SAAF is not sent has none');
-  assert.match(card, /data-act="emailSaaf" data-saaf="219\|SBC"[^>]*>[^]*?Email SAAF</, 'Email SAAF on the row');
-  assert.match(card, /data-act="emailSaaf" data-saaf="218\|SBC"[^>]*>[^]*?Resend SAAF</, 'a sent, unapproved SAAF can be sent again');
-  assert.doesNotMatch(card, /data-act="emailSaaf" data-saaf="215\|EWB"/, 'an approved SAAF is not sent again');
-  ui.pedits = { '218|SBC': P.TODAY }; const before = P.S.log.length;
-  try { P.ACTIONS.saafSave(scr); } catch (x) { /* DOM stub */ }
-  const lots = rows.filter(r => P.saafKey(r) === '218|SBC');
-  assert.strictEqual(lots.length, 3); assert.ok(lots.every(r => r._raw.saaf_approved === P.TODAY), 'every lot of the auction gets the date');
-  assert.strictEqual(P.S.log.length - before, 3); assert.ok(P.S.log.slice(before).every(x => x.module === 'SMD' && x.field === 'Seller Approved'));
-  assert.deepStrictEqual(ui.pedits, {});
+  for (const h of ['Auction No.', 'Auction Date', 'Seller', 'Lots', 'KYC Approved', 'SAAF Sent', 'Seller Approved', 'Detail']) assert.ok(card.includes(`<th scope="col">${h}</th>`), h);
+  assert.match(card, /<a class="btn ol" href="#\/SMD\/saaf\/219\/SBC" aria-label="View detail: Auction 219, SBC">View detail<\/a>/);
+  assert.doesNotMatch(card, /data-pair|data-act="emailSaaf"/, 'nothing to edit or send on the list');
+  assert.deepStrictEqual(P.colsOf(scr).map(c => c.key + (c.edit ? '*' : '')), ['lot', 'plate', 'model', 'customer', 'price', 'kyc_status', 'kyc_approved', 'for_saaf*', 'saaf_sent', 'saaf_approved*'], 'the detail page columns');
+  assert.deepStrictEqual((scr.buttons || []).filter(P.shown).map(b => b.act), ['emailSaaf', 'save']);
+});
+test('SAAF detail page: #/SMD/saaf/<auction>/<seller> lists only that auction and seller, ignores the list filters, links back; an unknown pair opens the list', () => {
+  const P = load(), scr = P.byId['SMD/saaf'], ui = P.U(scr.id);
+  assert.strictEqual(P.saafRoute('SMD/saaf/219/SBC'), '219|SBC'); assert.strictEqual(P.routeOf('SMD/saaf/219/SBC'), 'SMD/saaf/219/SBC');
+  assert.strictEqual(P.saafRoute('SMD/saaf/999/SBC'), null); assert.strictEqual(P.routeOf('SMD/saaf/999/SBC'), 'SMD/saaf', 'a pair with no lot waiting opens the list');
+  ui.pick = '219|SBC'; ui.applied.seller = ['EWB'];
+  const shown = [...P.dataCard(scr, 'x').matchAll(/data-tr="([^"]+)"/g)].map(m => m[1]).sort();
+  assert.deepStrictEqual(shown, scr.rows().filter(r => P.saafKey(r) === '219|SBC').map(r => r.id).sort(), 'the 8 lots of Auction 219, SBC, whatever the list filter');
+  const head = P.saafDetailHead(scr, '219|SBC');
+  assert.match(head, /<a href="#\/SMD\/saaf">Seller Awarding Acknowledgement<\/a>›<b>Auction 219, SBC<\/b>/); assert.match(head, /Back to auction list/); assert.match(head, /3 with KYC Approved/);
+  assert.match(head, /only a vehicle whose KYC Status is Approved|Only a vehicle whose KYC Status is Approved/);
 });
 test('P5 now covers only the pre-tick of approved lots and the Finance-only dispatch copy; everything else of the SAAF is standard', () => {
   const P = load(), p5 = P.PROPOSALS.find(p => p[0] === 'P5');
@@ -54,29 +58,30 @@ test('P5 now covers only the pre-tick of approved lots and the Finance-only disp
   assert.doesNotMatch(P.byId['log-activity'].rule, /with the proposed improvements on, the SAAF/);
   P.U('log-activity').applied.module = 'SMD'; assert.doesNotMatch(P.byId['log-activity'].emptyNote(), /proposed improvements/);
 });
-test('seed: one SAAF state per auction and seller (3 lots approved, 3 sent and awaiting the seller)', () => {
+test('seed: 3 lots approved by the seller, 3 sent and awaiting the seller; KYC approved on those and on 4 lots ready to send', () => {
   const rows = load().byId['SMD/saaf'].rows();
   assert.deepStrictEqual(rows.filter(r => r.saaf_approved).map(r => r.id).sort(), ['V092', 'V102', 'V103']);
   assert.deepStrictEqual(rows.filter(r => r.saaf_sent && !r.saaf_approved).map(r => r.id).sort(), ['V087', 'V096', 'V097']);
+  assert.deepStrictEqual(rows.filter(r => r.kyc_status === 'Approved').map(r => r.id).sort(), ['V017', 'V076', 'V087', 'V092', 'V093', 'V096', 'V097', 'V098', 'V102', 'V103']);
+  assert.ok(rows.every(r => r.kyc_status === 'Approved' || r.kyc_status === 'Pending'), 'every sold lot has a KYC Status, Pending by default');
 });
 test('sending the SAAF records SAAF Sent under SMD; the approval makes the lot ready for FAD', () => {
   const P = load(), scr = P.byId['SMD/saaf']; P.setProposed(true);
   const r = scr.rows().find(x => !x.saaf_sent), before = P.S.log.length;
   P.recordSaafSent(scr, [r]);
   assert.strictEqual(r._raw.saaf_sent, P.TODAY); assert.ok(P.S.log.slice(before).every(e => e.module === 'SMD'));
-  P.recordSaafApproved(scr, P.saafKey(r), P.TODAY);
+  P.U(scr.id).edits[r.id] = { saaf_approved: P.TODAY }; assert.deepStrictEqual(P.validateEdits(scr), []); P.applyEdits(scr);   // Seller Approved per vehicle
   assert.ok(P.selectedRows(P.byId['FAD/pending-awarding'], 'for_baaf').some(x => x.id === r.id));
 });
-test('approval date: not before SAAF Sent, not without a SAAF, not in the future; a refused date is not saved', () => {
-  const P = load(), scr = P.byId['SMD/saaf'], ui = P.U(scr.id);
-  assert.match(P.saafApprovedError('2026-09-10', '2026-09-01'), /SAAF Sent/);
-  assert.match(P.saafApprovedError('', P.TODAY), /sent first/);
-  assert.match(P.saafApprovedError('2026-09-10', '2026-12-01'), /after today/);
-  assert.strictEqual(P.saafApprovedError('2026-09-10', P.TODAY), null);
-  ui.pedits = { '218|SBC': '2026-09-01' };
-  try { P.ACTIONS.saafSave(scr); } catch (x) { /* DOM stub */ }
-  assert.match(ui.perrs['218|SBC'], /SAAF Sent/); assert.strictEqual(ui.pmsg.type, 'error');
-  assert.ok(scr.rows().filter(r => P.saafKey(r) === '218|SBC').every(r => !r.saaf_approved), 'nothing saved');
+test('Seller Approved per vehicle: not before SAAF Sent, not without a SAAF (locked), not in the future', () => {
+  const P = load(), scr = P.byId['SMD/saaf'], rows = scr.rows(), sent = rows.find(r => r.id === 'V087'), unsent = rows.find(r => !r.saaf_sent);
+  assert.match(scr.validate(sent, { saaf_approved: '2026-09-01' }).saaf_approved, /SAAF Sent/);
+  assert.match(scr.validate(unsent, { saaf_approved: P.TODAY }).saaf_approved, /sent first/);
+  assert.match(scr.validate(sent, { saaf_approved: '2026-12-01' }).saaf_approved, /after today/);
+  assert.strictEqual(scr.validate(sent, { saaf_approved: P.TODAY }).saaf_approved, null);
+  const col = scr.cols.find(c => c.key === 'saaf_approved'); assert.ok(col.lockWhen(unsent) && !col.lockWhen(sent), 'the date box shows once the SAAF is sent');
+  P.U(scr.id).edits[sent.id] = { saaf_approved: P.TODAY }; assert.strictEqual(P.applyEdits(scr), 1); assert.strictEqual(sent._raw.saaf_approved, P.TODAY);
+  assert.ok(P.byId['FAD/pending-awarding'].rows().find(r => r.id === 'V087').saaf_approved === P.TODAY, 'FAD Pending Awarding shows the same date');
 });
 test('SAAF form follows JBAP\'s paper form: title, seller and auction number, the 14 columns, release text, three role signatures', () => {
   const P = load(), lots = P.byId['SMD/saaf'].rows().filter(r => r.seller === 'SBC' && String(r.auction) === '219');
@@ -93,34 +98,43 @@ test('SAAF form follows JBAP\'s paper form: title, seller and auction number, th
   const brand = lots[0].model.split(' ')[0]; assert.ok(h.includes(`<td>${brand}</td>`), 'Brand = first word of Make/Model');
   const rowsN = (P.REPORTS.saaf('SBC', lots.slice(0, 1), P.TODAY).match(/<tr>/g) || []).length; assert.ok(rowsN >= 1 + 2 + 8, 'blank lines pad the table to 8 rows');
 });
-test('auction list: one row per auction and seller, newest first, filtered by Seller; the vehicle list shows only the pair clicked', () => {
+test('auction list: one row per auction and seller, newest first, filtered by Seller', () => {
   const P = load(), scr = P.byId['SMD/saaf'], ui = P.U(scr.id), rows = scr.rows();
   const pairs = new Set(rows.map(P.saafKey)); const list = P.saafAuctions(scr);
   assert.strictEqual(list.length, pairs.size); assert.ok(list.length > 1);
   for (let i = 1; i < list.length; i++) assert.ok(Number(list[i - 1].auction) >= Number(list[i].auction), 'newest auction first');
   assert.strictEqual(list.reduce((a, x) => a + x.lots, 0), rows.length, 'every waiting lot is in one pair');
-  assert.deepStrictEqual(P.colsOf(scr).filter(c => c.key === 'seller' || c.key === 'auction'), [], 'the vehicle list does not repeat Seller and Auction No.');
   assert.strictEqual(scr.filters[0].key, 'seller', 'Seller is the first filter');
-  assert.match(P.dataCard(scr, scr.detailTitle()), /Click an Auction No\./, 'nothing picked: the vehicle list asks for a click');
-  assert.strictEqual(scr.detailTitle(), 'Vehicle list');
   ui.applied.seller = ['SBC']; const sbc = P.saafAuctions(scr); assert.ok(sbc.length && sbc.every(a => a.seller === 'SBC'), 'filtered by Seller');
-  const pick = sbc.find(a => String(a.auction) === '219'); ui.pick = pick.key;
-  assert.match(P.saafAuctionCard(scr), /class="is-sel"[^]*?aria-pressed="true"[^>]*>219</);
-  assert.strictEqual(scr.detailTitle(), 'Vehicles: Auction 219, SBC');
-  const shown = [...P.dataCard(scr, 'x').matchAll(/data-tr="([^"]+)"/g)].map(m => m[1]).sort();
-  assert.deepStrictEqual(shown, rows.filter(r => P.saafKey(r) === pick.key).map(r => r.id).sort());
-  ui.applied.seller = ['EWB']; assert.strictEqual(P.saafPick(scr), null, 'a filter that hides the pair drops the pick');
 });
-test('Email SAAF on an auction row sends one SAAF with every vehicle of that auction and seller, no ticking', () => {
+test('Email SAAF on the detail page: one SAAF with the vehicles ticked; only KYC Approved vehicles the seller has not approved can be ticked; resend allowed', () => {
   const P = load(), scr = P.byId['SMD/saaf'], ui = P.U(scr.id), key = '219|SBC', lots = scr.rows().filter(r => P.saafKey(r) === key);
-  assert.strictEqual(lots.length, 8);
-  try { P.ACTIONS.emailSaaf(scr, { dataset: { saaf: key } }); } catch (x) { /* DOM stub: openModal */ }
-  assert.strictEqual(ui.pick, key, 'the vehicles of that auction show below');
-  const src = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8'); assert.doesNotMatch(src, /for_saaf/, 'no For SAAF tick anywhere');
-  P.recordSaafSent(scr, lots); assert.ok(lots.every(r => r._raw.saaf_sent === P.TODAY));
-  assert.strictEqual(P.saafAuctions(scr).find(a => a.key === key).sent, P.TODAY);
-  ui.pmsg = null; try { P.ACTIONS.emailSaaf(scr, { dataset: { saaf: '215|EWB' } }); } catch (x) { /* DOM stub */ }
-  assert.match(ui.pmsg.html, /already approved/, 'an approved SAAF is not sent again');
+  const col = scr.cols.find(c => c.key === 'for_saaf'), byId = id => scr.rows().find(r => r.id === id);
+  assert.ok(!col.disabledWhen(byId('V017')), 'KYC Approved: can be ticked'); assert.ok(col.disabledWhen(lots.find(r => r.kyc_status === 'Pending')), 'KYC Pending: cannot');
+  assert.ok(col.disabledWhen(byId('V102')), 'approved by the seller: cannot'); assert.ok(!col.disabledWhen(byId('V087')), 'sent, not approved yet: can be sent again');
+  ui.pick = key; lots.forEach(r => { ui.edits[r.id] = { for_saaf: true }; });   // a stale tick on a Pending lot does not count
+  assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf').map(r => r.id).sort(), ['V017', 'V093', 'V098']);
+  try { P.ACTIONS.emailSaaf(scr); } catch (x) { /* DOM stub: openModal */ }
+  const sent = lots.filter(r => ['V017', 'V093'].includes(r.id)); P.recordSaafSent(scr, sent);
+  assert.ok(sent.every(r => r._raw.saaf_sent === P.TODAY && !r._raw.for_saaf)); assert.strictEqual(P.saafAuctions(scr).find(a => a.key === key).sent, 2);
+  const P2 = load(), s2 = P2.byId['SMD/saaf']; P2.U(s2.id).pick = key;
+  try { P2.ACTIONS.emailSaaf(s2); } catch (x) { /* DOM stub */ }
+  assert.match(P2.U(s2.id).msg.html, /KYC Status is Approved/, 'nothing ticked: the message names the rule');
+});
+test('KYC Status changes only in Auction › Result Price: the switch records or clears KYC Approved and logs under Auction; SMD only reads it', () => {
+  const P = load(), rp = P.byId['auction/result-price'], v = rp.rows().find(r => r.id === 'V086'), col = rp.cols.find(c => c.key === 'kyc_status');
+  assert.strictEqual(v.kyc_status, 'Pending'); assert.strictEqual(col.type, 'toggle');
+  assert.match(P.cellHtml(rp, v, col, true), /<button type="button" class="tg" role="switch" aria-checked="false" data-act="kycToggle" data-rid="V086"[^>]*>[^]*Pending<\/button>/);
+  assert.strictEqual(P.cellHtml(rp, rp.rows().find(r => r.status === 'Not Sold'), col, true), '<td class="c"></td>', 'no KYC on an unsold lot');
+  const before = P.S.log.length;
+  try { P.ACTIONS.kycToggle(rp, { dataset: { rid: 'V086' } }); } catch (x) { /* DOM stub */ }
+  const raw = P.S.veh.find(x => x.id === 'V086'); assert.strictEqual(raw.kyc_status, 'Approved'); assert.strictEqual(raw.kyc_approved, P.TODAY);
+  assert.deepStrictEqual(P.S.log.slice(before).map(l => [l.module, l.screen, l.field, l.old, l.new]), [['Auction', 'Result Price', 'KYC Status', 'Pending', 'Approved'], ['Auction', 'Result Price', 'KYC Approved', '', P.fmtDate(P.TODAY)]]);
+  const s = P.byId['SMD/saaf'], sv = s.rows().find(r => r.id === 'V086');
+  assert.strictEqual(sv.kyc_status, 'Approved'); assert.ok(!s.cols.find(c => c.key === 'for_saaf').disabledWhen(sv), 'SMD can now tick it');
+  assert.ok(!s.cols.find(c => c.key === 'kyc_status').edit, 'no KYC change on the SAAF page');
+  try { P.ACTIONS.kycToggle(rp, { dataset: { rid: 'V086' } }); } catch (x) { /* DOM stub */ }
+  assert.strictEqual(raw.kyc_status, null); assert.strictEqual(raw.kyc_approved, null); assert.strictEqual(rp.rows().find(r => r.id === 'V086').kyc_status, 'Pending', 'back to Pending, date cleared');
 });
 test('Pending Awarding shows Seller Approved with the switch off and on, read only; the pre-tick of approved lots needs the switch', () => {
   const P = load(), scr = P.byId['FAD/pending-awarding'];
@@ -139,7 +153,7 @@ test('dispatch email is copied to Finance only with the switch on', () => {
 test('the SAAF screen has no pre-tick (switch off or on); its P6 count is the lots whose SAAF has not been sent yet', () => {
   const P = load(), scr = P.byId['SMD/saaf'];
   assert.ok(!scr.ready, 'no ready rule'); assert.strictEqual(typeof scr.queue, 'function', 'a count the screen gives');
-  for (const on of [false, true]) { P.setProposed(on); assert.ok(!P.colsOf(scr).some(c => c.type === 'check'), 'switch ' + on + ': no tick column'); }
+  for (const on of [false, true]) { P.setProposed(on); assert.deepStrictEqual(P.selectedRows(scr, 'for_saaf'), [], 'switch ' + on + ': nothing is pre-ticked'); }
   assert.strictEqual(P.isProposed(), true);
   const unsent = () => scr.rows().filter(r => !r.saaf_sent).length, all = scr.rows().length;
   assert.ok(unsent() > 0 && unsent() < all, 'sample: some lots sent (6), most not');

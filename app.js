@@ -201,7 +201,8 @@ function enrichV(v) {
     penalty: overdue && PENALTY_LOCATIONS.includes(v.location || 'Pasay City') ? daysBetween(dispatch_deadline, TODAY) * PENALTY_PER_DAY : null,
     penalty_paid: (v.penalty_payments || []).reduce((a, p) => a + p.amount, 0) || null,
     ...sm, min_bid: rb.min_bid, highest_offer: rb.highest_offer, rebate_revenue: rb.revenue,
-    rebate_ok: approvedRebate(v), rebate_decided: v.rebate_approved || v.rebate_rejected || null,   // JBAP feedback (26 Oct 2026): the approved amount only (Pending Awarding); the date the President decided (Rebate Approval)
+    rebate_ok: approvedRebate(v), rebate_decided: v.rebate_approved || v.rebate_rejected || null,
+    kyc_status: v.status === 'Sold' ? (v.kyc_status === 'Approved' ? 'Approved' : 'Pending') : null,   // 29 Oct 2026: the buyer's KYC on a sold lot, Pending until approved in Auction › Result Price   // JBAP feedback (26 Oct 2026): the approved amount only (Pending Awarding); the date the President decided (Rebate Approval)
   });
 }
 const V = () => S.veh.map(enrichV);
@@ -680,7 +681,7 @@ const SCREENS = [
   // JBAP (26 and 27 Oct 2026): Result Price already exists in CDMS under Auction (Set Result Price). Its layout is kept; the fields added on 26 Oct carry the New badge:
   // the Rebate (sent to the President in Approval › Rebate Approval) and, when Auction Status is set to Cancelled, Waived? and a justification. Update saves one row.
   { id: 'auction/result-price', dept: 'Auction', title: 'Result Price', actions: VFSU, isNew: true,
-    rule: 'The existing CDMS screen Auction › Result Price (Set Result Price), with the fields added after JBAP feedback of 26 Oct 2026. On a sold lot, type a Rebate (only before awarding) or set Auction Status to Cancelled, then press Update on that row. A rebate waits for the President in Approval › Rebate Approval. A cancellation asks Date Cancelled, Waived? and a justification; the lot then shows as Cancelled here and in Report › Cancellation Monitoring, and if the fee is not waived it is billed in FAD › Cancellation Billing & Payment. A rebate that is waiting for the President or approved cannot be retyped here; a rejected one can. Winner Confirmation › Print is a preview. Prototype: columns the sample data does not hold (Start Price, Offer Status, KYC Status) stay blank, and the lots that can take a rebate come first.',
+    rule: 'The existing CDMS screen Auction › Result Price (Set Result Price), with the fields added after JBAP feedback of 26 Oct 2026. On a sold lot, type a Rebate (only before awarding) or set Auction Status to Cancelled, then press Update on that row. A rebate waits for the President in Approval › Rebate Approval. A cancellation asks Date Cancelled, Waived? and a justification; the lot then shows as Cancelled here and in Report › Cancellation Monitoring, and if the fee is not waived it is billed in FAD › Cancellation Billing & Payment. A rebate that is waiting for the President or approved cannot be retyped here; a rejected one can. Winner Confirmation › Print is a preview. KYC Status (29 Oct 2026): Pending on every sold lot until switched to Approved here, the only place it changes; the switch records today as KYC Approved (switching back to Pending clears it) and SMD can then send the SAAF for the lot. Prototype: columns the sample data does not hold (Start Price, Offer Status) stay blank.',
     rows: () => V().filter(v => v.status).map(v => Object.assign(v, { status_set: v.status, just_log: (S.cancels.find(c => String(c.auction) === String(v.auction) && String(c.lot) === String(v.lot)) || {}).just || '' })),
     // no default sort: the rows keep the data order, which puts the lots that can take a rebate first (data-extra.js)
     cols: [C('Update', 'upd', 'rowbtn', { act: 'rpUpdate', btn: 'Update', aria: r => `lot ${r.lot} ${r.plate}`, showWhen: r => r.status === 'Sold' && !r.release }),
@@ -688,7 +689,8 @@ const SCREENS = [
       C('Auction No.', 'auction', 'code'), C('Lot No.', 'lot', 'code'), C('Model', 'model', 'text', { w: 170 }), C('Plate Number', 'plate', 'code'), C('Seller', 'seller', 'code'),
       C('Buyer ID', 'cid', 'code'), C('Buyer Name', 'customer', 'text', { w: 180 }), C('Start Price', 'start_price', 'money'), C('Minimum Bid Price', 'min_bid', 'money'), C('Highest Offer Price', 'highest_offer', 'money'),
       C('Rebate', 'rebate', 'money', { edit: 'money', isNew: true, lockWhen: r => !!r.awarding || r.status !== 'Sold' || rebateLocked(r) }), C('Rebate Status', 'rebate_status', 'text', { isNew: true }),
-      C('Winner Confirmation', 'winner', 'rowbtn', { act: 'printWinner', btn: 'Print', aria: r => `winner confirmation of lot ${r.lot} ${r.plate}`, showWhen: r => r.status === 'Sold' }), C('Offer Status', 'offer_status', 'text'), C('KYC Status', 'kyc_status', 'text'), C('Justification Log', 'just_log', 'text', { w: 200 })],
+      C('Winner Confirmation', 'winner', 'rowbtn', { act: 'printWinner', btn: 'Print', aria: r => `winner confirmation of lot ${r.lot} ${r.plate}`, showWhen: r => r.status === 'Sold' }), C('Offer Status', 'offer_status', 'text'),
+      C('KYC Status', 'kyc_status', 'toggle', { act: 'kycToggle', showWhen: r => r.status === 'Sold' }), C('KYC Approved', 'kyc_approved', 'date'), C('Justification Log', 'just_log', 'text', { w: 200 })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'lot', label: 'Lot No.', w: 'w1' }, { key: 'plate', label: 'Plate No.' },
       { key: 'status', label: 'Auction Status', type: 'select', w: 'w1', options: () => ['Sold', 'Not Sold', 'Cancelled'] }],
     validate: (r, e) => ({ rebate: rebateAmountError(r, e) }),
@@ -697,18 +699,23 @@ const SCREENS = [
 
   // ===================== SMD (legacy sample data on Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch; live data on SAAF, Unreleased Unit, Return to Seller and SMD Manager Approval) =====================
   // JBAP answer Q11 (20 Oct 2026): SMD's update screen for the SAAF is standard (it was proposal P5); live data, unlike SMD's four legacy-sample screens
-  // [BEHAVIOR] JBAP (27 Oct 2026): a SAAF covers one auction and one seller, every lot of it (no ticking). The auctions (filtered by Seller) are listed first, each with its
-  // SAAF Sent date, an editable Seller Approved date and an Email SAAF button; clicking an Auction No. lists its lots below (view only). rows() stays all lots waiting (the count,
-  // FAD Pending Awarding); detail() narrows the vehicle list to the pair picked. The dates are kept on every lot of the pair, as FAD reads them per lot.
+  // [BEHAVIOR] JBAP (27 and 29 Oct 2026): the list page shows one row per auction and seller (filtered by Seller) with counts of vehicles (KYC Approved, SAAF Sent, Seller Approved)
+  // and View detail; the detail page (#/SMD/saaf/<auction>/<seller>) lists that auction's vehicles. SMD ticks the vehicles to send: only a vehicle whose KYC Status is Approved
+  // (set in Auction › Result Price) and that the seller has not approved yet; one SAAF per send, sent again as often as needed. Seller Approved is entered per vehicle and shows
+  // in FAD › Pending Awarding. rows() stays all lots waiting (the count, FAD Pending Awarding); detail() narrows the vehicle list to the pair of the detail page.
   { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU, layout: 'saaf',
-    rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch in SMD still show the legacy sample). Filter by Seller; each auction row is one SAAF. Email SAAF on the row sends the SAAF for all the vehicles of that auction and seller, from sales@. Enter Seller Approved on the row when the seller replies and press Save changes; the date shows in FAD Pending Awarding (JBAP answer Q11). Click an Auction No. to list its vehicles.',
+    rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch in SMD still show the legacy sample). One row per auction and seller, filtered by Seller; KYC Approved, SAAF Sent and Seller Approved count its vehicles. View detail opens the vehicles of that auction and seller to send the SAAF and record the seller\'s approval (JBAP answer Q11).',
+    detailRule: 'Tick For SAAF on the vehicles to send and press Email SAAF: one SAAF with the vehicles ticked, emailed to the seller from sales@. Only a vehicle whose KYC Status is Approved (set in Auction › Result Price) can be ticked; it can be sent again until the seller approves it. Enter Seller Approved when the seller replies and press Save changes; the date shows in FAD › Pending Awarding.',
     rows: () => sold().filter(v => !v.awarding), sort: ['lot', 'asc'],
     detail(rows) { const k = saafPick(this); return k ? rows.filter(r => saafKey(r) === k) : []; },
-    detailTitle() { const k = saafPick(this); if (!k) return 'Vehicle list'; const [au, se] = k.split('|'); return `Vehicles: Auction ${au}, ${se}`; },
-    emptyNote() { return saafPick(this) ? '' : 'Click an Auction No. in the auction list above to see its vehicles.'; },
-    cols: [C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 220 }), C('Buyer', 'customer', 'text', { w: 220 }),
-      C('Winning Bid', 'price', 'money')],
+    cols: [C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 200 }), C('Buyer', 'customer', 'text', { w: 200 }),
+      C('Winning Bid', 'price', 'money'), C('KYC Status', 'kyc_status', 'status'), C('KYC Approved', 'kyc_approved', 'date'),
+      C('For SAAF', 'for_saaf', 'check', { edit: 'check', dropStale: true, disabledWhen: r => !saafSendable(r) }), C('SAAF Sent', 'saaf_sent', 'date'),
+      C('Seller Approved', 'saaf_approved', 'date', { edit: 'date', lockWhen: r => !r.saaf_sent })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'plate', label: 'Plate Number' }],
+    validate: (r, e) => ({ saaf_approved: saafApprovedError(r.saaf_sent, e.saaf_approved) }),
+    buttons: [{ label: 'Email SAAF', kind: 'ol', icon: 'mail', act: 'emailSaaf', count: 'for_saaf' }, { label: 'Save changes', kind: 'pr', icon: 'save', act: 'save' }],
+    savedNote: 'The approval dates show in FAD Pending Awarding.',
     queue() { return this.rows().filter(r => !r.saaf_sent).length; } },   // P6 (switch on): waiting = the lots whose SAAF SMD has not sent yet; no pre-tick on the standard screen
   { dept: 'SMD', slug: 'pending-awarding', title: 'Pending Awarding', actions: VFS, rule: 'Vehicles with status SOLD and a blank Awarding Date.',
     rows: () => SMD('pending'), sort: ['customer', 'asc'],
@@ -1078,8 +1085,14 @@ function cellHtml(scr, r, c, upd) {
   const v = r[c.key];
   if (c.type === 'rocheck' || c.type === 'check') return `<td class="c"><span class="ro-chk ${v ? 'on' : ''}" role="img" aria-label="${v ? 'Yes' : 'No'}">${v ? IC.check : ''}</span></td>`;
   if (c.type === 'status' && !v) return '<td class="c"></td>';   // yard and inspection units have no auction status
-  if (c.type === 'status') { const k = { Sold: 'sold', 'Not Sold': 'ns', Cancelled: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
+  if (c.type === 'status') { const k = { Sold: 'sold', 'Not Sold': 'ns', Cancelled: 'cx', Approved: 'sold', Pending: 'ns' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
   if (c.type === 'action') { const k = { Update: 'up', Create: 'sold', Cancel: 'cx', Delete: 'cx' }[v] || 'ns'; return `<td class="c"><span class="st ${k}">${esc(v)}</span></td>`; }
+  if (c.type === 'toggle') {   // [BEHAVIOR] a switch that records its change at once (Result Price › KYC Status); read only on screens without Update
+    if (c.showWhen && !c.showWhen(r)) return '<td class="c"></td>';
+    const on = v === 'Approved';
+    return upd ? `<td class="c"><button type="button" class="tg${on ? ' on' : ''}" role="switch" aria-checked="${on}" data-act="${c.act}" data-rid="${esc(r.id)}" aria-label="${esc(c.label)}, lot ${esc(r.lot || '')} ${esc(r.plate || '')}"><span class="tg-k" aria-hidden="true"></span>${esc(v || '')}</button></td>`
+      : `<td class="c"><span class="st ${on ? 'sold' : 'ns'}">${esc(v || '')}</span></td>`;
+  }
   if (c.type === 'rowbtn') return c.showWhen && !c.showWhen(r) ? '<td class="c"></td>' : `<td class="c"><button type="button" class="btn ol" data-act="${c.act}" data-rid="${esc(r.id)}" aria-label="${esc(c.btn)} ${esc(c.aria ? c.aria(r) : r.plate || '')}">${esc(c.btn)}</button></td>`;
   if (c.type === 'logval' && (v ?? '') === '') return '<td><span class="blank">(blank)</span></td>';
   let t = c.type === 'money' ? money(v) : c.type === 'int' ? intf(v) : c.type === 'date' ? fmtDate(v) : c.type === 'datetime' ? `${fmtDate(v.slice(0, 10))} ${v.slice(11)}` : (v ?? '');
@@ -1092,7 +1105,7 @@ function cellHtml(scr, r, c, upd) {
 
 function dataCard(scr, title) {
   const ui = U(scr.id), cols = colsOf(scr), upd = scr.actions.includes('Update'), anyEdit = upd && cols.some(c => c.edit);   // VWD lists: Update (row button) but no editable column
-  const listed = applyFilters(scr, scr.rows()), all = sortRows(scr, scr.detail ? scr.detail(listed) : listed);   // detail(): a master/detail screen (SAAF) shows the rows of the item picked above
+  const all = sortRows(scr, scr.detail ? scr.detail(scr.rows()) : applyFilters(scr, scr.rows()));   // detail(): the SAAF detail page shows the vehicles of its auction and seller (the list filters do not apply)
   const pages = Math.max(1, Math.ceil(all.length / ui.size)); ui.page = Math.min(ui.page, pages);
   const rows = all.slice((ui.page - 1) * ui.size, ui.page * ui.size);
   const dirty = dirtyCount(scr);
@@ -1136,43 +1149,43 @@ function queryCard(scr) {
     <p style="font-size:12.5px;color:var(--faint);margin:0 0 9px;max-width:620px">Buyer payment date has no filter. A unit is listed when Payment to Seller is blank, or falls after the date entered.</p>
     <div class="btns"><button type="submit" class="btn pr">${IC.play}Generate</button></div></form></section>`;
 }
-// [BEHAVIOR] SAAF (27 Oct 2026): one row per auction and seller among the lots the filter shows, newest auction first; the pick survives a filter that still shows it
+// [BEHAVIOR] SAAF (27 and 29 Oct 2026): one row per auction and seller among the lots the filter shows, newest auction first, with counts of vehicles; View detail opens its page
+const SAAF_ID = 'SMD/saaf';
 const saafKey = r => `${r.auction}|${r.seller}`;
-// a pair's date: the one every lot carries (the latest if they differ), blank while any lot has none
-const pairDate = (lots, k) => lots.every(r => r[k]) ? lots.map(r => r[k]).sort().at(-1) : '';
+const saafHref = key => { const [a, se] = key.split('|'); return `#/${SAAF_ID}/${encodeURIComponent(a)}/${encodeURIComponent(se)}`; };
 const saafLots = (scr, key) => scr.rows().filter(r => saafKey(r) === key);
+const saafSendable = r => r.kyc_status === 'Approved' && !r.saaf_approved;   // a SAAF goes only for a vehicle whose KYC is approved and that the seller has not approved yet
 const saafApprovedError = (sent, d) => notFuture(d) || (d && !sent ? 'needs the SAAF to be sent first' : notBefore(d, sent, 'SAAF Sent'));
-const saafDirty = scr => Object.keys(U(scr.id).pedits || {}).length;
-function saafPick(scr) { const k = U(scr.id).pick; return k && applyFilters(scr, scr.rows()).some(r => saafKey(r) === k) ? k : null; }
+function saafPick(scr) { const k = U(scr.id).pick; return k && scr.rows().some(r => saafKey(r) === k) ? k : null; }
+// #/SMD/saaf/<auction>/<seller>: the pair's key when it still has lots waiting, else null
+function saafRoute(h) {
+  const m = /^SMD\/saaf\/([^/]+)\/([^/]+)$/.exec(h || ''); if (!m) return null;
+  let key; try { key = `${decodeURIComponent(m[1])}|${decodeURIComponent(m[2])}`; } catch { return null; }
+  return byId[SAAF_ID].rows().some(r => saafKey(r) === key) ? key : null;
+}
 function saafAuctions(scr) {
   const groups = {}; applyFilters(scr, scr.rows()).forEach(r => (groups[saafKey(r)] ||= []).push(r));
+  const n = (lots, f) => lots.filter(f).length;
   return Object.entries(groups).map(([key, lots]) => ({ key, auction: lots[0].auction, adate: lots[0].adate, seller: lots[0].seller, lots: lots.length,
-    sent: pairDate(lots, 'saaf_sent'), approved: pairDate(lots, 'saaf_approved') }))
+    kyc: n(lots, r => r.kyc_status === 'Approved'), sent: n(lots, r => r.saaf_sent), approved: n(lots, r => r.saaf_approved) }))
     .sort((a, b) => (Number(b.auction) - Number(a.auction)) || String(a.seller).localeCompare(String(b.seller)));
 }
 function saafAuctionCard(scr) {
-  const ui = U(scr.id), list = saafAuctions(scr), pick = saafPick(scr), pe = ui.pedits ||= {}, perr = ui.perrs ||= {}, n = saafDirty(scr);
-  const body = list.length ? list.map((a, i) => { const on = a.key === pick, who = `Auction ${esc(a.auction)}, ${esc(a.seller)}`, err = perr[a.key], dirty = a.key in pe;
-    const appr = a.sent ? `${dateField(`sa-appr-${i}`, dirty ? pe[a.key] : a.approved, `data-pair="${esc(a.key)}" aria-label="Seller Approved, ${who}"${err ? ` aria-invalid="true" aria-describedby="sa-err-${i}" title="${esc(err)}"` : ''}`, `${dirty ? 'is-dirty' : ''}${err ? ' is-invalid' : ''}`)}${err ? `<span class="err" id="sa-err-${i}">${esc(err)}</span>` : ''}`
-      : '<span class="lk" title="Send the SAAF first">-</span>';
-    const mail = a.approved ? '<span class="lk">Approved</span>' : `<button type="button" class="btn ol sm" data-act="emailSaaf" data-saaf="${esc(a.key)}" aria-label="Email SAAF, ${who}, ${a.lots} vehicle(s)">${IC.mail}${a.sent ? 'Resend SAAF' : 'Email SAAF'}</button>`;
-    return `<tr class="${on ? 'is-sel' : ''}${dirty ? ' is-dirty' : ''}"><td class="c"><button type="button" class="pick" data-act="saafPick" data-saaf="${esc(a.key)}" aria-pressed="${on}" aria-label="${who}: show vehicles">${esc(a.auction)}</button></td>
-      <td class="c">${esc(a.adate)}</td><td class="c">${esc(a.seller)}</td><td class="c">${a.lots}</td><td class="c">${a.sent ? fmtDate(a.sent) : ''}</td><td class="c">${appr}</td><td class="c">${mail}</td></tr>`; }).join('')
-    : `<tr><td colspan="7"><div class="empty">${IC.inbox}<b>No auctions to show</b>${hasFilter(scr) ? 'No lots match the filter. Try Reset.' : 'Nothing is waiting for a SAAF right now.'}</div></td></tr>`;
-  const msg = ui.pmsg ? `<div class="msg ${ui.pmsg.type}" role="${ui.pmsg.type === 'error' ? 'alert' : 'status'}">${IC.info}<div>${ui.pmsg.html}</div></div>` : '';
+  const list = saafAuctions(scr);
+  const body = list.length ? list.map(a => `<tr><td class="c">${esc(a.auction)}</td><td class="c">${esc(a.adate)}</td><td class="c">${esc(a.seller)}</td><td class="c">${a.lots}</td><td class="c">${a.kyc}</td><td class="c">${a.sent}</td><td class="c">${a.approved}</td>
+      <td class="c"><a class="btn ol" href="${saafHref(a.key)}" aria-label="View detail: Auction ${esc(a.auction)}, ${esc(a.seller)}">View detail</a></td></tr>`).join('')
+    : `<tr><td colspan="8"><div class="empty">${IC.inbox}<b>No auctions to show</b>${hasFilter(scr) ? 'No lots match the filter. Try Reset.' : 'Nothing is waiting for a SAAF right now.'}</div></td></tr>`;
   return `<section class="card" aria-label="Auction list"><div class="card-h"><div class="ico">${IC.table}</div>Auction list<span class="bdg">${list.length}</span><span class="sp"></span></div>
-    <div class="tb"><p style="font-size:12.5px;color:var(--faint);margin:0">One SAAF per auction and seller, for all its vehicles. Click an Auction No. to list its vehicles below.</p><div class="btns">
-      <button type="button" class="btn pr" data-act="saafSave">${IC.save}Save changes<span class="n" data-count="saafSave"${n ? '' : ' hidden'}>${n || ''}</span></button></div></div>
-    ${msg}<div class="tw saaf-au"><table><thead><tr>${['Auction No.', 'Auction Date', 'Seller', 'Lots', 'SAAF Sent', 'Seller Approved', 'SAAF'].map(h => `<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div><div class="pg"></div></section>`;
+    <p style="font-size:12.5px;color:var(--faint);margin:10px 16px 0">KYC Approved, SAAF Sent and Seller Approved count the vehicles of each auction and seller. View detail to send the SAAF.</p>
+    <div class="tw saaf-au"><table><thead><tr>${['Auction No.', 'Auction Date', 'Seller', 'Lots', 'KYC Approved', 'SAAF Sent', 'Seller Approved', 'Detail'].map(h => `<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div><div class="pg"></div></section>`;
 }
-// [BEHAVIOR] typing a Seller Approved date on an auction row keeps it as an unsaved change (no re-render, so the focus stays); Save changes checks and records it
-function onPairDate(el) {
-  const scr = currentScr(); if (!scr) return; const ui = U(scr.id), key = el.dataset.pair, pe = ui.pedits ||= {};
-  const val = commitDate(el), cur = pairDate(saafLots(scr, key), 'saaf_approved'), same = String(val ?? '') === String(cur ?? '');
-  if (same) delete pe[key]; else pe[key] = val;
-  delete (ui.perrs ||= {})[key];
-  el.classList.toggle('is-dirty', !same); el.classList.toggle('is-invalid', val !== '' && !ISO_RE.test(val)); el.closest('tr')?.classList.toggle('is-dirty', !same);
-  const c = $('[data-count="saafSave"]'); if (c) { const n = saafDirty(scr); c.textContent = n || ''; c.hidden = !n; }
+// The detail page of one auction and seller: breadcrumb back to the list, the auction and seller, the rule of the page
+function saafDetailHead(scr, key) {
+  const [au, se] = key.split('|'), lots = saafLots(scr, key), pills = scr.actions.map(a => `<span class="pill ${a === 'Update' ? 'u' : ''}">${a}</span>`).join('');
+  return `<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›<span>SMD</span>›<a href="#/${SAAF_ID}">${esc(scr.title)}</a>›<b>Auction ${esc(au)}, ${esc(se)}</b></nav>
+    <div class="hrow"><h1>Auction ${esc(au)}, ${esc(se)}</h1><div class="acts">Allowed actions&nbsp;${pills}</div></div>
+    <p class="saaf-sub"><a class="btn gh" href="#/${SAAF_ID}">‹ Back to auction list</a><span>${esc(SELLER[se]?.name || se)} · ${esc(lots[0]?.adate || '')} · ${lots.length} vehicle(s), ${lots.filter(r => r.kyc_status === 'Approved').length} with KYC Approved</span></p>
+    <p class="rule">${IC.info}<span>${esc(scr.detailRule)}</span></p>`;
 }
 // [BEHAVIOR] Master › Holiday List: the Add holiday form above the list; what was typed stays, with the message, when it is refused
 function holidayForm(scr) {
@@ -1300,23 +1313,28 @@ const MOVED = { 'settings/holidays': 'master/holidays', 'FAD/result-summary': 'r
   // JBAP (27 Oct 2026): Result Price is the existing CDMS screen under Auction, not an SMD screen
   'SMD/result-price': 'auction/result-price' };
 const moved = h => Object.hasOwn(MOVED, h) ? MOVED[h] : null;   // own keys only: '#/constructor' is neither a moved nor a known screen
-const routeOf = h => { const t = moved(h) || h, scr = Object.hasOwn(byId, t) ? byId[t] : null; return scr && shown(scr) ? t : custRoute(t) ? t : ''; };   // a proposed screen opens only with the switch on
+const routeOf = h => { const t = moved(h) || h, scr = Object.hasOwn(byId, t) ? byId[t] : null; return scr && shown(scr) ? t : custRoute(t) ? t : /^SMD\/saaf\//.test(t) ? (saafRoute(t) ? t : SAAF_ID) : ''; };   // a SAAF detail page whose lots are all awarded opens the list   // a proposed screen opens only with the switch on
 function route() {
   const h = location.hash.replace(/^#\/?/, '');
   if (moved(h) && typeof history !== 'undefined' && history.replaceState) history.replaceState(null, '', `#/${moved(h)}`);   // the address bar shows the new link
   return routeOf(h);
 }
 function render() {
-  const r = route(), scr = byId[r], cust = custRoute(r);
+  const r = route(), scr = byId[r], cust = custRoute(r), sk = saafRoute(r);
   if (scr) OPEN[scr.dept] = true;
   if (cust) OPEN.Customer = true;
-  renderSide(r);
+  if (sk) OPEN.SMD = true;
+  renderSide(sk ? SAAF_ID : r);
   const c = $('#content');
+  if (sk) {   // SAAF detail page: the vehicles of one auction and seller
+    const ss = byId[SAAF_ID], ui = U(ss.id); if (ui.pick !== sk) { ui.pick = sk; ui.page = 1; ui.msg = null; }
+    const [au, se] = sk.split('|'); c.innerHTML = saafDetailHead(ss, sk) + dataCard(ss, `Vehicles: Auction ${au}, ${se}`); document.title = `Auction ${au}, ${se} | ${ss.title} | SMD | CDMS Prototype`; return;
+  }
   if (cust) { c.innerHTML = customerPage(cust.cid, cust.tab); document.title = `${cust.cid} | Customer | CDMS Prototype`; return; }
   if (!scr) { c.innerHTML = homeLayout(); document.title = 'CDMS Prototype | Post-Auction Menus'; return; }
   document.title = `${scr.title} | ${scr.top ? '' : `${deptLabel(scr.dept)} | `}CDMS Prototype`;
   let html = pageHead(scr);
-  if (scr.layout === 'query') html += queryCard(scr); if (scr.layout === 'holidays') html += holidayForm(scr); if (scr.layout === 'salesactions') html += `<section class="card" aria-label="Add sales action">${salesActionForm(null)}</section>`; if (scr.filters && scr.actions.includes('Filter')) html += filterCard(scr); if (scr.layout === 'saaf') html += saafAuctionCard(scr); html += dataCard(scr, scr.detailTitle?.() || scr.listTitle || scr.title + ' list');
+  if (scr.layout === 'query') html += queryCard(scr); if (scr.layout === 'holidays') html += holidayForm(scr); if (scr.layout === 'salesactions') html += `<section class="card" aria-label="Add sales action">${salesActionForm(null)}</section>`; if (scr.filters && scr.actions.includes('Filter')) html += filterCard(scr); html += scr.layout === 'saaf' ? saafAuctionCard(scr) : dataCard(scr, scr.listTitle || scr.title + ' list');
   c.innerHTML = html;
 }
 
@@ -1401,7 +1419,7 @@ function restoreEmailEdits(root) {
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────
-function currentScr() { return byId[route()]; }
+function currentScr() { const r = route(); return byId[r] || (saafRoute(r) ? byId[SAAF_ID] : undefined); }   // the SAAF detail page acts on the SAAF screen
 // A tick column marked dropStale (Document Monitoring's two ticks): a tick on a lot where the column is disabled (disabledWhen) is not a tick, so a stale saved one is neither counted nor acted on
 const tickAllowed = (scr, r, key) => { const c = scr.cols.find(x => x.key === key); return !(c?.dropStale && c.disabledWhen?.(r)); };
 function selectedRows(scr, key) { return sortRows(scr, tickRows(scr, key)).filter(r => tickValue(scr, r, key) && tickAllowed(scr, r, key)); }
@@ -1606,12 +1624,16 @@ function recordCommissionBilling(scr, code, no, bd, rows) {
   rows.forEach(r => { logChange(scr, 'Update', r, [['Commission Billing No.', 'text', null, no], ['Print?', 'check', r._raw.print_comm, false]]); r._raw.billed = true; r._raw.print_comm = false; delete ed[r.id]; });
   return bill;
 }
-// [BEHAVIOR] Q11: sending the SAAF records SAAF Sent = today on each lot of the auction (logged under SMD); SMD then enters the seller's approval on the auction row
-function recordSaafApproved(scr, key, date) {
-  saafLots(scr, key).forEach(r => { if ((r._raw.saaf_approved || '') !== (date || '')) { logChange(scr, 'Update', r, [['Seller Approved', 'date', r._raw.saaf_approved, date || null]]); r._raw.saaf_approved = date || null; } });
-}
+// [BEHAVIOR] Q11: sending the SAAF records SAAF Sent = today on each vehicle sent (logged under SMD); SMD then enters the seller's approval per vehicle
 function recordSaafSent(scr, rows) {
-  rows.forEach(r => { logChange(scr, 'Update', r, [['SAAF Sent', 'date', r._raw.saaf_sent, TODAY]]); r._raw.saaf_sent = TODAY; });
+  rows.forEach(r => { logChange(scr, 'Update', r, [['SAAF Sent', 'date', r._raw.saaf_sent, TODAY], ['For SAAF', 'check', r._raw.for_saaf, false]]);
+    r._raw.saaf_sent = TODAY; r._raw.for_saaf = false; clearTick(scr, r.id, 'for_saaf'); });
+}
+// [BEHAVIOR] 29 Oct 2026: KYC Status is changed only in Auction › Result Price. Approved records today as KYC Approved; back to Pending clears it. Logged under module Auction.
+function recordKyc(scr, v, approved) {
+  const date = approved ? TODAY : null;
+  logChange(scr, 'Update', v, [['KYC Status', 'text', v._raw.kyc_status === 'Approved' ? 'Approved' : 'Pending', approved ? 'Approved' : 'Pending'], ['KYC Approved', 'date', v._raw.kyc_approved || null, date]]);
+  v._raw.kyc_status = approved ? 'Approved' : null; v._raw.kyc_approved = date;
 }
 // [BEHAVIOR] P5: with the switch on the dispatch email is copied to Finance only; VWD sees the lot in its own list
 const dispatchCc = () => { const e = D.meta.company.emails; return PROPOSED ? e.finance : `${e.sales}; ${e.vwd}; ${e.finance}`; };
@@ -1669,32 +1691,26 @@ const ACTIONS = {
         closeModal(); render(); toast(`BAAF sent to ${Object.keys(groups).length} buyer(s). ${rows.length} vehicle(s) moved to Unpaid.${held.length ? ` ${held.length} held back (rebate waiting for the President).` : ''}`);
       } }] });
   },
-  emailSaaf(scr, el) {   // [BEHAVIOR] JBAP (27 Oct 2026): one SAAF for every vehicle of one auction and one seller, sent from the auction row (no ticking)
-    const ui = U(scr.id), key = el?.dataset.saaf, lots = key ? saafLots(scr, key) : [];
-    if (!lots.length) return;
-    if (pairDate(lots, 'saaf_approved')) { ui.pmsg = { type: 'error', html: 'The seller already approved this SAAF.' }; render(); return; }   // Q11: an approved SAAF is never sent again
-    ui.pmsg = null; ui.pick = key; render();
-    const code = lots[0].seller, au = lots[0].auction, file = `SAAF ${au} ${code}.pdf`, list = sortRows(scr, lots);
+  emailSaaf(scr) {   // [BEHAVIOR] 29 Oct 2026: one SAAF with the vehicles ticked on the detail page (KYC Approved, not approved by the seller yet); a vehicle can be sent again
+    const key = saafPick(scr), rows = key ? selectedRows(scr, 'for_saaf').filter(saafSendable) : [];
+    if (!rows.length) { setMsg(scr, 'error', 'Tick <b>For SAAF</b> on at least one vehicle whose KYC Status is Approved, then press Email SAAF.'); render(); return; }
+    setMsg(scr, null); render();
+    const code = rows[0].seller, au = rows[0].auction, file = `SAAF ${au} ${code}.pdf`;
     const mail = REPORTS.email({ from: D.meta.company.emails.sales, to: `${SELLER[code]?.name || code} <${code.toLowerCase()}@sellers.example.com>`, cc: '',
       subject: `SELLER ACKNOWLEDGEMENT AWARDING FORM - AUCTION ${au} - ${fmtDate(TODAY)}`, atts: [{ key, name: file }],
-      body: `Please review the ${list.length} awarded lot(s) of Auction ${esc(au)} in the attached Seller Acknowledgement Awarding Form, sign it and send it back, so we can send the notice of awarding to the buyers.` });
-    openModal({ title: `Email SAAF: Auction ${au}, ${code}, ${list.length} vehicle(s)`, icon: 'mail', wide: true, body: mail,
-      note: 'Simulated: no email is actually sent. Transmission and Mileage are blank on the form: CDMS does not keep them.', onAtt: () => openReport(file, REPORTS.saaf(code, list, TODAY), () => ACTIONS.emailSaaf(scr, el)),
+      body: `Please review the ${rows.length} awarded lot(s) of Auction ${esc(au)} in the attached Seller Acknowledgement Awarding Form, sign it and send it back, so we can send the notice of awarding to the buyers.` });
+    openModal({ title: `Email SAAF: Auction ${au}, ${code}, ${rows.length} vehicle(s)`, icon: 'mail', wide: true, body: mail,
+      note: 'Simulated: no email is actually sent. Transmission and Mileage are blank on the form: CDMS does not keep them.', onAtt: () => openReport(file, REPORTS.saaf(code, rows, TODAY), () => ACTIONS.emailSaaf(scr)),
       footer: [{ label: 'Cancel', kind: 'gh', onClick: closeModal }, { label: 'Send 1 email', kind: 'pr', icon: 'mail', onClick: () => {
-        logEmailEdits(scr, [list]); recordSaafSent(scr, list); closeModal(); render(); toast(`SAAF for Auction ${au} sent to ${code} (${list.length} vehicle(s)). Enter Seller Approved when the seller replies.`);
+        logEmailEdits(scr, [rows]); recordSaafSent(scr, rows); closeModal(); render(); toast(`SAAF for Auction ${au} sent to ${code} (${rows.length} vehicle(s)). Enter Seller Approved when the seller replies.`);
       } }] });
   },
-  saafSave(scr) {
-    const ui = U(scr.id), pe = ui.pedits ||= {}, keys = Object.keys(pe);
-    if (!keys.length) { ui.pmsg = { type: 'info', html: 'There are no changes to save.' }; render(); return; }
-    const errs = {}; keys.forEach(k => { const lots = saafLots(scr, k), v = pe[k];
-      const e = v !== '' && !ISO_RE.test(v) ? 'Type the date as mm/dd/yyyy.' : saafApprovedError(pairDate(lots, 'saaf_sent'), v); if (e) errs[k] = e; });
-    ui.perrs = errs;
-    if (Object.keys(errs).length) { ui.pmsg = { type: 'error', html: `Please fix ${Object.keys(errs).length} item(s) before saving:<br>${Object.entries(errs).map(([k, e]) => `Auction ${esc(k.replace('|', ', '))}: Seller Approved ${esc(e)}`).join('<br>')}` }; render(); return; }
-    keys.forEach(k => recordSaafApproved(scr, k, pe[k])); ui.pedits = {}; ui.pmsg = null; render();
-    toast(`${keys.length} auction(s) saved. The approval dates show in FAD Pending Awarding.`);
+  kycToggle(scr, el) {
+    const v = scr.rows().find(r => r.id === el.dataset.rid); if (!v || v.status !== 'Sold') return;
+    const approved = v.kyc_status !== 'Approved'; recordKyc(scr, v, approved); render();
+    $(`[data-act="kycToggle"][data-rid="${CSS.escape(v.id)}"]`)?.focus();
+    toast(approved ? `KYC of lot ${esc(v.lot)} (${esc(v.plate)}) approved on ${fmtDate(TODAY)}. SMD can now send the SAAF for it.` : `KYC of lot ${esc(v.lot)} (${esc(v.plate)}) set back to Pending.`);
   },
-  saafPick(scr, el) { const ui = U(scr.id); ui.pick = el.dataset.saaf; ui.page = 1; render(); $(`.pick[data-saaf="${CSS.escape(ui.pick)}"]`)?.focus(); },
   printSeller(scr) {
     const rows = selectedRows(scr, 'print_seller');
     if (!rows.length) { setMsg(scr, 'error', 'Tick <b>Print Payment to Seller</b> on at least one vehicle first.'); render(); return; }
@@ -2065,7 +2081,6 @@ function bind() {
   content.addEventListener('change', ev => {
     const el = ev.target;
     if (el.dataset.row) return onEdit(el);
-    if (el.dataset.pair) return onPairDate(el);
     if (el.dataset.mfilter) {   // a ticked dropdown value is kept as a draft until Apply filter; the dropdown's button shows what is ticked
       const k = el.dataset.mfilter, picked = tickedOf(content, k); U(route()).filters[k] = picked;
       const sum = el.closest('details')?.querySelector('summary'), t = sum?.querySelector('.msel-t'); if (t) { t.textContent = filterLabel(picked); sum.title = t.textContent; }
@@ -2125,7 +2140,7 @@ function bind() {
   const picker = document.createElement('input'); picker.type = 'date'; picker.id = 'dt-picker'; picker.tabIndex = -1; picker.setAttribute('aria-hidden', 'true'); document.body.appendChild(picker);
   let pickFor = null;
   document.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.classList?.contains('dt')) ev.target.dispatchEvent(new Event('change', { bubbles: true })); });
-  document.addEventListener('change', ev => { const el = ev.target; if (el.classList?.contains('dt') && !el.dataset.row && !el.dataset.pair) { el.classList.toggle('is-invalid', parseDateInput(el.value, TODAY) === null); commitDate(el); } });
+  document.addEventListener('change', ev => { const el = ev.target; if (el.classList?.contains('dt') && !el.dataset.row) { el.classList.toggle('is-invalid', parseDateInput(el.value, TODAY) === null); commitDate(el); } });
   document.addEventListener('click', ev => {
     const b = ev.target.closest('[data-pick]'); if (!b) return;
     pickFor = b.parentElement.querySelector('.dt'); if (!pickFor || pickFor.disabled) return;
