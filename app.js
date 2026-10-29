@@ -704,13 +704,13 @@ const SCREENS = [
   // (set in Auction › Result Price) and that the seller has not approved yet; one SAAF per send, sent again as often as needed. Seller Approved is entered per vehicle and shows
   // in FAD › Pending Awarding. rows() stays all lots waiting (the count, FAD Pending Awarding); detail() narrows the vehicle list to the pair of the detail page.
   { dept: 'SMD', slug: 'saaf', title: 'Seller Awarding Acknowledgement', actions: VFSU, layout: 'saaf',
-    rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch in SMD still show the legacy sample). One row per auction and seller, filtered by Seller; KYC Approved, SAAF Sent and Seller Approved count its vehicles. View detail opens the vehicles of that auction and seller to send the SAAF and record the seller\'s approval (JBAP answer Q11).',
-    detailRule: 'Tick For SAAF on the vehicles to send and press Email SAAF: one SAAF with the vehicles ticked, emailed to the seller from sales@. Only a vehicle whose KYC Status is Approved (set in Auction › Result Price) can be ticked; it can be sent again until the seller approves it. Enter Seller Approved when the seller replies and press Save changes; the date shows in FAD › Pending Awarding.',
+    rule: 'Sold lots with no Awarding Date (live data; Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch in SMD still show the legacy sample). One row per auction and seller, filtered by Seller; KYC Approved and Seller Approved count its vehicles. View detail opens the vehicles of that auction and seller to send the SAAF and record the seller\'s approval (JBAP answer Q11).',
+    detailRule: 'Tick For SAAF on the vehicles to send and press Email SAAF: one SAAF with the vehicles ticked, emailed to the seller from sales@. Only a vehicle whose KYC Status is Approved (set in Auction › Result Price) can be ticked; it can be sent again until the seller approves it. Enter Seller Approved when the seller replies and press Save changes (the box opens once the vehicle\'s SAAF is sent); the date shows in FAD › Pending Awarding.',
     rows: () => sold().filter(v => !v.awarding), sort: ['lot', 'asc'],
     detail(rows) { const k = saafPick(this); return k ? rows.filter(r => saafKey(r) === k) : []; },
     cols: [C('Lot', 'lot', 'code'), C('Plate Number', 'plate', 'code'), C('Make/Model', 'model', 'text', { w: 200 }), C('Buyer', 'customer', 'text', { w: 200 }),
       C('Winning Bid', 'price', 'money'), C('KYC Status', 'kyc_status', 'status'), C('KYC Approved', 'kyc_approved', 'date'),
-      C('For SAAF', 'for_saaf', 'check', { edit: 'check', dropStale: true, disabledWhen: r => !saafSendable(r) }), C('SAAF Sent', 'saaf_sent', 'date'),
+      C('For SAAF', 'for_saaf', 'check', { edit: 'check', dropStale: true, disabledWhen: r => !saafSendable(r) }),
       C('Seller Approved', 'saaf_approved', 'date', { edit: 'date', lockWhen: r => !r.saaf_sent })],
     filters: [{ key: 'seller', label: 'Seller', type: 'select', options: sellerOpts }, AUCTION_FILTER, { key: 'plate', label: 'Plate Number' }],
     validate: (r, e) => ({ saaf_approved: saafApprovedError(r.saaf_sent, e.saaf_approved) }),
@@ -1172,12 +1172,12 @@ function saafAuctions(scr) {
 }
 function saafAuctionCard(scr) {
   const list = saafAuctions(scr);
-  const body = list.length ? list.map(a => `<tr><td class="c">${esc(a.auction)}</td><td class="c">${esc(a.adate)}</td><td class="c">${esc(a.seller)}</td><td class="c">${a.lots}</td><td class="c">${a.kyc}</td><td class="c">${a.sent}</td><td class="c">${a.approved}</td>
+  const body = list.length ? list.map(a => `<tr><td class="c">${esc(a.auction)}</td><td class="c">${esc(a.adate)}</td><td class="c">${esc(a.seller)}</td><td class="c">${a.lots}</td><td class="c">${a.kyc}</td><td class="c">${a.approved}</td>
       <td class="c"><a class="btn ol" href="${saafHref(a.key)}" aria-label="View detail: Auction ${esc(a.auction)}, ${esc(a.seller)}">View detail</a></td></tr>`).join('')
-    : `<tr><td colspan="8"><div class="empty">${IC.inbox}<b>No auctions to show</b>${hasFilter(scr) ? 'No lots match the filter. Try Reset.' : 'Nothing is waiting for a SAAF right now.'}</div></td></tr>`;
+    : `<tr><td colspan="7"><div class="empty">${IC.inbox}<b>No auctions to show</b>${hasFilter(scr) ? 'No lots match the filter. Try Reset.' : 'Nothing is waiting for a SAAF right now.'}</div></td></tr>`;
   return `<section class="card" aria-label="Auction list"><div class="card-h"><div class="ico">${IC.table}</div>Auction list<span class="bdg">${list.length}</span><span class="sp"></span></div>
-    <p style="font-size:12.5px;color:var(--faint);margin:10px 16px 0">KYC Approved, SAAF Sent and Seller Approved count the vehicles of each auction and seller. View detail to send the SAAF.</p>
-    <div class="tw saaf-au"><table><thead><tr>${['Auction No.', 'Auction Date', 'Seller', 'Lots', 'KYC Approved', 'SAAF Sent', 'Seller Approved', 'Detail'].map(h => `<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div><div class="pg"></div></section>`;
+    <p style="font-size:12.5px;color:var(--faint);margin:10px 16px 0">KYC Approved and Seller Approved count the vehicles of each auction and seller. View detail to send the SAAF.</p>
+    <div class="tw saaf-au"><table><thead><tr>${['Auction No.', 'Auction Date', 'Seller', 'Lots', 'KYC Approved', 'Seller Approved', 'Detail'].map(h => `<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div><div class="pg"></div></section>`;
 }
 // The detail page of one auction and seller: breadcrumb back to the list, the auction and seller, the rule of the page
 function saafDetailHead(scr, key) {

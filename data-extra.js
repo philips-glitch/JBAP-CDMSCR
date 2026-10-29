@@ -66,6 +66,19 @@
   // [MOCK] 29 Oct 2026: KYC approved in Auction › Result Price on the lots whose SAAF was sent (the day before) and on four lots ready to send (Auction 219 of SBC: V017, V093, V098; Auction 221 of TFS: V076)
   const kyc = { V102: '2026-08-19', V103: '2026-08-26', V092: '2026-09-02', V096: '2026-09-09', V087: '2026-09-09', V097: '2026-09-09', V017: '2026-10-06', V093: '2026-10-06', V098: '2026-10-06', V076: '2026-10-07' };
   D.vehicles.forEach(v => { if (kyc[v.id]) { v.kyc_status = 'Approved'; v.kyc_approved = kyc[v.id]; } });
+  // [MOCK] User request (29 Oct 2026): Auction 221 of EWB has 20 sold lots waiting for the SAAF, 15 with KYC Approved and 5 Pending. Its 2 Access lots (V072, V082) stay Pending;
+  // 18 dummy lots are added (V210 to V227, lots 120 to 137, plates XEW1001 to XEW1018), 15 of them KYC Approved on 08 Oct 2026 and 3 Pending. Buyers are dummy (Sample Buyer A to F, D9001 to D9006).
+  const ewbModels = ['TOYOTA VIOS 1.3 XLE', 'MITSUBISHI MIRAGE G4 GLX', 'NISSAN ALMERA 1.5 E', 'HONDA CITY 1.5 S', 'TOYOTA INNOVA 2.8 E', 'SUZUKI ERTIGA GL'];
+  const ewbColors = ['WHITE', 'SILVER', 'GRAY', 'RED', 'BLACK', 'BLUE'];
+  for (let i = 0; i < 18; i++) {
+    const n = i + 1, b = i % 6, cid = `D900${b + 1}`;
+    D.vehicles.push({ id: `V${210 + i}`, auction: 221, lot: String(120 + i).padStart(3, '0'), plate: `XEW${1000 + n}`, model: ewbModels[i % 6], seller: 'EWB',
+      customer: `SAMPLE BUYER ${'ABCDEF'[b]}`, cid, email: `${cid.toLowerCase()}@buyers.example.com`, status: 'Sold', price: 300000 + n * 25000, transfer_fee: 1000, rebate: null,
+      vcn: `VCN-221${String(120 + i).padStart(3, '0')}`, for_baaf: false, print_seller: false, print_comm: false, awarding: null, buyer_paid: null, pay_seller: null, seller_ack: null,
+      dispatch: null, release: null, rcv_doas: null, buyer_doas: null, seller_doas: null, orig_docs: null, to_buyer: null, rebate_paid: null, billed: false, location: 'Pasay City',
+      year: 2018 + (i % 6), color: ewbColors[(i + 2) % 6], fuel: 'Gas', cs_no: `XE${String(n).padStart(4, '0')}`, vrf_no: null, docs_received: [], docs_others: '', atf_no: null,
+      for_dispatch_email: false, print_doc_trans: false, ...(i < 15 ? { kyc_status: 'Approved', kyc_approved: '2026-10-08' } : {}) });
+  }
   // [MOCK] Wish 5: Date of Entry (CDMS Cars > Car List). Inferred: start of the lot's auction minus 7 to 21 days
   const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   D.vehicles.forEach(v => { const a = D.auctions[String(v.auction)]; if (a && !v.entry_date) v.entry_date = addDays(a[0], -(7 + Number(v.id.slice(1)) % 15)); });   // [MOCK] only for lots without a usable date of entry from JBAP's parking inventory

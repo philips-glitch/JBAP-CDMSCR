@@ -17,7 +17,7 @@ test('SAAF screen is standard (shown with the switch off, no P5 tag) and lists t
   assert.match(P.sideHtml(''), /href="#\/SMD\/saaf"[^>]*>Seller Awarding Acknowledgement<span class="cnt">\d+<\/span>/, 'no New mark since 26 Oct 2026');
   assert.match(P.homeLayout(), /href="#\/SMD\/saaf">Seller Awarding Acknowledgement<span class="cnt">/);
 });
-test('SAAF list page: one row per auction and seller with counts (KYC Approved, SAAF Sent, Seller Approved) and View detail; no vehicle table on the list', () => {
+test('SAAF list page: one row per auction and seller with counts (KYC Approved, Seller Approved) and View detail; no SAAF Sent column; no vehicle table on the list', () => {
   const P = load(), scr = P.byId['SMD/saaf'];
   assert.strictEqual(P.isProposed(), false);
   const list = P.saafAuctions(scr), at = k => list.find(a => a.key === k);
@@ -25,10 +25,11 @@ test('SAAF list page: one row per auction and seller with counts (KYC Approved, 
   assert.deepStrictEqual([at('218|SBC').kyc, at('218|SBC').sent, at('218|SBC').approved], [3, 3, 0]);
   assert.deepStrictEqual([at('219|SBC').lots, at('219|SBC').kyc, at('219|SBC').sent, at('219|SBC').approved], [8, 3, 0, 0]);
   const card = P.saafAuctionCard(scr);
-  for (const h of ['Auction No.', 'Auction Date', 'Seller', 'Lots', 'KYC Approved', 'SAAF Sent', 'Seller Approved', 'Detail']) assert.ok(card.includes(`<th scope="col">${h}</th>`), h);
+  assert.deepStrictEqual([...card.matchAll(/<th scope="col">([^<]+)<\/th>/g)].map(m => m[1]), ['Auction No.', 'Auction Date', 'Seller', 'Lots', 'KYC Approved', 'Seller Approved', 'Detail'], 'no SAAF Sent column (29 Oct 2026)');
+  assert.deepStrictEqual([at('221|EWB').lots, at('221|EWB').kyc], [20, 15], 'dummy data: Auction 221 of EWB has 20 lots, 15 KYC Approved');
   assert.match(card, /<a class="btn ol" href="#\/SMD\/saaf\/219\/SBC" aria-label="View detail: Auction 219, SBC">View detail<\/a>/);
   assert.doesNotMatch(card, /data-pair|data-act="emailSaaf"/, 'nothing to edit or send on the list');
-  assert.deepStrictEqual(P.colsOf(scr).map(c => c.key + (c.edit ? '*' : '')), ['lot', 'plate', 'model', 'customer', 'price', 'kyc_status', 'kyc_approved', 'for_saaf*', 'saaf_sent', 'saaf_approved*'], 'the detail page columns');
+  assert.deepStrictEqual(P.colsOf(scr).map(c => c.key + (c.edit ? '*' : '')), ['lot', 'plate', 'model', 'customer', 'price', 'kyc_status', 'kyc_approved', 'for_saaf*', 'saaf_approved*'], 'the detail page columns (no SAAF Sent)');
   assert.deepStrictEqual((scr.buttons || []).filter(P.shown).map(b => b.act), ['emailSaaf', 'save']);
 });
 test('SAAF detail page: #/SMD/saaf/<auction>/<seller> lists only that auction and seller, ignores the list filters, links back; an unknown pair opens the list', () => {
@@ -58,11 +59,14 @@ test('P5 now covers only the pre-tick of approved lots and the Finance-only disp
   assert.doesNotMatch(P.byId['log-activity'].rule, /with the proposed improvements on, the SAAF/);
   P.U('log-activity').applied.module = 'SMD'; assert.doesNotMatch(P.byId['log-activity'].emptyNote(), /proposed improvements/);
 });
-test('seed: 3 lots approved by the seller, 3 sent and awaiting the seller; KYC approved on those and on 4 lots ready to send', () => {
+test('seed: 3 lots approved by the seller, 3 sent and awaiting the seller; KYC approved on those, on 4 lots ready to send and on 15 dummy lots of Auction 221 EWB', () => {
   const rows = load().byId['SMD/saaf'].rows();
   assert.deepStrictEqual(rows.filter(r => r.saaf_approved).map(r => r.id).sort(), ['V092', 'V102', 'V103']);
   assert.deepStrictEqual(rows.filter(r => r.saaf_sent && !r.saaf_approved).map(r => r.id).sort(), ['V087', 'V096', 'V097']);
-  assert.deepStrictEqual(rows.filter(r => r.kyc_status === 'Approved').map(r => r.id).sort(), ['V017', 'V076', 'V087', 'V092', 'V093', 'V096', 'V097', 'V098', 'V102', 'V103']);
+  assert.deepStrictEqual(rows.filter(r => r.kyc_status === 'Approved' && !/^V2[12]\d$/.test(r.id)).map(r => r.id).sort(), ['V017', 'V076', 'V087', 'V092', 'V093', 'V096', 'V097', 'V098', 'V102', 'V103']);
+  const ewb = rows.filter(r => String(r.auction) === '221' && r.seller === 'EWB');
+  assert.strictEqual(ewb.length, 20); assert.strictEqual(ewb.filter(r => r.kyc_status === 'Approved').length, 15); assert.strictEqual(ewb.filter(r => r.kyc_status === 'Pending').length, 5);
+  assert.ok(ewb.filter(r => /^V2[12]\d$/.test(r.id)).every(r => /^SAMPLE BUYER [A-F]$/.test(r.customer) && /^D900[1-6]$/.test(r.cid) && /^XEW10\d\d$/.test(r.plate)), 'the 18 added lots use dummy buyers and plates');
   assert.ok(rows.every(r => r.kyc_status === 'Approved' || r.kyc_status === 'Pending'), 'every sold lot has a KYC Status, Pending by default');
 });
 test('sending the SAAF records SAAF Sent under SMD; the approval makes the lot ready for FAD', () => {
