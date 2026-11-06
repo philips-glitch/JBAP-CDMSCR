@@ -1,110 +1,65 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CDMS Post-Auction V2 Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CDMS Prototype | Post-Auction V2 Concept</title>
+<link rel="stylesheet" href="../styles.css">
 <style>
-:root{--bg:#f5f6f8;--card:#fff;--ink:#1d2330;--mut:#667085;--line:#e3e6eb;--pri:#1f5fbf;--ok:#1a7f4b;--warn:#b26b00;--bad:#c0362c;--soft:#eef3fb}
-*{box-sizing:border-box}
-body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-header{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:10px 16px;background:#14213d;color:#fff}
-header h1{font-size:16px;margin:0;font-weight:600}
-header .tag{background:#f4b400;color:#14213d;font-size:11px;padding:2px 6px;border-radius:4px;font-weight:700}
-header label{font-size:12px;opacity:.85}
-header select{margin-left:4px}
-header .today{margin-left:auto;font-size:13px}
-.wrap{display:grid;grid-template-columns:190px 1fr 300px;min-height:calc(100vh - 46px)}
-nav{background:#fff;border-right:1px solid var(--line);padding:12px 0}
-nav a{display:flex;justify-content:space-between;padding:8px 16px;color:var(--ink);text-decoration:none}
-nav a.on{background:var(--soft);color:var(--pri);font-weight:600;border-left:3px solid var(--pri)}
-nav .n{background:var(--bad);color:#fff;border-radius:10px;padding:0 7px;font-size:12px}
-nav .n.z{background:#cfd4dc}
-nav .sep{margin:12px 16px 4px;font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
-main{padding:16px 20px;overflow:auto}
-aside{background:#fff;border-left:1px solid var(--line);padding:12px;overflow:auto}
-h2{font-size:18px;margin:0 0 4px}
-.sub{color:var(--mut);margin:0 0 14px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px}
-.task{display:flex;gap:12px;align-items:flex-start}
-.task .sev{width:6px;align-self:stretch;border-radius:3px;background:var(--warn)}
-.task .sev.high{background:var(--bad)} .task .sev.low{background:#9aa4b2}
-.task .body{flex:1}
-.task .t{font-weight:600}
-.task .m{color:var(--mut);font-size:13px}
-.btn{border:1px solid var(--pri);background:var(--pri);color:#fff;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:13px;margin:2px 4px 2px 0}
-.btn.o{background:#fff;color:var(--pri)}
-.btn.r{background:var(--bad);border-color:var(--bad)}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-table{width:100%;border-collapse:collapse;background:#fff}
-th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-size:12px;color:var(--mut);font-weight:600;background:#fafbfc}
-td.num,th.num{text-align:right}
-a.lk{color:var(--pri);cursor:pointer;text-decoration:none}
-.chip{display:inline-block;font-size:11px;padding:1px 6px;border-radius:10px;border:1px solid;white-space:nowrap}
-.c-auto{color:var(--ok);border-color:#9fd3b6;background:#eef8f2}
-.c-link{color:#6b3fb3;border-color:#c9b5ec;background:#f4effc}
-.c-click{color:var(--pri);border-color:#a9c3ea;background:var(--soft)}
-.c-scan{color:var(--warn);border-color:#ecc98e;background:#fdf5e8}
-.c-manual{color:var(--bad);border-color:#efb0aa;background:#fdeeed}
-.st{font-size:12px;padding:2px 8px;border-radius:10px;background:#eef0f3;white-space:nowrap}
-.st.bad{background:#fdeeed;color:var(--bad)} .st.ok{background:#eef8f2;color:var(--ok)} .st.w{background:#fdf5e8;color:var(--warn)}
-.steps{display:flex;flex-wrap:wrap;gap:0;margin:6px 0}
-.step{flex:1;min-width:120px;padding:8px;border-top:4px solid #d5dae1;margin-right:4px}
-.step.done{border-color:var(--ok)} .step.cur{border-color:var(--warn);background:#fffaf0}
-.step .h{font-size:12px;font-weight:600}
-.step .d{font-size:12px;color:var(--mut)}
-.tracks{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.track h4{margin:0 0 6px;font-size:13px}
-.track .step{min-width:0;margin:0 0 4px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
-.kpi{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
-.kpi .v{font-size:22px;font-weight:700}
-.kpi .l{font-size:12px;color:var(--mut)}
-.bar{display:flex;align-items:center;gap:8px;margin:5px 0}
-.bar .lab{width:210px;font-size:13px}
-.bar .b{height:18px;background:var(--pri);border-radius:3px;min-width:2px}
-.bar .c{font-size:13px;color:var(--mut)}
-.next{border-left:4px solid var(--warn);background:#fffaf0}
-.next.none{border-color:var(--ok);background:#f3faf6}
-details summary{cursor:pointer;color:var(--mut);margin:6px 0}
-.feed{font-size:12px}
-.feed div{padding:6px 0;border-bottom:1px dashed var(--line)}
-.feed .d{color:var(--mut)}
-aside h3{font-size:13px;margin:6px 0 8px}
-aside .btn{width:100%;text-align:left;margin:3px 0}
-.note{font-size:12px;color:var(--mut)}
-.legend{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}
-@media (max-width:1100px){.wrap{grid-template-columns:1fr}nav{display:flex;flex-wrap:wrap;border:0}nav .sep{display:none}aside{border:0}.tracks,.grid2,.kpis{grid-template-columns:1fr}}
-@media print{aside,nav,header select{display:none}.wrap{display:block}}
+/* V2 additions on top of the V1 CDMS styles (same tokens) */
+.src{display:inline-block;font-size:10.5px;font-weight:600;padding:0 6px;border-radius:8px;border:1px solid;line-height:16px;white-space:nowrap;vertical-align:middle}
+.src.auto{color:var(--ok);border-color:#9fd3b6;background:#eef8f2}
+.src.link{color:#6b3fb3;border-color:#c9b5ec;background:#f4effc}
+.src.click{color:var(--edit);border-color:#a9c3ea;background:var(--sel)}
+.src.scan{color:#8a5a00;border-color:#ecc98e;background:#fdf5e8}
+.src.manual{color:var(--danger);border-color:#efb0aa;background:#fdeeed}
+.prio{display:inline-block;width:9px;height:9px;border-radius:50%;background:#e0a100}
+.prio.high{background:var(--danger)}.prio.low{background:#aab3c8}
+.steps{display:flex;gap:4px;padding:12px 16px 14px;flex-wrap:wrap}
+.step{flex:1;min-width:130px;padding:8px 10px;border-top:4px solid #d3d9e6;background:#fafbfd}
+.step.done{border-color:var(--ok)}.step.cur{border-color:#e0a100;background:#fffaf0}
+.step .h{font-size:12px;font-weight:600;color:#3b4466}.step .d{font-size:12px;color:var(--faint);margin-top:2px}
+.tracks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:12px 16px 14px}
+.tracks h4{margin:0 0 6px;font-family:var(--font-head);font-weight:500;font-size:15px;color:var(--navy)}
+.tracks .step{min-width:0;margin-bottom:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.nextbox{padding:12px 16px;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.nextbox .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.kv{width:100%;font-size:13px}.kv td{height:30px}.kv td:last-child{text-align:right}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:14px}
+.kpi{background:#fff;border-radius:var(--radius);box-shadow:0 1px 3px rgba(23,37,101,.13);padding:12px 16px}
+.kpi .v{font-family:var(--font-head);font-size:26px;font-weight:600;color:var(--navy)}.kpi .l{font-size:12px;color:var(--faint)}
+.bars{padding:12px 16px}.bar{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13px}.bar .lab{width:240px}.bar .b{height:16px;background:var(--navy);border-radius:2px;min-width:2px}
+.v2tag{font-size:10px;font-weight:700;color:#fff;background:#1b7343;border-radius:8px;padding:0 6px;margin-left:6px;line-height:16px;font-family:var(--font-ui)}
+.mis .v2tag{margin-left:6px}
+.wrapcell{white-space:normal;line-height:1.35;padding:6px 8px}
+.top a.btn{text-decoration:none}
+.demo-btns{display:grid;gap:8px}.demo-btns .btn{justify-content:flex-start}
+details.wait>summary{cursor:pointer;padding:12px 16px;color:var(--muted);font-size:13px}
+@media (max-width:1100px){.tracks,.two,.kpis{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<header>
-  <h1>CDMS · Post-Auction</h1><span class="tag">V2 CONCEPT · SCRATCH UI</span>
-  <label>Viewing as <select id="role">
-    <option value="ALL">All roles</option><option value="SMD">SMD</option><option value="FAD">FAD</option>
-    <option value="VWD">VWD</option><option value="APPROVER">President / Managers</option></select></label>
-  <span class="today" id="today"></span>
-</header>
-<div class="wrap">
-  <nav id="nav"></nav>
-  <main id="main"></main>
-  <aside>
-    <h3>Simulate events</h3>
-    <p class="note">In V2 most dates are set by events, not typed. Press a button and watch the lots move by themselves (feed below).</p>
-    <button class="btn o" data-sim="bank">Import bank statement (CSV)</button>
-    <button class="btn o" data-sim="seller">Seller clicks the link in an email</button>
-    <button class="btn o" data-sim="kyc">Buyer completes KYC in the portal</button>
-    <button class="btn" data-sim="day">Next working day ▶</button>
-    <button class="btn o" data-sim="reset">Reset demo</button>
-    <h3>What the system did</h3>
-    <div class="feed" id="feed"></div>
-  </aside>
+<div class="app">
+  <nav class="side" aria-label="CDMS menu"><div class="side-h">CDMS MENU</div><div class="menu" id="menu"></div></nav>
+  <div class="main">
+    <header class="top">
+      <button type="button" class="burger" id="burger" aria-label="Open menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#293a8e" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <a href="#/"><img class="logo" src="../assets/logo.png" alt="JBA Philippines (go to Home)"></a>
+      <span class="proto-tag">V2 concept · dummy data</span>
+      <a class="btn ol" href="#/compare">V1 vs V2</a>
+      <button type="button" class="btn pr" data-open="demo">Demo events</button>
+      <span class="note" id="today" style="padding:0"></span>
+      <img class="user" src="../assets/user.png" alt="Signed in as system">
+    </header>
+    <main class="content" id="content" tabindex="-1"></main>
+    <footer class="foot">&copy; 2026 JBA Philippines Inc.</footer>
+  </div>
 </div>
+<div id="modal"></div>
+<div class="toast-wrap" id="toasts" aria-live="polite"></div>
 <script>
-/* ===== Dates (working days skip Sat/Sun and the holiday list; dates below are [MOCK]) ===== */
+/* ===== Dates: working days skip Sat/Sun and the holiday list ([MOCK]) ===== */
 const HOL=['2026-11-30','2026-12-08','2026-12-24','2026-12-25','2026-12-30','2026-12-31'];
 const pad=n=>String(n).padStart(2,'0');
 const toD=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
@@ -113,52 +68,63 @@ const isWD=d=>d.getDay()%6!==0&&!HOL.includes(iso(d));
 const addWD=(s,n)=>{const d=toD(s);while(n>0){d.setDate(d.getDate()+1);if(isWD(d))n--;}return iso(d)};
 const wdBetween=(a,b)=>{let n=0;const d=toD(a),e=toD(b);while(d<e){d.setDate(d.getDate()+1);if(isWD(d))n++;}return n};
 const calDays=(a,b)=>Math.round((toD(b)-toD(a))/864e5);
-const fmt=s=>s?toD(s).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-const peso=n=>'₱'+Math.round(n).toLocaleString('en-US');
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=s=>{if(!s)return '';const[y,m,d]=s.split('-');return `${m}/${d}/${y}`};
+const peso=n=>Math.round(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=q=>document.querySelector(q);
 
-/* ===== Seller parameters (codes as in the V1 prototype; rules simplified) ===== */
-const SELLERS={
-  EWB:{release:'seller_ack',doas:'branch',fee:1000},
-  SBC:{release:'seller_ack',doas:'jbap',fee:400},
-  TFS:{release:'buyer_payment',doas:'none',fee:500},
-  ORICO:{release:'doas',doas:'jbap',fee:500}};
+/* ===== Icons (same as V1) ===== */
+const IC={table:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M3 14h18M9 9v11"/></svg>',
+  info:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>',
+  inbox:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/></svg>',
+  task:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17"/></svg>'};
+const DEPT_ICON={FAD:'<rect x="5" y="2.5" width="14" height="19" rx="1.6"/><rect x="7.8" y="5.3" width="8.4" height="3.6" rx=".6"/><path d="M8.3 12.3h.1M12 12.3h.1M15.7 12.3h.1M8.3 15.3h.1M12 15.3h.1M15.7 15.3h.1M8.3 18.3h.1M12 18.3h.1M15.7 18.3h.1"/>',
+  SMD:'<rect x="3" y="3.5" width="18" height="12.5" rx="1.2"/><path d="M12 16v3.5M8 21h8"/><path d="M6.5 13v-2.5M10 13V8.5M13.5 13v-3M17 13V6.5"/>',
+  VWD:'<path d="M2.5 9.5L12 4l9.5 5.5V21h-19z"/><path d="M6 21v-6.5h12V21"/><path d="M7.6 17.8h8.8M9 14.5l1-1.8h4l1 1.8"/><path d="M8.6 19.6h.1M15.4 19.6h.1"/>',
+  APP:'<rect x="5" y="3.5" width="14" height="17.5" rx="1.6"/><path d="M9 3.5V2.5h6v2H9z"/><path d="M8.5 13.2l2.6 2.6 4.6-5.2"/>',
+  LOG:'<rect x="4.5" y="3.5" width="13" height="17.5" rx="1.4"/><path d="M8 3.5V2.5h6v2H8z"/><path d="M7.5 9h7M7.5 12.5h4"/><circle cx="17" cy="17" r="4.2"/><path d="M17 15v2.2l1.4 1"/>'};
+const deptSvg=d=>`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${DEPT_ICON[d]}</svg>`;
+
+/* ===== Seller parameters (codes as in V1; rules simplified) ===== */
+const SELLERS={EWB:{release:'seller_ack',doas:'branch',fee:1000},SBC:{release:'seller_ack',doas:'jbap',fee:400},
+  TFS:{release:'buyer_payment',doas:'none',fee:500},ORICO:{release:'doas',doas:'jbap',fee:500}};
 const RELEASE_TXT={seller_ack:'after Seller Acknowledgement',buyer_payment:'after Buyer Payment',doas:'after Buyer Payment + signed DOAS'};
 const SRC={auto:'Auto',link:'Via link',click:'1-click',scan:'Scan',manual:'Typed'};
-const EV={sold:'Sold at auction',kyc:'Buyer KYC approved',saaf_sent:'SAAF sent to seller',saaf_ok:'Seller approved SAAF',
-  rebate:'Rebate decided',baaf:'Awarded (BAAF sent)',paid:'Buyer paid',seller_paid:'Seller paid',comm_billed:'Commission billed',
-  seller_ack:'Seller acknowledged',doas_sent:'DOAS sent for signing',doas_back:'Signed DOAS received',docs_in:'Documents from seller',
-  docs_out:'Documents to buyer',dispatch:'Dispatch notice sent',release:'Unit released'};
+const EV={sold:'Sold at auction',kyc:'KYC approved',saaf_sent:'SAAF sent',saaf_ok:'Seller approved SAAF',rebate:'Rebate decided',
+  baaf:'Awarded (BAAF sent)',paid:'Buyer paid',seller_paid:'Seller paid',comm_billed:'Commission billed',seller_ack:'Seller acknowledged',
+  doas_sent:'DOAS sent for signing',doas_back:'Signed DOAS received',docs_in:'Documents from seller',docs_out:'Documents to buyer',
+  dispatch:'Dispatch notice sent',release:'Unit released'};
 
-/* ===== Dummy data (anonymised: Sample Buyer A–F, plates XAA/XEW…) ===== */
-const BUYERS={D9001:'Sample Buyer A',D9002:'Sample Buyer B',D9003:'Sample Buyer C',D9004:'Sample Buyer D',D9005:'Sample Buyer E',D9006:'Sample Buyer F'};
+/* ===== Dummy data (anonymised) ===== */
+const BUYERS={D9001:'SAMPLE BUYER A',D9002:'SAMPLE BUYER B',D9003:'SAMPLE BUYER C',D9004:'SAMPLE BUYER D',D9005:'SAMPLE BUYER E',D9006:'SAMPLE BUYER F'};
 const E=(d,src='auto',by)=>({d,src,by:by||({auto:'System',link:'via link',click:'user',scan:'FAD (scan)',manual:'user'})[src]});
 function seed(){
   const L=(id,auc,lot,plate,model,seller,buyer,price,ev,x={})=>Object.assign({id,auc,lot,plate,model,seller,buyer,price,ev},x);
+  const K=(d)=>E(d,'link','Buyer (portal)');
   const lots=[
-    L('L01',231,101,'XAA1001','Toyota Vios 1.3 E','EWB','D9001',420000,{sold:E('2026-11-02')}),
-    L('L02',231,102,'XAA1002','Mitsubishi Mirage G4','SBC','D9002',385000,{sold:E('2026-11-02'),kyc:E('2026-11-02','link','Buyer (portal)'),saaf_sent:E('2026-11-02')}),
-    L('L03',231,103,'XAA1003','Toyota Innova 2.8 G','TFS','D9003',1120000,{sold:E('2026-11-02'),kyc:E('2026-11-02','link','Buyer (portal)'),saaf_sent:E('2026-11-02'),saaf_ok:E('2026-11-03','link','TFS (link)')},{rebate:{amt:15000,status:'pending',req:'2026-11-04'}}),
-    L('L04',231,104,'XAA1004','Honda City 1.5 S','ORICO','D9001',610000,{sold:E('2026-11-02'),kyc:E('2026-11-02','link','Buyer (portal)'),saaf_sent:E('2026-11-02'),saaf_ok:E('2026-11-04','link','ORICO (link)'),baaf:E('2026-11-04')},{pay:'ok'}),
-    L('L05',230,110,'XEW1005','Ford Ranger XLT','EWB','D9004',890000,{sold:E('2026-10-26'),kyc:E('2026-10-26','link','Buyer (portal)'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-27','link','EWB (link)'),baaf:E('2026-10-28')}),
-    L('L06',230,111,'XAA1006','Nissan Almera 1.5','SBC','D9002',455000,{sold:E('2026-10-26'),kyc:E('2026-10-27','link','Buyer (portal)'),saaf_sent:E('2026-10-27'),saaf_ok:E('2026-10-30','link','SBC (link)'),baaf:E('2026-11-03')},{pay:'short'}),
-    L('L07',230,112,'XAA1007','Toyota Fortuner 2.4 G','TFS','D9005',1350000,{sold:E('2026-10-26'),kyc:E('2026-10-26','link','Buyer (portal)'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-27','link','TFS (link)'),baaf:E('2026-10-28'),paid:E('2026-10-30','auto','System (bank match)'),dispatch:E('2026-10-30')}),
-    L('L08',230,113,'XAA1008','Suzuki Ertiga GL','ORICO','D9006',640000,{sold:E('2026-10-26'),kyc:E('2026-10-26','link','Buyer (portal)'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-26','link','ORICO (link)'),baaf:E('2026-10-26'),paid:E('2026-10-28','auto','System (bank match)'),doas_sent:E('2026-10-28'),seller_paid:E('2026-11-03','click','FAD Manager'),comm_billed:E('2026-11-03')}),
-    L('L09',229,120,'XAA1009','Hyundai Accent 1.6','SBC','D9003',398000,{sold:E('2026-10-19'),kyc:E('2026-10-19','link','Buyer (portal)'),saaf_sent:E('2026-10-19'),saaf_ok:E('2026-10-20','link','SBC (link)'),baaf:E('2026-10-21'),paid:E('2026-10-26','auto','System (bank match)'),doas_sent:E('2026-10-26'),doas_back:E('2026-10-28','scan'),seller_paid:E('2026-10-28','click','FAD Manager'),comm_billed:E('2026-10-28'),seller_ack:E('2026-10-29','link','SBC (link)'),dispatch:E('2026-10-29'),release:E('2026-11-02','click','VWD'),docs_in:E('2026-11-04','scan')}),
-    L('L10',229,121,'XAA1010','Toyota Wigo 1.0 G','TFS','D9004',345000,{sold:E('2026-10-19'),kyc:E('2026-10-19','link','Buyer (portal)'),saaf_sent:E('2026-10-19'),saaf_ok:E('2026-10-19','link','TFS (link)'),baaf:E('2026-10-20'),paid:E('2026-10-21','auto','System (bank match)'),dispatch:E('2026-10-21'),seller_paid:E('2026-10-23','click','FAD Manager'),comm_billed:E('2026-10-23'),release:E('2026-10-23','click','VWD'),seller_ack:E('2026-10-26','link','TFS (link)'),docs_in:E('2026-10-27','scan'),docs_out:E('2026-10-28','click','FAD')}),
-    L('L11',231,105,'XEW1011','Toyota Hilux 2.4 E','EWB','D9006',980000,{sold:E('2026-11-03'),kyc:E('2026-11-05','link','Buyer (portal)')}),
-    L('L12',230,114,'XEW1012','Mitsubishi Montero GLS','EWB','D9001',1240000,{sold:E('2026-10-26'),kyc:E('2026-10-26','link','Buyer (portal)'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-28','link','EWB (link)'),baaf:E('2026-10-29'),paid:E('2026-11-04','auto','System (bank match)'),doas_sent:E('2026-11-04')}),
-    L('L13',229,122,'XAA1013','Isuzu D-Max LS','SBC','D9005',760000,{sold:E('2026-10-19'),kyc:E('2026-10-19','link','Buyer (portal)'),saaf_sent:E('2026-10-19'),saaf_ok:E('2026-10-20','link','SBC (link)'),baaf:E('2026-10-21')},{cancel:{d:'2026-10-28',fee:10000,waived:false,feePaid:null},pay:'fee'}),
-    L('L14',231,106,'XAA1014','Kia Picanto 1.2 EX','ORICO','D9005',330000,{sold:E('2026-11-03'),kyc:E('2026-11-03','link','Buyer (portal)'),saaf_sent:E('2026-11-03'),saaf_ok:E('2026-11-04','link','ORICO (link)'),baaf:E('2026-11-05')},{pay:'ok'})
-  ];
-  return {today:'2026-11-06',lots,exceptions:[],feed:[],
-    approvals:[{id:1,type:'Rebate',lot:'L03',detail:'Rebate ₱15,000 requested by SMD (buyer asked after inspection)',role:'President',status:'pending'}],seq:2};
+    L('L01',231,101,'XAA1001','TOYOTA VIOS 1.3 E','EWB','D9001',420000,{sold:E('2026-11-02')}),
+    L('L02',231,102,'XAA1002','MITSUBISHI MIRAGE G4','SBC','D9002',385000,{sold:E('2026-11-02'),kyc:K('2026-11-02'),saaf_sent:E('2026-11-02')}),
+    L('L03',231,103,'XAA1003','TOYOTA INNOVA 2.8 G','TFS','D9003',1120000,{sold:E('2026-11-02'),kyc:K('2026-11-02'),saaf_sent:E('2026-11-02'),saaf_ok:E('2026-11-03','link','TFS (link)')},{rebate:{amt:15000,status:'pending',req:'2026-11-04'}}),
+    L('L04',231,104,'XAA1004','HONDA CITY 1.5 S','ORICO','D9001',610000,{sold:E('2026-11-02'),kyc:K('2026-11-02'),saaf_sent:E('2026-11-02'),saaf_ok:E('2026-11-04','link','ORICO (link)'),baaf:E('2026-11-04')},{pay:'ok'}),
+    L('L05',230,110,'XEW1005','FORD RANGER XLT','EWB','D9004',890000,{sold:E('2026-10-26'),kyc:K('2026-10-26'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-27','link','EWB (link)'),baaf:E('2026-10-28')}),
+    L('L06',230,111,'XAA1006','NISSAN ALMERA 1.5','SBC','D9002',455000,{sold:E('2026-10-26'),kyc:K('2026-10-27'),saaf_sent:E('2026-10-27'),saaf_ok:E('2026-10-30','link','SBC (link)'),baaf:E('2026-11-03')},{pay:'short'}),
+    L('L07',230,112,'XAA1007','TOYOTA FORTUNER 2.4 G','TFS','D9005',1350000,{sold:E('2026-10-26'),kyc:K('2026-10-26'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-27','link','TFS (link)'),baaf:E('2026-10-28'),paid:E('2026-10-30','auto','System (bank match)'),dispatch:E('2026-10-30')}),
+    L('L08',230,113,'XAA1008','SUZUKI ERTIGA GL','ORICO','D9006',640000,{sold:E('2026-10-26'),kyc:K('2026-10-26'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-26','link','ORICO (link)'),baaf:E('2026-10-26'),paid:E('2026-10-28','auto','System (bank match)'),doas_sent:E('2026-10-28'),seller_paid:E('2026-11-03','click','FAD Manager'),comm_billed:E('2026-11-03')}),
+    L('L09',229,120,'XAA1009','HYUNDAI ACCENT 1.6','SBC','D9003',398000,{sold:E('2026-10-19'),kyc:K('2026-10-19'),saaf_sent:E('2026-10-19'),saaf_ok:E('2026-10-20','link','SBC (link)'),baaf:E('2026-10-21'),paid:E('2026-10-26','auto','System (bank match)'),doas_sent:E('2026-10-26'),doas_back:E('2026-10-28','scan'),seller_paid:E('2026-10-28','click','FAD Manager'),comm_billed:E('2026-10-28'),seller_ack:E('2026-10-29','link','SBC (link)'),dispatch:E('2026-10-29'),release:E('2026-11-02','click','VWD'),docs_in:E('2026-11-04','scan')}),
+    L('L10',229,121,'XAA1010','TOYOTA WIGO 1.0 G','TFS','D9004',345000,{sold:E('2026-10-19'),kyc:K('2026-10-19'),saaf_sent:E('2026-10-19'),saaf_ok:E('2026-10-19','link','TFS (link)'),baaf:E('2026-10-20'),paid:E('2026-10-21','auto','System (bank match)'),dispatch:E('2026-10-21'),seller_paid:E('2026-10-23','click','FAD Manager'),comm_billed:E('2026-10-23'),release:E('2026-10-23','click','VWD'),seller_ack:E('2026-10-26','link','TFS (link)'),docs_in:E('2026-10-27','scan'),docs_out:E('2026-10-28','click','FAD')}),
+    L('L11',231,105,'XEW1011','TOYOTA HILUX 2.4 E','EWB','D9006',980000,{sold:E('2026-11-03'),kyc:K('2026-11-05')}),
+    L('L12',230,114,'XEW1012','MITSUBISHI MONTERO GLS','EWB','D9001',1240000,{sold:E('2026-10-26'),kyc:K('2026-10-26'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-28','link','EWB (link)'),baaf:E('2026-10-29'),paid:E('2026-11-04','auto','System (bank match)'),doas_sent:E('2026-11-04')}),
+    L('L13',229,122,'XAA1013','ISUZU D-MAX LS','SBC','D9005',760000,{sold:E('2026-10-19'),kyc:K('2026-10-19'),saaf_sent:E('2026-10-19'),saaf_ok:E('2026-10-20','link','SBC (link)'),baaf:E('2026-10-21')},{cancel:{d:'2026-10-28',fee:10000,waived:false,feePaid:null},pay:'fee'}),
+    L('L14',231,106,'XAA1014','KIA PICANTO 1.2 EX','ORICO','D9005',330000,{sold:E('2026-11-03'),kyc:K('2026-11-03'),saaf_sent:E('2026-11-03'),saaf_ok:E('2026-11-04','link','ORICO (link)'),baaf:E('2026-11-05')},{pay:'ok'})];
+  return {today:'2026-11-06',lots,exceptions:[],feed:[],imports:[],
+    approvals:[{id:1,type:'Rebate',lot:'L03',detail:'Rebate 15,000.00 requested by SMD',role:'President',status:'pending'}],seq:2};
 }
 let S=seed();
-let ROLE='ALL';
+const OPEN={Customer:false,Auction:false,Report:false,Approval:false,FAD:true,SMD:false,VWD:false,Payment:false};
 const lot=id=>S.lots.find(l=>l.id===id);
-const log=(msg,src='auto')=>S.feed.unshift({d:S.today,msg,src});
-const label=l=>`A${l.auc}-${l.lot} ${l.plate}`;
+const label=l=>`A${l.auc} Lot ${l.lot}`;
+let toastQ=[];
+const log=(msg,src='auto')=>{S.feed.unshift({d:S.today,msg,src});toastQ.push(msg)};
 
 /* ===== Lot rules ===== */
 const deadline=l=>l.ev.baaf?(l.deadlineOverride||addWD(l.ev.baaf.d,3)):null;
@@ -166,227 +132,292 @@ const rebateDone=l=>!l.rebate||l.rebate.status!=='pending';
 function dispatchReady(l){const s=SELLERS[l.seller];if(!l.ev.paid)return false;
   if(s.release==='buyer_payment')return true;if(s.release==='seller_ack')return !!l.ev.seller_ack;return !!l.ev.doas_back}
 const releaseBlock=l=>(SELLERS[l.seller].doas!=='none'&&!l.ev.doas_back)?'Signed DOAS not received yet':null;
-function penalty(l){if(!l.ev.dispatch||l.ev.release)return 0;const dl=addWD(l.ev.dispatch.d,3);return Math.max(0,calDays(dl,S.today))*500}
+const pullDeadline=l=>l.ev.dispatch?addWD(l.ev.dispatch.d,3):null;
+function penalty(l){if(!l.ev.dispatch||l.ev.release)return 0;return Math.max(0,calDays(pullDeadline(l),S.today))*500}
 const money=l=>{const s=SELLERS[l.seller],com=l.price*.05,vat=com*.12,reb=(l.rebate&&l.rebate.status==='approved')?l.rebate.amt:0;
   return {fee:s.fee,buyer:l.price+s.fee-reb,com,vat,reb,payable:l.price+s.fee-com-vat}};
 const closed=l=>l.cancel?(l.cancel.waived||!!l.cancel.feePaid):!!(l.ev.release&&l.ev.docs_out&&l.ev.seller_ack&&l.ev.comm_billed);
-
 function stage(l){
-  if(l.cancel)return {k:'cancelled',t:closed(l)?'Cancelled · closed':'Cancelled · fee unpaid',who:closed(l)?null:'Buyer'};
-  if(!l.ev.kyc)return {k:'kyc',t:'Waiting buyer KYC',who:'Buyer'};
-  if(!l.ev.saaf_sent)return {k:'saaf',t:'SAAF queued (system)',who:'System'};
-  if(!l.ev.saaf_ok)return {k:'saaf',t:'Waiting seller approval',who:'Seller'};
-  if(!rebateDone(l))return {k:'rebate',t:'Rebate waiting for President',who:'President'};
-  if(!l.ev.baaf)return {k:'award',t:'BAAF queued (system)',who:'System'};
-  if(!l.ev.paid)return {k:'pay',t:S.today>deadline(l)?'Unpaid · overdue':'Waiting buyer payment',who:'Buyer'};
-  if(closed(l))return {k:'closed',t:'Closed',who:null};
-  return {k:'after',t:'Paid · settlement, documents, release',who:'Several'};
+  if(l.cancel)return {k:'cancelled',t:closed(l)?'Cancelled':'Cancelled · fee unpaid',c:closed(l)?'ns':'cx'};
+  if(!l.ev.kyc)return {k:'kyc',t:'Waiting KYC',c:'ns'};
+  if(!l.ev.saaf_sent||!l.ev.saaf_ok)return {k:'saaf',t:'Waiting seller (SAAF)',c:'ns'};
+  if(!rebateDone(l))return {k:'rebate',t:'Rebate for approval',c:'up'};
+  if(!l.ev.baaf)return {k:'award',t:'Awarding',c:'up'};
+  if(!l.ev.paid)return S.today>deadline(l)?{k:'pay',t:'Unpaid · overdue',c:'cx'}:{k:'pay',t:'Unpaid',c:'up'};
+  if(closed(l))return {k:'closed',t:'Complete',c:'sold'};
+  if(l.ev.release)return {k:'after',t:'Released · closing',c:'up'};
+  if(l.ev.dispatch)return {k:'after',t:penalty(l)?'For release · overdue':'For release',c:penalty(l)?'cx':'up'};
+  return {k:'after',t:'Paid',c:'up'};
 }
 
-/* ===== Automation engine: runs after every event and every new day ===== */
+/* ===== Automation engine ===== */
 function runAuto(){
-  for(const l of S.lots){
-    if(l.cancel)continue;const e=l.ev,s=SELLERS[l.seller];
-    if(e.kyc&&!e.saaf_sent){e.saaf_sent=E(S.today);log(`${label(l)}: SAAF emailed to ${l.seller} with an approve link (KYC was approved)`)}
-    if(e.saaf_ok&&rebateDone(l)&&!e.baaf){e.baaf=E(S.today);log(`${label(l)}: BAAF emailed to ${BUYERS[l.buyer]}; pay by ${fmt(deadline(l))}`)}
-    if(e.baaf&&!e.paid&&addWD(S.today,1)===deadline(l)&&l.reminded!==S.today){l.reminded=S.today;log(`${label(l)}: payment reminder sent to the buyer (deadline is the next working day)`)}
-    if(e.paid&&s.doas!=='none'&&!e.doas_sent){e.doas_sent=E(S.today);log(`${label(l)}: ${s.doas==='branch'?'EWB call-out notice':'DOAS for signature'} emailed to the buyer`)}
-    if(dispatchReady(l)&&!e.dispatch){e.dispatch=E(S.today);log(`${label(l)}: dispatch notice sent; pull out by ${fmt(addWD(S.today,3))}`)}
-    if(e.seller_paid&&!e.comm_billed){e.comm_billed=E(S.today);log(`${label(l)}: commission billing generated for ${l.seller}`)}
-  }
+  for(const l of S.lots){if(l.cancel)continue;const e=l.ev,s=SELLERS[l.seller];
+    if(e.kyc&&!e.saaf_sent){e.saaf_sent=E(S.today);log(`${label(l)} ${l.plate}: SAAF emailed to ${l.seller} with an Approve link`)}
+    if(e.saaf_ok&&rebateDone(l)&&!e.baaf){e.baaf=E(S.today);log(`${label(l)} ${l.plate}: BAAF emailed to the buyer; pay by ${fmt(deadline(l))}`)}
+    if(e.baaf&&!e.paid&&addWD(S.today,1)===deadline(l)&&l.reminded!==S.today){l.reminded=S.today;log(`${label(l)} ${l.plate}: payment reminder emailed (deadline is the next working day)`)}
+    if(e.paid&&s.doas!=='none'&&!e.doas_sent){e.doas_sent=E(S.today);log(`${label(l)} ${l.plate}: ${s.doas==='branch'?'EWB call-out notice':'DOAS for signature'} emailed to the buyer`)}
+    if(dispatchReady(l)&&!e.dispatch){e.dispatch=E(S.today);log(`${label(l)} ${l.plate}: dispatch notice emailed; pull out by ${fmt(addWD(S.today,3))}`)}
+    if(e.seller_paid&&!e.comm_billed){e.comm_billed=E(S.today);log(`${label(l)} ${l.plate}: commission billing generated for ${l.seller}`)}}
 }
 
-/* ===== Tasks (only what needs a person; waiting items are listed apart) ===== */
-function tasks(){
-  const T=[],W=[];const t=S.today;
-  for(const l of S.lots){const e=l.ev,s=SELLERS[l.seller],st=stage(l);
-    if(l.cancel){if(!closed(l))W.push({who:'Buyer',l,txt:`Cancellation fee ${peso(l.cancel.fee)} billed ${fmt(l.cancel.d)}; matched automatically when paid`});continue}
-    if(!e.kyc){const n=wdBetween(e.sold.d,t);(n>=2?T:W).push(n>=2?{role:'SMD',sev:'med',l,title:'Buyer KYC still missing',m:`${n} working days since the sale. Automatic reminders got no response.`,acts:[['Remind buyer','remindKyc']]}:{who:'Buyer',l,txt:'KYC in the buyer portal'});continue}
-    if(e.saaf_sent&&!e.saaf_ok){const n=wdBetween(e.saaf_sent.d,t);(n>=2?T:W).push(n>=2?{role:'SMD',sev:'med',l,title:`${l.seller} has not approved the SAAF`,m:`Sent ${fmt(e.saaf_sent.d)} (${n} working days).`,acts:[['Nudge seller','nudge']]}:{who:l.seller,l,txt:'SAAF approval (link in email)'});continue}
-    if(!rebateDone(l)){W.push({who:'President',l,txt:'Rebate decision (Approvals)'});continue}
-    if(e.baaf&&!e.paid){const dl=deadline(l);if(t>dl)T.push({role:'SMD',sev:'high',l,title:'Unpaid after the deadline',m:`Deadline ${fmt(dl)}. Reminders were sent automatically. Decide now.`,acts:[['Cancel sale (fee auto-billed)','cancel'],['Request +2 days','extend']]});
-      else W.push({who:'Buyer',l,txt:`Payment, deadline ${fmt(dl)}`});continue}
+/* ===== Tasks per department (only work that needs a person) ===== */
+function tasks(){const T=[],W=[],t=S.today;
+  for(const l of S.lots){const e=l.ev,s=SELLERS[l.seller];
+    if(l.cancel){if(!closed(l))W.push({who:'Buyer',l,txt:`Cancellation fee ${peso(l.cancel.fee)} billed ${fmt(l.cancel.d)}; matched from the bank file when paid`});continue}
+    if(!e.kyc){const n=wdBetween(e.sold.d,t);if(n>=2)T.push({dept:'SMD',sev:'med',l,title:'Buyer KYC still missing',m:`${n} working days since the sale; automatic reminders got no response`,due:addWD(e.sold.d,2),acts:[['Remind buyer','remindKyc','ol']]});else W.push({who:'Buyer',l,txt:'KYC in the buyer portal'});continue}
+    if(e.saaf_sent&&!e.saaf_ok){const n=wdBetween(e.saaf_sent.d,t);if(n>=2)T.push({dept:'SMD',sev:'med',l,title:`${l.seller} has not approved the SAAF`,m:`Sent ${fmt(e.saaf_sent.d)}, ${n} working days ago`,due:addWD(e.saaf_sent.d,2),acts:[['Nudge seller','nudge','ol']]});else W.push({who:l.seller,l,txt:'SAAF approval (link in the email)'});continue}
+    if(!rebateDone(l)){W.push({who:'President',l,txt:'Rebate decision (Approval)'});continue}
+    if(e.baaf&&!e.paid){const dl=deadline(l);if(t>dl)T.push({dept:'SMD',sev:'high',l,title:'Unpaid after the deadline',m:`Deadline ${fmt(dl)}; reminders were sent automatically`,due:dl,acts:[['Cancel sale','cancel','dg'],['Request +2 days','extend','ol']]});else W.push({who:'Buyer',l,txt:`Payment, deadline ${fmt(dl)}`});continue}
     if(!e.paid)continue;
-    if(!e.seller_paid&&!T.some(x=>x.key==='run'))T.push({key:'run',role:'FAD',sev:'med',l:null,title:'Seller settlement run is ready',m:`${S.lots.filter(x=>x.ev.paid&&!x.ev.seller_paid&&!x.cancel).length} paid lots; payable and commission already computed.`,acts:[['Open settlement run','gorun']]});
     if(e.seller_paid&&!e.seller_ack)W.push({who:l.seller,l,txt:'Seller acknowledgement (link)'});
-    if(e.doas_sent&&!e.doas_back){if(s.doas==='jbap')T.push({role:'FAD',sev:'low',l,title:'Signed DOAS: scan when it arrives',m:`DOAS sent ${fmt(e.doas_sent.d)}. Scanning the transmittal QR records the date.`,acts:[['Scan signed DOAS','scanDoas']]});
-      else W.push({who:'EWB',l,txt:'DOAS signing at EWB branch (EWB confirms via link)'})}
-    if(e.seller_paid&&(s.doas==='none'||e.doas_back)&&!e.docs_in)T.push({role:'FAD',sev:'low',l,title:'Documents from seller: scan on receipt',m:'ORCR / deed package from the seller.',acts:[['Scan documents','scanDocs']]});
-    if(e.dispatch&&!e.release){const p=penalty(l),b=releaseBlock(l);T.push({role:'VWD',sev:p?'high':'med',l,title:p?`Unit overdue · penalty ${peso(p)} accruing`:'Ready for pull-out',m:`Pull-out deadline ${fmt(addWD(e.dispatch.d,3))}.${b?' Blocked: '+b+'.':''}`,acts:[['Release unit','release']]})}
-    else if(e.paid&&!e.dispatch)W.push({who:SELLERS[l.seller].release==='seller_ack'?l.seller:'Buyer',l,txt:`Dispatch condition: ${RELEASE_TXT[s.release]}`});
-    if(e.docs_in&&e.release&&!e.docs_out)T.push({role:'FAD',sev:'low',l,title:'Hand documents to buyer',m:'Unit already released; documents are in.',acts:[['Mark handed over','docsOut']]});
+    if(e.doas_sent&&!e.doas_back){if(s.doas==='jbap')T.push({dept:'FAD',sev:'low',l,title:'Signed DOAS: scan on receipt',m:`DOAS emailed ${fmt(e.doas_sent.d)}; scanning the transmittal QR records the date`,due:null,acts:[['Scan signed DOAS','scanDoas','pr']]});else W.push({who:'EWB',l,txt:'DOAS signing at the EWB branch (EWB confirms via link)'})}
+    if(e.seller_paid&&(s.doas==='none'||e.doas_back)&&!e.docs_in)T.push({dept:'FAD',sev:'low',l,title:'Documents from seller: scan on receipt',m:'ORCR / deed package',due:null,acts:[['Scan documents','scanDocs','pr']]});
+    if(e.dispatch&&!e.release){const p=penalty(l),b=releaseBlock(l);T.push({dept:'VWD',sev:p?'high':'med',l,title:p?`Overdue for pull-out · penalty ${peso(p)}`:'Ready for pull-out',m:b?`Blocked: ${b}`:`Pull-out deadline ${fmt(pullDeadline(l))}`,due:pullDeadline(l),acts:[['Release vehicle','release','pr']]})}
+    else if(!e.dispatch)W.push({who:s.release==='seller_ack'?l.seller:'Buyer',l,txt:`Dispatch ${RELEASE_TXT[s.release]}`});
+    if(e.docs_in&&e.release&&!e.docs_out)T.push({dept:'FAD',sev:'low',l,title:'Hand documents to buyer',m:'Unit released; documents are in',due:null,acts:[['Mark handed over','docsOut','pr']]});
   }
-  for(const x of S.exceptions)T.unshift({role:'FAD',sev:'high',l:lot(x.lot),title:'Bank payment does not match',m:`${peso(x.amt)} received from ${BUYERS[lot(x.lot).buyer]}; expected ${peso(money(lot(x.lot)).buyer)}.`,acts:[['Accept & match','match'],['Ask buyer for the balance','short']]});
-  for(const a of S.approvals.filter(a=>a.status==='pending'))T.push({role:'APPROVER',sev:'med',l:lot(a.lot),title:`${a.type} approval (${a.role})`,m:a.detail,acts:[['Approve','approve:'+a.id],['Reject','reject:'+a.id]]});
+  const run=S.lots.filter(l=>l.ev.paid&&!l.ev.seller_paid&&!l.cancel);
+  if(run.length)T.push({dept:'FAD',sev:'med',l:null,title:'Seller settlement run is ready',m:`${run.length} paid lot(s); payable and commission already computed`,due:null,acts:[['Open settlement run','gorun','pr']]});
+  for(const x of S.exceptions)T.unshift({dept:'FAD',sev:'high',l:lot(x.lot),title:'Bank payment does not match',m:`Received ${peso(x.amt)}; expected ${peso(money(lot(x.lot)).buyer)}`,due:null,acts:[['Accept & match','match','pr'],['Ask buyer for balance','short','ol']]});
   return {T,W};
 }
-const roleOk=r=>ROLE==='ALL'||ROLE===r;
+const pendingApprovals=()=>S.approvals.filter(a=>a.status==='pending');
 
 /* ===== Actions ===== */
 const ACT={
-  remindKyc:l=>log(`${label(l)}: KYC reminder sent to the buyer (SMD)`,'click'),
-  nudge:l=>log(`${label(l)}: SAAF reminder resent to ${l.seller} (SMD)`,'click'),
-  cancel:l=>{if(!confirm(`Cancel ${label(l)}? The PHP 10,000 fee is billed to the buyer automatically.`))return;
-    const waive=confirm('Ask the President to waive the fee? (OK = request waiver, Cancel = bill the fee)');
-    l.cancel={d:S.today,fee:10000,waived:false,feePaid:null};log(`${label(l)}: sale cancelled; fee ₱10,000 billed by email`,'click');
-    if(waive)S.approvals.push({id:S.seq++,type:'Fee waiver',lot:l.id,detail:`Waive ₱10,000 fee on ${label(l)}`,role:'President',status:'pending'})},
-  extend:l=>{S.approvals.push({id:S.seq++,type:'Deadline extension',lot:l.id,detail:`+2 working days for ${label(l)} (from ${fmt(deadline(l))})`,role:'FAD Manager',status:'pending'});log(`${label(l)}: extension requested (SMD)`,'click')},
-  gorun:()=>go('#/settlement'),
-  scanDoas:l=>{l.ev.doas_back=E(S.today,'scan');log(`${label(l)}: signed DOAS scanned in`,'scan')},
-  scanDocs:l=>{l.ev.docs_in=E(S.today,'scan');log(`${label(l)}: seller documents scanned in`,'scan')},
-  docsOut:l=>{l.ev.docs_out=E(S.today,'click','FAD');log(`${label(l)}: documents handed to the buyer`,'click')},
-  release:l=>{const b=releaseBlock(l);if(b){alert('Cannot release: '+b+'.');return}
-    const p=penalty(l);if(p&&!confirm(`Storage penalty ${peso(p)}. Collect it at the cashier now? (receipt is issued automatically)`))return;
-    if(p)l.penaltyPaid=p;l.ev.release=E(S.today,'click','VWD');
-    if(l.ev.docs_in&&!l.ev.docs_out)l.ev.docs_out=E(S.today,'click','VWD');
-    log(`${label(l)}: released${p?`; penalty ${peso(p)} collected`:''}`,'click')},
-  match:l=>{S.exceptions=S.exceptions.filter(x=>x.lot!==l.id);l.ev.paid=E(S.today,'click','FAD (manual match)');log(`${label(l)}: payment matched by FAD`,'click')},
-  short:l=>{S.exceptions=S.exceptions.filter(x=>x.lot!==l.id);l.pay='ok';log(`${label(l)}: balance request emailed to the buyer`,'click')},
-  rebate:l=>{const v=prompt('Rebate amount (PHP)','10000');if(!v)return;l.rebate={amt:+v,status:'pending',req:S.today};
-    S.approvals.push({id:S.seq++,type:'Rebate',lot:l.id,detail:`Rebate ${peso(+v)} on ${label(l)}`,role:'President',status:'pending'});log(`${label(l)}: rebate requested (SMD)`,'click')}
+  remindKyc:l=>log(`${label(l)} ${l.plate}: KYC reminder emailed to the buyer (SMD)`,'click'),
+  nudge:l=>log(`${label(l)} ${l.plate}: SAAF reminder resent to ${l.seller} (SMD)`,'click'),
+  cancel:l=>modal('Cancel sale',`<p>${label(l)} · ${l.plate} · ${esc(l.model)} · ${BUYERS[l.buyer]}</p>
+    <div class="fgrid"><div class="fld"><span class="lbl">Date Cancelled</span><input class="ctl" value="${fmt(S.today)}" readonly></div>
+    <div class="fld"><span class="lbl">Cancellation fee</span><input class="ctl" value="10,000.00" readonly></div>
+    <label class="chkline"><input type="checkbox" id="waive"> Request a fee waiver (goes to Approval › President)</label>
+    <div class="fld w3"><span class="lbl">Justification (required for a waiver)</span><input class="ctl" id="just"></div></div>
+    <p class="note" style="padding:0">The fee is billed to the buyer by email right away and matched from the bank file when paid. No Cancellation Billing list to tick.</p>`,
+    ()=>{const w=$('#waive').checked,j=$('#just').value.trim();if(w&&!j){alert('Justification is required for a waiver.');return false}
+      l.cancel={d:S.today,fee:10000,waived:false,feePaid:null};log(`${label(l)} ${l.plate}: sale cancelled; fee 10,000.00 billed by email`,'click');
+      if(w)S.approvals.push({id:S.seq++,type:'Fee waiver',lot:l.id,detail:`Waive 10,000.00 fee: ${j}`,role:'President',status:'pending'})},'Cancel sale','dg'),
+  extend:l=>{S.approvals.push({id:S.seq++,type:'Payment deadline extension',lot:l.id,detail:`+2 working days (from ${fmt(deadline(l))})`,role:'FAD Manager',status:'pending'});log(`${label(l)} ${l.plate}: extension requested (SMD)`,'click')},
+  gorun:()=>{location.hash='#/FAD/settlement-run'},
+  scanDoas:l=>{l.ev.doas_back=E(S.today,'scan');log(`${label(l)} ${l.plate}: signed DOAS scanned in`,'scan')},
+  scanDocs:l=>{l.ev.docs_in=E(S.today,'scan');log(`${label(l)} ${l.plate}: seller documents scanned in`,'scan')},
+  docsOut:l=>{l.ev.docs_out=E(S.today,'click','FAD');log(`${label(l)} ${l.plate}: documents handed to the buyer`,'click')},
+  release:l=>{const b=releaseBlock(l);if(b){alert('Cannot release: '+b+'.');return}const p=penalty(l);
+    modal('Release vehicle',`<p>${label(l)} · ${l.plate} · ${esc(l.model)} · ${BUYERS[l.buyer]}</p>
+      <table class="kv"><tr><td>Pull-out deadline</td><td>${fmt(pullDeadline(l))}</td></tr><tr><td>Storage penalty due</td><td class="${p?'late':''}">${peso(p)}</td></tr>
+      <tr><td>Documents</td><td>${l.ev.docs_in?'In: hand over with the unit':'Not yet received (sent later)'}</td></tr></table>
+      ${p?'<p class="note" style="padding:8px 0 0">The penalty is collected here and posted to Cashier; no separate Record payment in FAD.</p>':''}`,
+      ()=>{if(p)l.penaltyPaid=p;l.ev.release=E(S.today,'click','VWD');if(l.ev.docs_in&&!l.ev.docs_out)l.ev.docs_out=E(S.today,'click','VWD');
+        log(`${label(l)} ${l.plate}: released${p?`; penalty ${peso(p)} collected`:''}`,'click')},p?'Collect penalty & release':'Release','pr')},
+  match:l=>{S.exceptions=S.exceptions.filter(x=>x.lot!==l.id);l.ev.paid=E(S.today,'click','FAD (manual match)');log(`${label(l)} ${l.plate}: payment matched by FAD`,'click')},
+  short:l=>{S.exceptions=S.exceptions.filter(x=>x.lot!==l.id);l.pay='ok';log(`${label(l)} ${l.plate}: balance request emailed to the buyer`,'click')},
+  rebate:l=>modal('Request rebate',`<p>${label(l)} · ${l.plate} · Highest offer ${peso(l.price)}</p><div class="fld"><span class="lbl">Rebate</span><input class="ctl" id="reb" value="10000"></div>
+    <p class="note" style="padding:8px 0 0">Goes to Approval › President. The BAAF waits for the decision automatically.</p>`,
+    ()=>{const v=+$('#reb').value;if(!(v>0)){alert('Type an amount.');return false}l.rebate={amt:v,status:'pending',req:S.today};
+      S.approvals.push({id:S.seq++,type:'Rebate',lot:l.id,detail:`Rebate ${peso(v)} requested by SMD`,role:'President',status:'pending'});log(`${label(l)} ${l.plate}: rebate requested (SMD)`,'click')},'Send for approval','pr'),
+  runApprove:()=>{const R=S.lots.filter(l=>l.ev.paid&&!l.ev.seller_paid&&!l.cancel);R.forEach(l=>{l.ev.seller_paid=E(S.today,'click','FAD Manager')});log(`Settlement run approved: ${R.length} lot(s) paid to sellers`,'click')}
 };
 function decide(id,ok){const a=S.approvals.find(a=>a.id===+id),l=lot(a.lot);
-  if(!ok&&!prompt('Reason for rejecting'))return;a.status=ok?'approved':'rejected';
+  if(!ok){const r=prompt('Reason for rejecting');if(!r)return;a.reason=r}
+  a.status=ok?'approved':'rejected';a.at=S.today;
   if(a.type==='Rebate'){l.rebate.status=a.status;l.ev.rebate=E(S.today,'click','President')}
-  if(a.type==='Deadline extension'&&ok)l.deadlineOverride=addWD(deadline(l),2);
+  if(a.type==='Payment deadline extension'&&ok)l.deadlineOverride=addWD(deadline(l),2);
   if(a.type==='Fee waiver'&&ok){l.cancel.waived=true;l.cancel.fee=0}
-  log(`${label(l)}: ${a.type} ${a.status} (${a.role})`,'click')}
+  log(`${label(l)} ${l.plate}: ${a.type} ${a.status} (${a.role})`,'click')}
 const SIM={
-  bank:()=>{let n=0;for(const l of S.lots){
-      if(l.cancel&&l.pay==='fee'&&!l.cancel.feePaid&&!l.cancel.waived){l.cancel.feePaid=S.today;n++;log(`${label(l)}: cancellation fee matched from the bank file`);continue}
+  bank:()=>{const rows=[];for(const l of S.lots){
+      if(l.cancel&&l.pay==='fee'&&!l.cancel.feePaid&&!l.cancel.waived){l.cancel.feePaid=S.today;rows.push([l,10000,'Cancellation fee matched']);log(`${label(l)} ${l.plate}: cancellation fee matched from the bank file`);continue}
       if(l.cancel||!l.ev.baaf||l.ev.paid)continue;
-      if(l.pay==='ok'){l.ev.paid=E(S.today,'auto','System (bank match)');n++;log(`${label(l)}: buyer payment matched from the bank file`)}
-      else if(l.pay==='short'&&!S.exceptions.some(x=>x.lot===l.id)){S.exceptions.push({lot:l.id,amt:money(l).buyer-5000});log(`${label(l)}: payment short by ₱5,000; sent to FAD as an exception`)}}
-    if(!n&&!S.exceptions.length)log('Bank file imported: nothing new to match')},
+      if(l.pay==='ok'){l.ev.paid=E(S.today,'auto','System (bank match)');rows.push([l,money(l).buyer,'Matched']);log(`${label(l)} ${l.plate}: buyer payment matched from the bank file`)}
+      else if(l.pay==='short'&&!S.exceptions.some(x=>x.lot===l.id)){const a=money(l).buyer-5000;S.exceptions.push({lot:l.id,amt:a});rows.push([l,a,'Short: sent to FAD']);log(`${label(l)} ${l.plate}: payment short by 5,000.00; sent to FAD › My Tasks`)}}
+    S.imports.unshift({d:S.today,file:`BDO_${S.today.replace(/-/g,'')}.csv`,rows});if(!rows.length)log('Bank file imported: nothing new to match')},
   seller:()=>{const l=S.lots.find(l=>!l.cancel&&l.ev.saaf_sent&&!l.ev.saaf_ok)||S.lots.find(l=>l.ev.seller_paid&&!l.ev.seller_ack)||S.lots.find(l=>SELLERS[l.seller].doas==='branch'&&l.ev.doas_sent&&!l.ev.doas_back);
     if(!l)return log('No email is waiting for a seller');
-    if(!l.ev.saaf_ok){l.ev.saaf_ok=E(S.today,'link',`${l.seller} (link)`);log(`${label(l)}: ${l.seller} approved the SAAF from the email link`,'link')}
-    else if(!l.ev.seller_ack&&l.ev.seller_paid){l.ev.seller_ack=E(S.today,'link',`${l.seller} (link)`);log(`${label(l)}: ${l.seller} acknowledged payment from the email link`,'link')}
-    else{l.ev.doas_back=E(S.today,'link','EWB (link)');log(`${label(l)}: EWB confirmed the DOAS was signed at the branch`,'link')}},
-  kyc:()=>{const l=S.lots.find(l=>!l.ev.kyc);if(!l)return log('No buyer is waiting for KYC');l.ev.kyc=E(S.today,'link','Buyer (portal)');log(`${label(l)}: buyer finished KYC in the portal`,'link')},
-  day:()=>{S.today=addWD(S.today,1);log(`— New working day: ${fmt(S.today)} —`)},
-  reset:()=>{S=seed();runAuto()}
+    if(!l.ev.saaf_ok){l.ev.saaf_ok=E(S.today,'link',`${l.seller} (link)`);log(`${label(l)} ${l.plate}: ${l.seller} approved the SAAF from the email`,'link')}
+    else if(!l.ev.seller_ack&&l.ev.seller_paid){l.ev.seller_ack=E(S.today,'link',`${l.seller} (link)`);log(`${label(l)} ${l.plate}: ${l.seller} acknowledged payment from the email`,'link')}
+    else{l.ev.doas_back=E(S.today,'link','EWB (link)');log(`${label(l)} ${l.plate}: EWB confirmed the DOAS was signed at the branch`,'link')}},
+  kyc:()=>{const l=S.lots.find(l=>!l.ev.kyc);if(!l)return log('No buyer is waiting for KYC');l.ev.kyc=E(S.today,'link','Buyer (portal)');log(`${label(l)} ${l.plate}: buyer finished KYC in the portal`,'link')},
+  day:()=>{S.today=addWD(S.today,1);log(`New working day: ${fmt(S.today)}`)},
+  reset:()=>{S=seed();runAuto();toastQ=[]}
 };
 
-/* ===== Views ===== */
-const chip=src=>`<span class="chip c-${src}">${SRC[src]}</span>`;
-function stepBox(l,k,lab,cur){const e=l.ev[k];return `<div class="step ${e?'done':cur?'cur':''}"><div class="h">${lab||EV[k]}</div><div class="d">${e?`${fmt(e.d)} · ${esc(e.by)} ${chip(e.src)}`:cur?'next':'—'}</div></div>`}
-function lotLink(l){return l?`<a class="lk" href="#/lot/${l.id}">${label(l)}</a>`:''}
-function stClass(st){return st.k==='closed'?'ok':/overdue|fee unpaid/.test(st.t)?'bad':st.k==='after'?'w':''}
+/* ===== UI helpers ===== */
+const chip=src=>`<span class="src ${src}">${SRC[src]}</span>`;
+const unitLink=l=>l?`<a href="#/unit/${l.id}">${l.plate}</a>`:'';
+const custLink=l=>`<a href="#/customer/${l.buyer}">${BUYERS[l.buyer]}</a>`;
+const stHtml=l=>{const s=stage(l);return `<span class="st ${s.c}">${s.t}</span>`};
+const th=h=>`<thead><tr>${h.map(x=>`<th><span class="hb">${x}</span></th>`).join('')}</tr></thead>`;
+const head=(crumbs,title,rule,acts=['View'])=>`<nav class="crumb"><a href="#/">Home</a>›${crumbs.map(c=>`<span>${c}</span>›`).join('')}<b>${esc(title)}</b></nav>
+  <div class="hrow"><h1>${esc(title)}</h1><div class="acts">Allowed actions&nbsp;${acts.map(a=>`<span class="pill ${a==='Update'?'u':''}">${a}</span>`).join('')}</div></div>
+  <p class="rule">${IC.info}<span>${rule}</span></p>`;
+const card=(title,n,body,tb='')=>`<section class="card"><div class="card-h"><div class="ico">${IC.table}</div>${title}${n!=null?`<span class="bdg">${n}</span>`:''}</div>${tb?`<div class="tb">${tb}</div>`:''}${body}</section>`;
+const empty=(b,t)=>`<div class="empty">${IC.inbox}<b>${b}</b>${t}</div>`;
+const btn=(t,act,cls,lid)=>`<button type="button" class="btn ${cls}" data-act="${act}" ${lid?`data-lot="${lid}"`:''}>${t}</button>`;
 
-function vTasks(){const {T,W}=tasks();const mine=T.filter(x=>roleOk(x.role));
-  const order={high:0,med:1,low:2};mine.sort((a,b)=>order[a.sev]-order[b.sev]);
-  return `<h2>My Tasks</h2><p class="sub">Only the work that needs a person, most urgent first. Everything else moves by itself. ${ROLE==='ALL'?'Pick a role in the header to see one team’s list.':''}</p>
-  ${mine.length?mine.map(x=>`<div class="card task"><div class="sev ${x.sev}"></div><div class="body">
-    <div class="t">${esc(x.title)} ${x.l?'· '+lotLink(x.l):''} <span class="st">${x.role==='APPROVER'?'Approver':x.role}</span></div>
-    <div class="m">${esc(x.m)}</div>
-    <div>${x.acts.map(([t,a])=>`<button class="btn ${/Reject|Cancel sale/.test(t)?'o':''}" data-act="${a}" data-lot="${x.l?x.l.id:''}">${esc(t)}</button>`).join('')}</div></div></div>`).join(''):'<div class="card">Nothing needs you right now.</div>'}
-  <details><summary>Waiting on buyer, seller or approver: ${W.length} lots (no action needed; the system reminds them)</summary>
-  <table><tr><th>Lot</th><th>Waiting on</th><th>For</th></tr>${W.map(w=>`<tr><td>${lotLink(w.l)}</td><td>${esc(w.who)}</td><td>${esc(w.txt)}</td></tr>`).join('')}</table></details>`}
-
-function vLots(){return `<h2>All units</h2><p class="sub">One row per lot, whatever department you are in. The V1 prototype splits these across ~20 lists.</p>
-  <table><tr><th>Lot</th><th>Make / Model</th><th>Seller</th><th>Buyer</th><th>Stage</th><th>Waiting on</th></tr>
-  ${S.lots.map(l=>{const st=stage(l);return `<tr><td>${lotLink(l)}</td><td>${esc(l.model)}</td><td>${l.seller}</td><td>${BUYERS[l.buyer]}</td><td><span class="st ${stClass(st)}">${st.t}</span></td><td>${st.who||'—'}</td></tr>`}).join('')}</table>`}
-
-function vLot(id){const l=lot(id);if(!l)return '<p>Not found</p>';const s=SELLERS[l.seller],st=stage(l),m=money(l),e=l.ev;
-  const {T,W}=tasks();const my=T.filter(t=>t.l&&t.l.id===id),wt=W.filter(w=>w.l.id===id);
-  const main=['sold','kyc','saaf_sent','saaf_ok'].concat(l.rebate?['rebate']:[]).concat(['baaf','paid']);
-  const firstMissing=main.find(k=>!e[k]);
-  const trk=(title,keys)=>{const f=keys.find(k=>!e[k]);return `<div class="track"><h4>${title}</h4>${keys.map(k=>stepBox(l,k,null,e.paid&&k===f)).join('')}</div>`};
-  const docKeys=(s.doas==='none'?[]:['doas_sent','doas_back']).concat(['docs_in','docs_out']);
-  const canRebate=!e.baaf&&!l.rebate&&!l.cancel&&roleOk('SMD'),canCancel=!e.release&&!l.cancel&&roleOk('SMD');
-  return `<p><a class="lk" href="#/lots">← All units</a></p>
-  <h2>${label(l)} · ${esc(l.model)}</h2>
-  <p class="sub">Seller ${l.seller} (dispatch ${RELEASE_TXT[s.release]}; DOAS ${s.doas==='none'?'not used':s.doas==='branch'?'signed at seller branch':'signed at JBAP'}) · Buyer ${BUYERS[l.buyer]} (${l.buyer}) · <span class="st ${stClass(st)}">${st.t}</span></p>
-  <div class="card next ${my.length?'':'none'}"><b>${my.length?'Needs a person':'No action needed'}</b>
-    ${my.map(x=>`<div>${esc(x.title)} (${x.role==='APPROVER'?'Approver':x.role}): ${esc(x.m)} ${x.acts.map(([t,a])=>`<button class="btn" data-act="${a}" data-lot="${id}">${esc(t)}</button>`).join('')}</div>`).join('')}
-    ${wt.map(w=>`<div class="m">Waiting on ${esc(w.who)}: ${esc(w.txt)}</div>`).join('')}
-    ${!my.length&&!wt.length&&!closed(l)?'<div class="m">The system handles the next step.</div>':''}
-    <div>${canRebate?`<button class="btn o" data-act="rebate" data-lot="${id}">Request rebate</button>`:''}${canCancel?`<button class="btn o" data-act="cancel" data-lot="${id}">Cancel sale</button>`:''}</div></div>
-  ${l.cancel?`<div class="card"><b>Cancelled ${fmt(l.cancel.d)}</b> · fee ${peso(l.cancel.fee)}${l.cancel.waived?' (waived)':''} · ${l.cancel.feePaid?'fee paid '+fmt(l.cancel.feePaid):l.cancel.waived?'':'fee unpaid'}</div>`:''}
-  <div class="card"><b>Sale → payment</b><div class="steps">${main.map(k=>stepBox(l,k,null,k===firstMissing&&!l.cancel)).join('')}</div>
-  ${e.baaf&&!e.paid?`<div class="m">Payment deadline ${fmt(deadline(l))}${l.deadlineOverride?' (extended)':''}</div>`:''}</div>
-  <div class="card"><b>After payment: three tracks run in parallel</b><p class="note">In V1 these are separate lists in FAD, SMD and VWD. Here they sit on one page.</p>
-  <div class="tracks">${trk('Seller settlement',['seller_paid','comm_billed','seller_ack'])}${trk('Documents',docKeys)}${trk('Release',['dispatch','release'])}</div>
-  ${e.dispatch&&!e.release?`<p class="m">Pull-out deadline ${fmt(addWD(e.dispatch.d,3))} · penalty now ${peso(penalty(l))}</p>`:''}${l.penaltyPaid?`<p class="m">Penalty collected ${peso(l.penaltyPaid)}</p>`:''}</div>
-  <div class="grid2"><div class="card"><b>Money</b> <span class="note">(illustrative rates)</span><table>
-    <tr><td>Awarded price</td><td class="num">${peso(l.price)}</td></tr><tr><td>Notarial / transfer fee</td><td class="num">${peso(m.fee)}</td></tr>
-    ${m.reb?`<tr><td>Rebate (approved)</td><td class="num">−${peso(m.reb)}</td></tr>`:''}<tr><th>Buyer pays</th><th class="num">${peso(m.buyer)}</th></tr>
-    <tr><td>Commission 5% + VAT</td><td class="num">${peso(m.com+m.vat)}</td></tr><tr><th>Payable to seller</th><th class="num">${peso(m.payable)}</th></tr></table></div>
-  <div class="card"><b>History</b><table>${Object.entries(e).sort((a,b)=>a[1].d<b[1].d?-1:1).map(([k,v])=>`<tr><td>${fmt(v.d)}</td><td>${EV[k]}</td><td>${esc(v.by)}</td><td>${chip(v.src)}</td></tr>`).join('')}</table></div></div>`}
-
-function vApprovals(){const P=S.approvals;return `<h2>Approvals</h2><p class="sub">One inbox for rebates, fee waivers, deadline extensions and returns to seller. Approve is a button: the name and time are recorded, never typed.</p>
-  <table><tr><th>Type</th><th>Lot</th><th>Detail</th><th>Approver</th><th>Status</th><th></th></tr>
-  ${P.map(a=>`<tr><td>${a.type}</td><td>${lotLink(lot(a.lot))}</td><td>${esc(a.detail)}</td><td>${a.role}</td><td><span class="st ${a.status==='approved'?'ok':a.status==='rejected'?'bad':'w'}">${a.status}</span></td>
-  <td>${a.status==='pending'&&roleOk('APPROVER')?`<button class="btn" data-act="approve:${a.id}">Approve</button><button class="btn o" data-act="reject:${a.id}">Reject</button>`:''}</td></tr>`).join('')}</table>`}
+/* ===== Screens ===== */
+function vTasks(dept){const {T,W}=tasks();const mine=T.filter(x=>x.dept===dept),o={high:0,med:1,low:2};mine.sort((a,b)=>o[a.sev]-o[b.sev]);
+  const ww=W.filter(w=>dept==='SMD'?['Buyer','President'].includes(w.who)||SELLERS[w.who]:dept==='FAD'?/DOAS|acknowledgement|fee/i.test(w.txt):/Dispatch/.test(w.txt));
+  const rule={SMD:'Replaces SMD Pending Awarding, Unpaid, Seller Ack and For Dispatch lists. KYC, SAAF and BAAF go out by themselves; only what needs SMD shows here: buyers or sellers who do not respond, and unpaid lots past the deadline.',
+    FAD:'Replaces Pending Awarding, Unpaid, Payment Seller, Seller Acknowledgement, Vehicle Dispatch, Billing and Cancellation Billing lists. Payments are matched from the bank file, emails go out by themselves; FAD sees exceptions, the settlement run and physical documents to scan.',
+    VWD:'Replaces VWD Unreleased Unit, Unreleased Unit (Overdue) and For Dispatch. Units appear once the seller’s release condition is met; the penalty is collected in the release step.'}[dept];
+  return head([dept],'My Tasks',rule,['View','Update'])+
+  card('Tasks',mine.length,mine.length?`<div class="tw"><table>${th(['','Task','Auction No.','Lot','Plate Number','Customer Name','Seller','Due','Action'])}<tbody>
+    ${mine.map(x=>`<tr><td class="c"><span class="prio ${x.sev}"></span></td><td class="wrapcell"><b>${esc(x.title)}</b><br><span class="note" style="padding:0">${esc(x.m)}</span></td>
+    <td class="c">${x.l?x.l.auc:''}</td><td class="c">${x.l?x.l.lot:''}</td><td>${unitLink(x.l)}</td><td>${x.l?custLink(x.l):''}</td><td class="c">${x.l?x.l.seller:''}</td>
+    <td class="c ${x.due&&x.due<S.today?'late':''}">${fmt(x.due)}</td><td>${x.acts.map(([t,a,c])=>btn(t,a,c,x.l?.id)).join(' ')}</td></tr>`).join('')}</tbody></table></div><div class="pg"><span>Most urgent first</span></div>`
+    :empty('Nothing needs you right now','Everything else moves by itself.'))+
+  `<section class="card"><details class="wait"><summary>Waiting on buyer, seller or approver: <b>${ww.length}</b> lot(s). No action needed; the system sends the reminders.</summary>
+  <div class="tw"><table>${th(['Plate Number','Customer Name','Seller','Waiting on','For'])}<tbody>${ww.map(w=>`<tr><td>${unitLink(w.l)}</td><td>${custLink(w.l)}</td><td class="c">${w.l.seller}</td><td>${esc(w.who)}</td><td>${esc(w.txt)}</td></tr>`).join('')}</tbody></table></div><div class="pg"></div></details></section>`}
 
 function vSettlement(){const R=S.lots.filter(l=>l.ev.paid&&!l.ev.seller_paid&&!l.cancel);const by={};R.forEach(l=>(by[l.seller]=by[l.seller]||[]).push(l));
-  return `<h2>Seller settlement run</h2><p class="sub">Replaces Payment Seller + print + typed date, and Commission Billing ticks. Paid lots are grouped per seller with every amount computed. One approval pays and bills them all.</p>
-  ${Object.keys(by).length?Object.entries(by).map(([s,ls])=>`<div class="card"><b>${s}</b> · ${ls.length} lot(s)<table><tr><th>Lot</th><th>Buyer paid</th><th class="num">Payable to seller</th><th class="num">Commission + VAT</th></tr>
-  ${ls.map(l=>`<tr><td>${lotLink(l)}</td><td>${fmt(l.ev.paid.d)}</td><td class="num">${peso(money(l).payable)}</td><td class="num">${peso(money(l).com+money(l).vat)}</td></tr>`).join('')}</table></div>`).join('')+
-  (roleOk('FAD')?`<button class="btn" data-act="runApprove">Approve run: pay sellers and bill commission</button>`:'<p class="note">Switch to FAD to approve.</p>'):'<div class="card">No paid lot is waiting for settlement.</div>'}`}
+  return head(['FAD'],'Settlement Run','Replaces Payment Seller (tick, type the payment date, print) and Billing › Commission Billing (tick, type NOAH no., print). Lots the buyer has paid are grouped per seller with every amount computed. One approval pays the sellers and generates the commission billings.',['View','Update'])+
+  (R.length?Object.entries(by).map(([s,ls])=>card(`${s} · Payable to Seller`,ls.length,`<div class="tw"><table>${th(['Auction No.','Lot','Plate Number','Customer Name','Buyer Paid','Awarded Price','Transfer Fee','Commission + VAT','Payable to Seller'])}<tbody>
+    ${ls.map(l=>{const m=money(l);return `<tr><td class="c">${l.auc}</td><td class="c">${l.lot}</td><td>${unitLink(l)}</td><td>${custLink(l)}</td><td class="c">${fmt(l.ev.paid.d)} ${chip(l.ev.paid.src)}</td><td class="r">${peso(l.price)}</td><td class="r">${peso(m.fee)}</td><td class="r">${peso(m.com+m.vat)}</td><td class="r"><b>${peso(m.payable)}</b></td></tr>`}).join('')}</tbody></table></div><div class="pg"></div>`)).join('')+
+    `<section class="card"><div class="tb">${btn('Approve run: pay sellers &amp; generate commission billing','runApprove','pr')}<span>Payment to Seller date = approval date (recorded, not typed). Seller acknowledges by email link.</span></div></section>`
+  :card('Payable to Seller',0,empty('No paid lot is waiting','Lots appear here when the buyer payment is matched.')))}
 
-function vPipeline(){const st=S.lots.map(stage);const cnt=k=>st.filter(s=>s.k===k).length;
-  const rows=[['kyc','Buyer KYC'],['saaf','Seller approval (SAAF)'],['rebate','Rebate decision'],['pay','Buyer payment'],['after','Paid: settlement / docs / release'],['closed','Closed'],['cancelled','Cancelled']];
+function vDocs(){const R=S.lots.filter(l=>l.ev.paid&&!l.cancel);
+  const cell=(l,k,act)=>{const e=l.ev[k];if(e)return `${fmt(e.d)} ${chip(e.src)}`;if(k.startsWith('doas')&&SELLERS[l.seller].doas==='none')return '<span class="note" style="padding:0">n/a</span>';return act?btn('Scan',act,'ol',l.id):''};
+  return head(['FAD'],'Documents','Replaces Document Monitoring. No date is typed: the DOAS email records Receipt of DOAS, a scan of the transmittal QR records each physical receipt, and the release step records Documents to Buyer. Change date (with a reason) stays for corrections.',['View','Update'])+
+  card('Documents list',R.length,`<div class="tw"><table>${th(['Auction No.','Lot','Plate Number','Customer Name','Seller','DOAS Sent','Signed DOAS','Docs from Seller','Docs to Buyer','Status'])}<tbody>
+  ${R.map(l=>{const e=l.ev,st=!e.doas_back&&SELLERS[l.seller].doas!=='none'?'Pending DOAS':!e.docs_in?'Pending Documents':!e.docs_out?'For Releasing':'Complete';
+    return `<tr><td class="c">${l.auc}</td><td class="c">${l.lot}</td><td>${unitLink(l)}</td><td>${custLink(l)}</td><td class="c">${l.seller}</td>
+    <td class="c">${cell(l,'doas_sent')}</td><td class="c">${cell(l,'doas_back',SELLERS[l.seller].doas==='jbap'?'scanDoas':null)}</td><td class="c">${cell(l,'docs_in',e.seller_paid?'scanDocs':null)}</td><td class="c">${cell(l,'docs_out',e.docs_in&&e.release?'docsOut':null)}</td>
+    <td class="c"><span class="st ${st==='Complete'?'sold':'up'}">${st}</span></td></tr>`}).join('')}</tbody></table></div><div class="pg"></div>`)}
+
+function vApprovals(){const P=S.approvals;return head(['Approval'],'Approvals','One inbox for every approval: rebate and fee waiver (President), payment deadline and pull-out extensions (FAD Manager), return to seller (SMD and FAD Managers). Approve is a button; the user and time are recorded, never typed.',['View','Update'])+
+  card('Approval list',pendingApprovals().length,`<div class="tw"><table>${th(['Type','Auction No.','Lot','Plate Number','Customer Name','Detail','Approver','Status','Decided','Action'])}<tbody>
+  ${P.map(a=>{const l=lot(a.lot);return `<tr><td>${a.type}</td><td class="c">${l.auc}</td><td class="c">${l.lot}</td><td>${unitLink(l)}</td><td>${custLink(l)}</td><td class="wrapcell">${esc(a.detail)}${a.reason?`<br><span class="late">Reason: ${esc(a.reason)}</span>`:''}</td><td>${a.role}</td>
+  <td class="c"><span class="st ${a.status==='approved'?'sold':a.status==='rejected'?'cx':'up'}">${a.status}</span></td><td class="c">${fmt(a.at)}</td>
+  <td>${a.status==='pending'?btn('Approve','approve:'+a.id,'pr')+' '+btn('Reject','reject:'+a.id,'ol'):''}</td></tr>`}).join('')}</tbody></table></div><div class="pg"></div>`)}
+
+function vResultPrice(){return head(['Auction'],'Result Price','Existing CDMS screen. V2 changes: KYC Status is read from the buyer’s KYC in the portal (no manual switch); Request rebate sends the rebate to the President; Cancel sale bills the fee automatically. Everything after this moves by itself.',['View','Update'])+
+  card('Result Price list',S.lots.length,`<div class="tw"><table>${th(['Auction No.','Lot No.','Model','Plate Number','Seller','Buyer ID','Buyer Name','Highest Offer Price','KYC Status','Rebate','Auction Status','Action'])}<tbody>
+  ${S.lots.map(l=>`<tr><td class="c">${l.auc}</td><td class="c">${l.lot}</td><td>${esc(l.model)}</td><td>${unitLink(l)}</td><td class="c">${l.seller}</td><td class="c">${l.buyer}</td><td>${custLink(l)}</td><td class="r">${peso(l.price)}</td>
+  <td class="c">${l.ev.kyc?`<span class="st sold">Approved</span> ${chip(l.ev.kyc.src)}`:'<span class="st ns">Pending</span>'}</td>
+  <td class="r">${l.rebate?`${peso(l.rebate.amt)} <span class="st ${l.rebate.status==='approved'?'sold':l.rebate.status==='rejected'?'cx':'up'}">${l.rebate.status}</span>`:(!l.ev.baaf&&!l.cancel?btn('Request','rebate','ol',l.id):'')}</td>
+  <td class="c"><span class="st ${l.cancel?'cx':'sold'}">${l.cancel?'CANCELLED':'SOLD'}</span></td><td>${!l.cancel&&!l.ev.release?btn('Cancel sale','cancel','gh',l.id):''}</td></tr>`).join('')}</tbody></table></div><div class="pg"></div>`)}
+
+function vBank(){const I=S.imports[0];return head(['Payment'],'Bank Transfer','Existing CDMS screen (import of the bank statement CSV). V2 adds the matching: each credit is matched to a buyer’s awarded lots or cancellation fee by reference and amount. Matched lots become Paid by themselves; anything else goes to FAD › My Tasks. To check: whether JBAP PH uses this module today and which reference buyers put on their transfers.',['View','Update'])+
+  `<section class="card"><div class="tb">${btn('Import bank statement (CSV)','sim:bank','pr')}<span>${I?`Last import: ${I.file} on ${fmt(I.d)}`:'No file imported in this demo yet'}</span></div></section>`+
+  (I?card('Matching result',I.rows.length,I.rows.length?`<div class="tw"><table>${th(['Plate Number','Customer Name','Auction No.','Lot','Amount','Result'])}<tbody>${I.rows.map(([l,a,r])=>`<tr><td>${unitLink(l)}</td><td>${custLink(l)}</td><td class="c">${l.auc}</td><td class="c">${l.lot}</td><td class="r">${peso(a)}</td><td><span class="st ${/Short/.test(r)?'cx':'sold'}">${r}</span></td></tr>`).join('')}</tbody></table></div><div class="pg"></div>`:empty('Nothing new to match','')):'')}
+
+function vPipeline(){const st=S.lots.map(stage),cnt=k=>st.filter(s=>s.k===k).length;
+  const rows=[['kyc','Waiting KYC'],['saaf','Waiting seller (SAAF)'],['rebate','Rebate for approval'],['pay','Unpaid'],['after','Paid: settlement / documents / release'],['closed','Complete'],['cancelled','Cancelled']];
   const max=Math.max(...rows.map(r=>cnt(r[0])),1);
-  const overdue=S.lots.filter(l=>!l.cancel&&l.ev.baaf&&!l.ev.paid&&S.today>deadline(l)).length;
-  const pen=S.lots.reduce((a,l)=>a+penalty(l),0);
+  const overdue=S.lots.filter(l=>!l.cancel&&l.ev.baaf&&!l.ev.paid&&S.today>deadline(l)).length,pen=S.lots.reduce((a,l)=>a+penalty(l),0);
   const recv=S.lots.filter(l=>!l.cancel&&l.ev.baaf&&!l.ev.paid).reduce((a,l)=>a+money(l).buyer,0);
-  const pay=S.lots.filter(l=>!l.cancel&&l.ev.paid&&!l.ev.seller_paid).reduce((a,l)=>a+money(l).payable,0);
-  const done=S.lots.filter(l=>l.ev.release);const avg=done.length?(done.reduce((a,l)=>a+wdBetween(l.ev.sold.d,l.ev.release.d),0)/done.length).toFixed(1):'—';
-  return `<h2>Pipeline</h2><p class="sub">Where every unit is, from the same data as My Tasks. Replaces most of the 7 Report screens for day-to-day use.</p>
-  <div class="kpis"><div class="kpi"><div class="v">${overdue}</div><div class="l">Unpaid after deadline</div></div>
-  <div class="kpi"><div class="v">${peso(pen)}</div><div class="l">Storage penalty accruing</div></div>
-  <div class="kpi"><div class="v">${peso(recv)}</div><div class="l">Due from buyers</div></div>
-  <div class="kpi"><div class="v">${avg}</div><div class="l">Working days sale → release</div></div></div>
-  <div class="card">${rows.map(([k,t])=>`<div class="bar"><span class="lab">${t}</span><span class="b" style="width:${cnt(k)/max*300}px"></span><span class="c">${cnt(k)}</span></div>`).join('')}</div>
-  <div class="card">Payable to sellers (paid, not settled): <b>${peso(pay)}</b></div>`}
+  const done=S.lots.filter(l=>l.ev.release),avg=done.length?(done.reduce((a,l)=>a+wdBetween(l.ev.sold.d,l.ev.release.d),0)/done.length).toFixed(1):'—';
+  return head(['Report'],'Pipeline','Every unit after the auction, by stage, from the same data as My Tasks. Click a plate to open the unit. The formal reports JBAP sends out (Rebate Monitoring, Liability to Seller, Inventory Summary, Cancellation Monitoring) stay as in V1.')+
+  `<div class="kpis"><div class="kpi"><div class="v">${overdue}</div><div class="l">Unpaid after deadline</div></div><div class="kpi"><div class="v">${peso(pen)}</div><div class="l">Storage penalty accruing</div></div>
+  <div class="kpi"><div class="v">${peso(recv)}</div><div class="l">Due from buyers</div></div><div class="kpi"><div class="v">${avg}</div><div class="l">Working days sale → release</div></div></div>`+
+  card('Units by stage',null,`<div class="bars">${rows.map(([k,t])=>`<div class="bar"><span class="lab">${t}</span><span class="b" style="width:${cnt(k)/max*320}px"></span><span>${cnt(k)}</span></div>`).join('')}</div>`)+
+  card('All units',S.lots.length,`<div class="tw"><table>${th(['Auction No.','Lot','Plate Number','Make/Model','Seller','Customer Name','Stage'])}<tbody>${S.lots.map(l=>`<tr><td class="c">${l.auc}</td><td class="c">${l.lot}</td><td>${unitLink(l)}</td><td>${esc(l.model)}</td><td class="c">${l.seller}</td><td>${custLink(l)}</td><td>${stHtml(l)}</td></tr>`).join('')}</tbody></table></div><div class="pg"></div>`)}
+
+function vCustomers(){const ids=[...new Set(S.lots.map(l=>l.buyer))];
+  return head(['Customer'],'Customer Inquiry','Existing screen. The customer page tabs (Sold, Pending Awarding, Unpaid, Vehicle for release, Pending DOAS, Documents for release, Cancellation) read the same stages as the units, so the buyer portal (Transaction History) can show exactly the same thing.')+
+  card('Customer list',ids.length,`<div class="tw"><table>${th(['Buyer ID','Customer Name','Lots','Unpaid','For release','Open tasks'])}<tbody>${ids.map(b=>{const ls=S.lots.filter(l=>l.buyer===b),{T}=tasks();
+    return `<tr><td class="c">${b}</td><td><a href="#/customer/${b}">${BUYERS[b]}</a></td><td class="c">${ls.length}</td><td class="c">${ls.filter(l=>stage(l).k==='pay').length}</td><td class="c">${ls.filter(l=>l.ev.dispatch&&!l.ev.release).length}</td><td class="c">${T.filter(t=>t.l&&t.l.buyer===b).length}</td></tr>`}).join('')}</tbody></table></div><div class="pg"></div>`)}
+function vCustomer(b){const ls=S.lots.filter(l=>l.buyer===b);
+  return head(['Customer','Customer Inquiry'],BUYERS[b]||b,`Buyer ID ${b}. Same lots and stages as the units; the buyer portal reads this view.`)+
+  card('Lots',ls.length,`<div class="tw"><table>${th(['Auction No.','Lot','Plate Number','Make/Model','Seller','Stage','Deadline','Penalty'])}<tbody>${ls.map(l=>`<tr><td class="c">${l.auc}</td><td class="c">${l.lot}</td><td>${unitLink(l)}</td><td>${esc(l.model)}</td><td class="c">${l.seller}</td><td>${stHtml(l)}</td>
+  <td class="c">${!l.ev.paid&&l.ev.baaf&&!l.cancel?fmt(deadline(l)):l.ev.dispatch&&!l.ev.release?fmt(pullDeadline(l)):''}</td><td class="r">${penalty(l)?peso(penalty(l)):''}</td></tr>`).join('')}</tbody></table></div><div class="pg"></div>`)}
+
+function vUnit(id){const l=lot(id);if(!l)return empty('Unit not found','');const s=SELLERS[l.seller],m=money(l),e=l.ev;
+  const {T,W}=tasks(),my=T.filter(t=>t.l&&t.l.id===id),wt=W.filter(w=>w.l.id===id);
+  const main=['sold','kyc','saaf_sent','saaf_ok'].concat(l.rebate?['rebate']:[]).concat(['baaf','paid']),fm=main.find(k=>!e[k]);
+  const box=(k,cur)=>{const x=e[k];return `<div class="step ${x?'done':cur?'cur':''}"><div class="h">${EV[k]}</div><div class="d">${x?`${fmt(x.d)} · ${esc(x.by)} ${chip(x.src)}`:cur?'next':'—'}</div></div>`};
+  const trk=(t,keys)=>{const f=keys.find(k=>!e[k]);return `<div><h4>${t}</h4>${keys.map(k=>box(k,e.paid&&k===f)).join('')}</div>`};
+  const docKeys=(s.doas==='none'?[]:['doas_sent','doas_back']).concat(['docs_in','docs_out']);
+  return head(['Unit'],`${label(l)} · ${l.plate}`,`${esc(l.model)} · Seller ${l.seller} (dispatch ${RELEASE_TXT[s.release]}; DOAS ${s.doas==='none'?'not used':s.doas==='branch'?'signed at the seller’s branch':'signed at JBAP'}) · Buyer ${custLink(l)} (${l.buyer}) · ${stHtml(l)}. One page for every department; in V1 this lot sits in up to 9 lists.`,['View','Update'])+
+  `<section class="card"><div class="card-h"><div class="ico">${IC.task}</div>Next action</div><div class="nextbox">
+   ${my.map(x=>`<div class="row"><span class="prio ${x.sev}"></span><b>${esc(x.title)}</b> <span class="st up">${x.dept}</span> <span class="note" style="padding:0">${esc(x.m)}</span> ${x.acts.map(([t,a,c])=>btn(t,a,c,id)).join(' ')}</div>`).join('')}
+   ${wt.map(w=>`<div class="row">Waiting on <b>${esc(w.who)}</b>: ${esc(w.txt)}</div>`).join('')}
+   ${!my.length&&!wt.length?`<div class="row">${closed(l)?'Complete. Nothing left to do.':'No action needed: the system handles the next step.'}</div>`:''}
+   <div class="row">${!e.baaf&&!l.rebate&&!l.cancel?btn('Request rebate','rebate','ol',id):''}${!e.release&&!l.cancel?btn('Cancel sale','cancel','gh',id):''}</div></div></section>`+
+  (l.cancel?card('Cancellation',null,`<div class="nextbox">Cancelled ${fmt(l.cancel.d)} · fee ${peso(l.cancel.fee)}${l.cancel.waived?' (waived)':''} · ${l.cancel.feePaid?'fee paid '+fmt(l.cancel.feePaid):l.cancel.waived?'':'fee unpaid'}</div>`):'')+
+  card('Sale → payment',null,`<div class="steps">${main.map(k=>box(k,k===fm&&!l.cancel)).join('')}</div>${e.baaf&&!e.paid&&!l.cancel?`<p class="note">Payment deadline ${fmt(deadline(l))}${l.deadlineOverride?' (extended)':''}</p>`:''}`)+
+  card('After payment: three tracks in parallel',null,`<div class="tracks">${trk('Seller settlement',['seller_paid','comm_billed','seller_ack'])}${trk('Documents',docKeys)}${trk('Release',['dispatch','release'])}</div>
+   ${e.dispatch&&!e.release?`<p class="note">Pull-out deadline ${fmt(pullDeadline(l))} · storage penalty now <span class="${penalty(l)?'late':''}">${peso(penalty(l))}</span></p>`:''}${l.penaltyPaid?`<p class="note">Penalty collected ${peso(l.penaltyPaid)}</p>`:''}`)+
+  `<div class="two">`+card('Money',null,`<div class="tw" style="padding:8px 16px 12px"><table class="kv"><tbody>
+   <tr><td>Awarded Price</td><td>${peso(l.price)}</td></tr><tr><td>Transfer / Notarial Fee</td><td>${peso(m.fee)}</td></tr>${m.reb?`<tr><td>Rebate (approved)</td><td>−${peso(m.reb)}</td></tr>`:''}
+   <tr><td><b>Buyer pays</b></td><td><b>${peso(m.buyer)}</b></td></tr><tr><td>Commission 5% + VAT (illustrative)</td><td>${peso(m.com+m.vat)}</td></tr><tr><td><b>Payable to Seller</b></td><td><b>${peso(m.payable)}</b></td></tr></tbody></table></div>`)+
+  card('History',Object.keys(e).length,`<div class="tw" style="padding-bottom:12px"><table>${th(['Date','Event','By','Recorded'])}<tbody>${Object.entries(e).sort((a,b)=>a[1].d<b[1].d?-1:1).map(([k,v])=>`<tr><td class="c">${fmt(v.d)}</td><td>${EV[k]}</td><td>${esc(v.by)}</td><td class="c">${chip(v.src)}</td></tr>`).join('')}</tbody></table></div>`)+`</div>`}
+
+function vLog(){return head([],'Log Activity','Every event, automatic or by a user, newest first. Per unit it also shows on the unit page (History).')+
+  card('Activity',S.feed.length,S.feed.length?`<div class="tw"><table>${th(['Date','Recorded','Activity'])}<tbody>${S.feed.map(f=>`<tr><td class="c">${fmt(f.d)}</td><td class="c">${chip(f.src)}</td><td class="wrapcell">${esc(f.msg)}</td></tr>`).join('')}</tbody></table></div><div class="pg"></div>`:empty('No activity yet',''))}
+
+function vHome(){const {T}=tasks(),c=d=>T.filter(t=>t.dept===d).length;
+  const hc=(d,items)=>`<div class="hcard"><div class="card-h"><div class="ico">${deptSvg(d==='Approval'?'APP':d)}</div><span style="font-family:var(--font-head);font-size:20px">${d}</span></div><ul>${items.map(([t,h,n])=>`<li><a href="${h}">${t}${n!=null?`<span class="cnt">${n}</span>`:''}</a></li>`).join('')}</ul></div>`;
+  return `<div class="home"><h1>Post-Auction · V2 concept</h1><p class="lead">The same CDMS, with the post-auction work as one flow. Each department opens <b>My Tasks</b>: only what needs a person, most urgent first. Emails, awarding, payment matching, dispatch notices and billings run by themselves; every date is recorded by the event that caused it. Use <b>Demo events</b> in the header to see lots move, and <b>V1 vs V2</b> for the comparison with the current prototype.</p>
+  <div class="hgrid">${hc('SMD',[['My Tasks','#/SMD/my-tasks',c('SMD')],['Auction › Result Price','#/Auction/result-price',null],['Customer Inquiry','#/Customer/customer-inquiry',null]])}
+  ${hc('FAD',[['My Tasks','#/FAD/my-tasks',c('FAD')],['Settlement Run','#/FAD/settlement-run',S.lots.filter(l=>l.ev.paid&&!l.ev.seller_paid&&!l.cancel).length],['Documents','#/FAD/documents',null],['Payment › Bank Transfer','#/Payment/bank-transfer',null]])}
+  ${hc('VWD',[['My Tasks','#/VWD/my-tasks',c('VWD')]])}
+  ${hc('Approval',[['Approvals','#/Approval/approvals',pendingApprovals().length]])}</div></div>`}
 
 function vCompare(){const R=[
-  ['Result & KYC','Auction › Result Price: switch KYC Pending/Approved by hand','KYC status comes from the buyer’s KYC in the portal','1 switch','0'],
-  ['Seller approval (SAAF)','SMD › SAAF: tick For SAAF › Email SAAF; later type Seller Approved date','Sent by the system when KYC is approved; seller clicks Approve in the email','tick + send + typed date','0 (seller clicks)'],
-  ['Rebate','Result Price: type rebate › Update; President decides in Approval','Same (already a real approval in V1); BAAF waits for it automatically','2','2'],
+  ['Result & KYC','Auction › Result Price: KYC switched Pending/Approved by hand','KYC read from the buyer’s KYC in the portal','1 switch','0'],
+  ['Seller approval (SAAF)','SMD › SAAF: tick For SAAF › Email; later type Seller Approved','Sent by the system when KYC is approved; seller clicks Approve in the email','tick + send + typed date','0 (seller clicks)'],
+  ['Rebate','Result Price: type rebate › Update; President decides in Approval','Same, in one Approval inbox; the BAAF waits for the decision automatically','2','2'],
   ['Awarding (BAAF)','FAD › Pending Awarding: tick For BAAF, check Awarding Date › Email BAAF','Sent by the system once KYC, SAAF and rebate are clear; Awarding Date = send time','tick + send','0'],
-  ['Buyer payment','FAD › Unpaid: type Buyer Paid › Save','Matched from the bank file (or payment module); only mismatches reach FAD','typed date','0 (exceptions only)'],
-  ['Unpaid after deadline','Someone notices on Unpaid; cancellation in Result Price','Reminder D-1 automatic; overdue lot appears as a task with Cancel / Extend','find + 4 fields','1 decision'],
-  ['Payment to seller','FAD › Payment Seller: tick Print › dialog date › print','Settlement run per seller, one approval','tick + typed date','1 per run'],
-  ['Seller acknowledgement','FAD › Seller Acknowledgement: type date','Seller clicks acknowledge in the email','typed date','0 (seller clicks)'],
-  ['Commission billing','FAD › Billing: tick Print? › type NOAH no. and date › print','Generated with the settlement run (NOAH integration to be checked)','tick + 2 typed fields','0'],
-  ['Dispatch','FAD › Vehicle Dispatch: tick For Dispatch Email? › type Dispatch Date','Notice sent the moment the seller’s condition is met','tick + typed date','0'],
-  ['DOAS & documents','FAD › Document Monitoring: tick DOAS email; type up to 5 receipt dates','DOAS email automatic; physical receipts recorded by scanning the transmittal QR','tick + up to 5 typed dates','2 scans'],
-  ['Release & penalty','FAD › Unreleased: Record payment of penalty; VWD › Release vehicle','VWD releases; penalty shown and collected in the same step','2 screens','1'],
-  ['Approvals (RTS, extension)','Type “SMD/FAD Manager Approved” dates; type approver name','Approve button in one inbox; user and time recorded','typed dates / names','1 click each'],
-  ['Where is this unit?','Search up to ~20 lists in FAD, SMD and VWD','One Unit page with timeline, money and history','many screens','1 page']];
-  return `<h2>V1 (current prototype) vs V2 (this concept)</h2><p class="sub">Per step of one lot’s life. “Touches” = what a JBAP user does by hand. V2 numbers are design targets that depend on the checks listed in README.md.</p>
-  <div class="kpis"><div class="kpi"><div class="v">39 → ~6</div><div class="l">Screens → work areas</div></div><div class="kpi"><div class="v">21 → 0</div><div class="l">Typed date fields (2 become scans)</div></div>
-  <div class="kpi"><div class="v">9 → 0</div><div class="l">“For …?” tick columns</div></div><div class="kpi"><div class="v">~15 → ~4</div><div class="l">Touches per normal lot</div></div></div>
-  <div class="legend">${Object.keys(SRC).map(chip).join('')}<span class="note">how each date is recorded in V2</span></div>
-  <table><tr><th>Step</th><th>V1: how it works</th><th>V2: how it works</th><th>V1 touches</th><th>V2 touches</th></tr>
-  ${R.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join('')}</table>`}
+  ['Buyer payment','FAD › Unpaid: type Buyer Paid › Save','Payment › Bank Transfer import matches it; only mismatches reach FAD › My Tasks','typed date','0 (exceptions only)'],
+  ['Unpaid after deadline','Someone notices on Unpaid; cancel in Result Price','Reminder before the deadline is automatic; overdue lot is an SMD task with Cancel / Extend','find + dialog','1 decision'],
+  ['Payment to seller','FAD › Payment Seller: tick Print › type date › print','FAD › Settlement Run: one approval per run','tick + typed date','1 per run'],
+  ['Seller acknowledgement','FAD › Seller Acknowledgement: type date','Seller clicks Acknowledge in the email','typed date','0 (seller clicks)'],
+  ['Commission billing','FAD › Billing: tick Print? › type NOAH no. and date › print','Generated with the settlement run (NOAH integration to check)','tick + 2 typed fields','0'],
+  ['Dispatch','FAD › Vehicle Dispatch: tick For Dispatch Email? › type Dispatch Date','Notice sent when the seller’s release condition is met','tick + typed date','0'],
+  ['DOAS & documents','FAD › Document Monitoring: tick DOAS email; type up to 5 receipt dates','DOAS email automatic; physical receipts by scanning the transmittal QR','tick + up to 5 dates','2 scans'],
+  ['Release & penalty','FAD › Unreleased: Record payment; then VWD › Release vehicle','VWD › My Tasks › Release vehicle collects the penalty in the same step','2 screens','1'],
+  ['Approvals (RTS, extension)','Typed “SMD/FAD Manager Approved” dates; typed approver name','Approve button in Approval › Approvals; user and time recorded','typed dates / names','1 click each'],
+  ['Where is this unit?','Look through up to ~9 lists in FAD, SMD and VWD','One unit page: timeline, money, history','several screens','1 page']];
+  return head(['Concept'],'V1 vs V2','Per step of one lot’s life. “Touches” = what a JBAP user does by hand. V2 numbers are design targets that depend on the checks in v2-concept/README.md.')+
+  `<div class="kpis"><div class="kpi"><div class="v">39 → 20</div><div class="l">Screens: 13 new or changed + 7 kept as V1</div></div><div class="kpi"><div class="v">21 → 0</div><div class="l">Typed date fields in the normal flow</div></div>
+  <div class="kpi"><div class="v">9 → 0</div><div class="l">“For …?” tick columns</div></div><div class="kpi"><div class="v">±15–20 → ±3–4</div><div class="l">Touches per normal lot</div></div></div>`+
+  card('Step by step',R.length,`<div class="tb">${Object.keys(SRC).map(chip).join(' ')}<span>how each date is recorded in V2</span></div><div class="tw"><table>${th(['Step','V1 (current prototype)','V2 (this concept)','V1 touches','V2 touches'])}<tbody>
+  ${R.map(r=>`<tr><td class="wrapcell"><b>${r[0]}</b></td><td class="wrapcell">${r[1]}</td><td class="wrapcell">${r[2]}</td><td class="wrapcell">${r[3]}</td><td class="wrapcell">${r[4]}</td></tr>`).join('')}</tbody></table></div><div class="pg"></div>`)}
 
-/* ===== Shell ===== */
-const ROUTES=[['#/tasks','My Tasks'],['#/approvals','Approvals'],['#/lots','All units'],['#/pipeline','Pipeline'],['#/settlement','Settlement run'],['#/compare','V1 vs V2']];
-function go(h){location.hash=h}
-function render(){const h=location.hash||'#/tasks';const {T}=tasks();
-  const cTask=T.filter(x=>roleOk(x.role)).length,cApp=S.approvals.filter(a=>a.status==='pending').length;
-  document.getElementById('today').textContent='Demo date: '+toD(S.today).toDateString();
-  document.getElementById('nav').innerHTML=ROUTES.map(([r,t])=>{const n=r==='#/tasks'?cTask:r==='#/approvals'?cApp:null;
-    return (r==='#/pipeline'?'<div class="sep">Overview</div>':r==='#/compare'?'<div class="sep">Concept</div>':'')+`<a href="${r}" class="${h.startsWith(r)||(r==='#/lots'&&h.startsWith('#/lot/'))?'on':''}"><span>${t}</span>${n!==null?`<span class="n ${n?'':'z'}">${n}</span>`:''}</a>`}).join('');
-  const M=document.getElementById('main');
-  M.innerHTML=h.startsWith('#/lot/')?vLot(h.split('/')[2]):h==='#/approvals'?vApprovals():h==='#/lots'?vLots():h==='#/pipeline'?vPipeline():h==='#/settlement'?vSettlement():h==='#/compare'?vCompare():vTasks();
-  document.getElementById('feed').innerHTML=S.feed.slice(0,60).map(f=>`<div><span class="d">${fmt(f.d)}</span> ${chip(f.src)} ${esc(f.msg)}</div>`).join('')||'<div class="note">Nothing yet.</div>';
-}
-document.addEventListener('click',ev=>{const b=ev.target.closest('[data-act],[data-sim]');if(!b)return;
-  if(b.dataset.sim){SIM[b.dataset.sim]();}
-  else{const a=b.dataset.act;
-    if(a.startsWith('approve:'))decide(a.split(':')[1],true);
-    else if(a.startsWith('reject:'))decide(a.split(':')[1],false);
-    else if(a==='runApprove'){S.lots.filter(l=>l.ev.paid&&!l.ev.seller_paid&&!l.cancel).forEach(l=>{l.ev.seller_paid=E(S.today,'click','FAD Manager')});log('Settlement run approved: sellers paid','click')}
-    else ACT[a](lot(b.dataset.lot));}
-  runAuto();render();});
-document.getElementById('role').addEventListener('change',e=>{ROLE=e.target.value;render()});
-window.addEventListener('hashchange',render);
-runAuto();render();
+/* ===== Menu (CDMS sidebar; FAD/SMD/VWD kept, contents reduced) ===== */
+const MENU=[['Dashboard','dashboard'],['Customer','customer',[['Customer Inquiry','Customer/customer-inquiry']]],['Seller Inquiry','seller-inquiry'],['Cars','cars'],['Master','master',[['Holiday List (as V1)',null]]],
+  ['Auction','auction',[['Result Price','Auction/result-price']]],['Live Auction','live-auction'],['Live Result','live-result'],['Market Search','market-search'],
+  ['Report','report',[['Pipeline','Report/pipeline',null,1],['Rebate Monitoring (as V1)',null],['Liability to Seller (as V1)',null],['Inventory Summary (as V1)',null],['Cancellation Monitoring (as V1)',null]]],
+  ['Approval','APP',[['Approvals','Approval/approvals',()=>pendingApprovals().length,1]]],
+  ['FAD','FAD',[['My Tasks','FAD/my-tasks',()=>tasks().T.filter(t=>t.dept==='FAD').length,1],['Settlement Run','FAD/settlement-run',()=>S.lots.filter(l=>l.ev.paid&&!l.ev.seller_paid&&!l.cancel).length,1],['Documents','FAD/documents',null,1],['Security Bond (as V1)',null]]],
+  ['SMD','SMD',[['My Tasks','SMD/my-tasks',()=>tasks().T.filter(t=>t.dept==='SMD').length,1],['Return to Seller (as V1, approvals in inbox)',null]]],
+  ['VWD','VWD',[['My Tasks','VWD/my-tasks',()=>tasks().T.filter(t=>t.dept==='VWD').length,1]]],
+  ['Sales Summary','sales-summary'],['Cashier Closing','cashier-closing'],['Deposit','deposit'],['Payment','payment',[['Bank Transfer','Payment/bank-transfer',null,1]]],['Inspection','inspection'],['Staff','staff'],['Log Activity','LOG',null]];
+function renderMenu(route){$('#menu').innerHTML=MENU.map(([t,ic,items])=>{const icon=DEPT_ICON[ic]?deptSvg(ic):`<img src="../assets/ic-${ic}.png" alt="">`;
+    if(t==='Log Activity')return `<a class="mi ${route==='log'?'is-active':''}" href="#/log">${icon}Log Activity</a>`;
+    if(!items)return `<button type="button" class="mi is-disabled" title="Not part of this concept">${icon}${t}</button>`;
+    const key=t,open=OPEN[key];
+    return `<button type="button" class="mi" data-group="${key}" aria-expanded="${!!open}">${icon}${t}<span class="caret"></span></button><div class="lvs" ${open?'':'hidden'}>${items.map(([n,h,c,isV2])=>h?`<a class="mis ${route===h?'is-active':''}" href="#/${h}">${n}${isV2?'<span class="v2tag">V2</span>':''}${c?`<span class="cnt">${c()}</span>`:''}</a>`:`<span class="mis" style="opacity:.55">${n}</span>`).join('')}</div>`}).join('')+
+  '<p class="side-note">V2 concept: green V2 tags mark changed screens. Items marked “as V1” keep the V1 prototype design. Other menus are existing CDMS and not part of this concept.</p>'}
+
+/* ===== Modal, toasts, render ===== */
+let modalOk=null;
+function modal(title,body,ok,okText,okCls){modalOk=ok;$('#modal').innerHTML=`<div class="modal-bg"><div class="modal"><div class="modal-h">${title}<button class="x" data-close>×</button></div><div class="modal-b">${body}</div>
+  <div class="modal-f"><button class="btn gh" data-close>Close</button>${ok?`<button class="btn ${okCls||'pr'}" data-ok>${okText||'OK'}</button>`:''}</div></div></div>`}
+function demoModal(){modal('Demo events',`<p class="note" style="padding:0 0 10px">In V2 most dates are set by events, not typed. Press one and watch the lists, the unit pages and Log Activity change.</p>
+  <div class="demo-btns">${btn('Import bank statement (Payment › Bank Transfer)','sim:bank','ol')}${btn('A seller clicks the link in a SAAF / acknowledgement email','sim:seller','ol')}${btn('A buyer completes KYC in the portal','sim:kyc','ol')}${btn('Next working day ▶ (reminders, deadlines, penalties)','sim:day','pr')}${btn('Reset demo data','sim:reset','gh')}</div>`)}
+function flushToasts(){const w=$('#toasts');toastQ.slice(-4).forEach(m=>{const d=document.createElement('div');d.className='toast';d.textContent=m;w.appendChild(d);setTimeout(()=>d.remove(),3500)});toastQ=[]}
+function render(){const h=(location.hash||'#/').slice(2);const p=h.split('/');
+  $('#today').textContent='Demo date '+fmt(S.today);renderMenu(h);
+  const v=h===''?vHome():p[0]==='unit'?vUnit(p[1]):p[0]==='customer'?vCustomer(p[1]):p[1]==='my-tasks'?vTasks(p[0]):h==='FAD/settlement-run'?vSettlement():h==='FAD/documents'?vDocs():
+    h==='Approval/approvals'?vApprovals():h==='Auction/result-price'?vResultPrice():h==='Payment/bank-transfer'?vBank():h==='Report/pipeline'?vPipeline():h==='Customer/customer-inquiry'?vCustomers():h==='log'?vLog():h==='compare'?vCompare():vHome();
+  $('#content').innerHTML=v;flushToasts()}
+document.addEventListener('click',ev=>{
+  const g=ev.target.closest('[data-group]');if(g){OPEN[g.dataset.group]=!OPEN[g.dataset.group];render();return}
+  if(ev.target.closest('[data-open=demo]')){demoModal();return}
+  if(ev.target.closest('[data-close]')){$('#modal').innerHTML='';return}
+  if(ev.target.closest('[data-ok]')){if(modalOk&&modalOk()===false)return;$('#modal').innerHTML='';runAuto();render();return}
+  if(ev.target.closest('#burger')){document.body.classList.toggle('nav-open');return}
+  const b=ev.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;
+  if(a.startsWith('sim:')){SIM[a.slice(4)]();}
+  else if(a.startsWith('approve:'))decide(a.split(':')[1],true);
+  else if(a.startsWith('reject:'))decide(a.split(':')[1],false);
+  else ACT[a](lot(b.dataset.lot));
+  runAuto();render()});
+window.addEventListener('hashchange',()=>{const p=(location.hash||'').slice(2).split('/')[0];if(OPEN[p]!==undefined)OPEN[p]=true;render();window.scrollTo(0,0)});
+runAuto();toastQ=[];render();
 </script>
 </body>
 </html>
