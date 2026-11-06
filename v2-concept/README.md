@@ -2,7 +2,8 @@
 
 > **Status**: draft konsep, belum direview Yoshi-san / Alvin, belum dikirim ke JBAP.
 > **Branch**: `concept/v2-one-flow` (dibuat dari `jbap-feedback-docmon-bond` @ 356bf9a). Prototype V1 milik Philips **tidak diubah sama sekali**; semua file V2 ada di folder `v2-concept/`.
-> **Cara buka scratch UI**: double-click `v2-concept/index.html` (tanpa server). Data dummy anonim (Sample Buyer A–F, plat XAA/XEW).
+> **Cara buka scratch UI**: double-click `v2-concept/index.html` (tanpa server). UI memakai shell CDMS yang sama dengan V1 (`../styles.css`, `../assets/`: sidebar CDMS MENU, logo, kartu biru, tabel), jadi folder ini harus tetap berada di dalam repo prototype. Data dummy anonim (Sample Buyer A–F, plat XAA/XEW).
+> **Target push** (setelah disetujui): `philips-glitch/JBAP-CDMSCR`, branch `concept/v2-one-flow`.
 > **Disusun**: 6 Nov 2026, Firman.
 
 ---
@@ -135,18 +136,30 @@ Kolom **Kelayakan**: *Tinggi* = bisa dibangun di CDMS tanpa pihak luar; *Cek* = 
 
 ---
 
-## 6. Struktur layar V2 (scratch UI)
+## 6. Struktur layar V2 (scratch UI, di dalam menu CDMS)
 
-| Area | Isi | Menggantikan (V1) |
-|---|---|---|
-| **My Tasks** | Antrian kerja per role (SMD, FAD, VWD, Approver), urut paling mendesak; item yang menunggu pihak lain dilipat | Hampir semua list kerja FAD/SMD/VWD |
-| **Approvals** | Rebate, fee waiver, extension, return to seller. Tombol Approve/Reject | Approval › Rebate Approval, SMD Manager Approval, RTS Approval, kolom approver di Extend |
-| **All units → Unit page** | Satu halaman per lot: timeline sale→payment, 3 track paralel, uang, history dengan sumber tanggal | Mencari lot di banyak list; Log Activity per lot |
-| **Settlement run** | Lot yang sudah dibayar buyer, per seller, nilai sudah dihitung; satu approval | Payment Seller, Commission Billing, (Billing Monitoring) |
-| **Pipeline** | Jumlah unit per stage, KPI (overdue, penalty, piutang, hari sale→release) | Sebagian besar Report untuk kebutuhan harian |
-| **V1 vs V2** | Tabel perbandingan per langkah | (halaman penjelasan untuk review) |
+V2 **bukan aplikasi baru**: semuanya ada di CDMS yang sudah berjalan, dengan sidebar CDMS MENU yang sama. Menu departemen **FAD / SMD / VWD tetap ada** (user JBAP sudah mengenalnya), tetapi isinya dipangkas. Layar yang berubah diberi tag hijau **V2** di sidebar; yang ditandai *as V1* memakai desain V1 apa adanya.
 
-Belum dibuat di scratch UI (masuk konsep, dibuat setelah arah disetujui): Customer 360 + buyer portal (V3 Transaction History mengambil state yang sama), Return to Seller flow, Security Bond, Inventory, Master (seller parameter, holiday), report formal (Rebate Monitoring, Liability to Seller, Cancellation Monitoring).
+| Menu CDMS | Layar | Status | Isi |
+|---|---|---|---|
+| Customer | Customer Inquiry, customer page | Existing, diperkaya | Tab customer page membaca stage yang sama dengan unit (sumber yang sama untuk buyer portal) |
+| Auction | Result Price | Existing, diubah | KYC dibaca dari portal (tidak di-switch manual); Request rebate; Cancel sale (fee tertagih otomatis) |
+| Report | **Pipeline** | Baru | Unit per stage, KPI (overdue, penalty, piutang, hari sale→release), daftar semua unit |
+| Report | Rebate Monitoring, Liability to Seller, Inventory Summary, Cancellation Monitoring | As V1 | Report formal yang dikirim ke pihak lain |
+| Approval | **Approvals** | Baru (menggantikan Rebate Approval) | Satu inbox: rebate, fee waiver, extension, return to seller. Tombol Approve/Reject |
+| FAD | **My Tasks** | Baru | Hanya pengecualian: pembayaran tidak cocok, settlement run siap, dokumen fisik untuk di-scan, serah dokumen |
+| FAD | **Settlement Run** | Baru | Lot yang sudah dibayar buyer, per seller, nilai terhitung; satu approval membayar seller dan membuat commission billing |
+| FAD | **Documents** | Menggantikan Document Monitoring | Tanggal tercatat dari email, scan QR, atau release; tidak ada tanggal diketik |
+| FAD | Security Bond | As V1 | |
+| SMD | **My Tasks** | Baru | Buyer/seller yang tidak merespons, unpaid lewat deadline (Cancel / Extend) |
+| SMD | Return to Seller | As V1 | Approval manager pindah ke inbox |
+| VWD | **My Tasks** | Baru | Unit siap/overdue pull-out; Release vehicle sekaligus menagih penalty |
+| Payment | Bank Transfer | Existing, diubah | Import mutasi bank (modul CDMS existing) + matching otomatis ke lot / cancellation fee |
+| Master | Holiday List | As V1 | (+ import tahunan, belum di scratch) |
+| (dari link plat) | **Unit page** | Baru | Satu halaman per lot: next action, timeline sale→payment, 3 track paralel, uang, history dengan sumber tiap tanggal |
+| Log Activity | Log Activity | Existing | Semua event otomatis dan manual |
+
+Total: 39 layar V1 → **20** (13 baru/berubah + 7 tetap *as V1*). Tombol **Demo events** di header mensimulasikan event (import bank, seller klik link, buyer KYC, hari kerja berikutnya); **V1 vs V2** membuka tabel perbandingan.
 
 ### 6.1 Pemetaan 39 layar V1 → V2
 
@@ -182,7 +195,7 @@ Belum dibuat di scratch UI (masuk konsep, dibuat setelah arah disetujui): Custom
 |---|---|---|
 | Unit desain | Layar per departemen (FAD/SMD/VWD) | Perjalanan satu unit + antrian kerja per role |
 | Cara lot maju | Staf mengetik tanggal / centang lalu Save | Event: sistem, link seller/buyer, scan, satu klik |
-| Jumlah layar | 39 | ±6 area kerja (perkiraan saya, belum divalidasi) |
+| Jumlah layar | 39 | 20 di scratch UI (13 baru/berubah + 7 *as V1*) |
 | Field tanggal diketik | 21 (+ dialog) | 0 dalam alur normal; koreksi via Change date |
 | Kolom centang "For …?" | 9 | 0 (trigger otomatis / aksi massal) |
 | Approval | Campuran: tombol (Rebate) dan tanggal/nama diketik (RTS, Extend) | Satu inbox, semua tombol |
@@ -285,15 +298,16 @@ Query-nya disiapkan terpisah setelah dokumen ini disetujui.
 ## 12. Isi folder dan cara review scratch UI
 
 - `README.md`: dokumen ini.
-- `index.html`: scratch UI satu file (HTML+CSS+JS), data dummy. Bukan desain final.
+- `index.html`: scratch UI di shell CDMS (memakai `../styles.css` dan `../assets/` milik V1). Bukan desain final.
 
 **Alur demo yang disarankan:**
-1. Buka **My Tasks** (All roles): 8 task, sisanya "Waiting on …" dilipat.
-2. Klik lot **A230-112** → lihat Unit page: timeline, 3 track paralel, penalty, uang, history dengan label sumber.
-3. Di panel kanan tekan **Import bank statement**: 2 pembayaran cocok otomatis, 1 kurang bayar masuk task FAD, fee cancel lunas otomatis.
-4. **Seller clicks the link** dan **Buyer completes KYC**: lihat SAAF/BAAF terkirim sendiri di feed.
-5. **Next working day**: reminder, deadline, dan penalty bergerak.
-6. Approve rebate di **Approvals** → BAAF untuk lot itu langsung terkirim.
-7. **Settlement run** → Approve: seller dibayar, commission billing terbentuk sendiri.
-8. Ganti role ke **VWD** → Release unit (penalty ditagih di langkah yang sama).
-9. Buka **V1 vs V2** untuk tabel perbandingan.
+1. **Home**: kartu SMD / FAD / VWD / Approval dengan jumlah task.
+2. **FAD › My Tasks**, **SMD › My Tasks**, **VWD › My Tasks**: hanya yang butuh orang; yang menunggu pihak lain dilipat di bawah.
+3. Klik plat **XAA1007** → Unit page: next action, timeline, 3 track paralel, penalty, uang, history dengan label sumber.
+4. **Payment › Bank Transfer** → Import bank statement: 2 pembayaran cocok otomatis, 1 kurang bayar masuk FAD › My Tasks, cancellation fee lunas otomatis.
+5. **Approval › Approvals** → Approve rebate: BAAF lot itu langsung terkirim (lihat Log Activity).
+6. **FAD › Settlement Run** → Approve run: seller dibayar, commission billing terbentuk sendiri.
+7. **VWD › My Tasks** → Release vehicle: penalty ditagih di langkah yang sama.
+8. **SMD › My Tasks** → Cancel sale (dengan request waiver) → muncul di Approvals.
+9. **Demo events** → seller klik link, buyer KYC, next working day: lihat SAAF/BAAF/reminder berjalan sendiri.
+10. **V1 vs V2** di header untuk tabel perbandingan.
