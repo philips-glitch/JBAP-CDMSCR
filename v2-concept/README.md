@@ -110,10 +110,10 @@ Kolom **Kelayakan**: *Tinggi* = bisa dibangun di CDMS tanpa pihak luar; *Cek* = 
 | # | V1 (manual) | V2 | Sumber tanggal | Kelayakan |
 |---|---|---|---|---|
 | 1 | KYC Status di-switch di Result Price | Diambil dari status KYC buyer (registrasi di jbap-revamp / API) | Auto | Cek: sumber dan definisi KYC |
-| 2 | SAAF: centang For SAAF → Email per lot | SAAF **disusun otomatis per seller per auction** dari lot yang KYC-nya approved (layout form kertas sekarang, termasuk Minimum Bid Price); SMD **Checked & print** (cek tercatat, lot di bawah minimum bid ditandai) lalu **Mark sent to seller** sekali per form. Tanda tangan internal tetap di kertas, tidak dicatat | Auto + 1-click | Tinggi |
+| 2 | SAAF: centang For SAAF → Email per lot | SAAF **disusun otomatis per seller per auction** dari lot yang KYC-nya approved (layout form kertas sekarang, termasuk Minimum Bid Price); SMD cek winning bid price + buyer lalu **Checked & print** (cek tercatat) lalu **Mark sent to seller** sekali per form. Tanda tangan internal tetap di kertas, tidak dicatat | Auto + 1-click | Tinggi |
 | 3 | Seller Approved diketik per lot | SMD klik **Record signed SAAF** sekali per form saat kertas kembali (untick lot yang tidak ditandatangani; lampirkan scan) | 1-click (opsi: scan QR di form) | Tinggi |
 | 4 | Pending Awarding: centang For BAAF, cek Awarding Date | BAAF disiapkan otomatis saat KYC + SAAF beres, dikirim pada pengiriman 16:00; **ditahan otomatis** selama rebate menunggu President; Awarding Date = tanggal kirim | Auto | Tinggi |
-| 5 | Buyer Paid diketik | Dicocokkan dari import mutasi bank / modul payment; hanya yang tidak cocok masuk ke FAD | Auto | Cek: modul BankTransfer/PaymentCustomer dipakai? format referensi pembayaran buyer |
+| 5 | Buyer Paid diketik | Dicocokkan dari import mutasi bank / modul payment; hanya yang tidak cocok masuk ke FAD | Auto | Import & template CDMS existing (`template_btm.csv`: Last/First/Middle Name, Customer Account Number, Amount) dipakai apa adanya; yang baru hanya auto-assign by Customer Account Number + Amount. Cek: modul dipakai di PH? arti Customer Account Number |
 | 6 | Unpaid lewat deadline diketahui manual | Reminder H-1 otomatis; lewat deadline muncul tugas **Cancel / Extend** | Auto + 1-click | Tinggi |
 | 7 | Payment Seller: centang + ketik tanggal + print | **Settlement run** per seller, satu approval | 1-click | Cek: modul PaymentSeller; cara transfer ke seller |
 | 8 | Seller Acknowledgement diketik per lot | FAD › My Tasks › **Record acknowledgement** sekali per seller (centang lot di dokumen) | 1-click | Tinggi |
@@ -243,7 +243,7 @@ Estimasi lama (preliminary 100–150 MD dari Alvin; ±41 MD bagian saya) **tidak
 | Core lot state machine + event log | Inti V2; menggantikan banyak list |
 | My Tasks, Approvals inbox, Unit page, Pipeline | Lebih sedikit layar daripada V1, tapi tiap layar lebih "pintar" |
 | Automation jobs (SAAF builder, BAAF, reminder, dispatch, DOAS email, billing) | Scheduler + template email (layout reuse V1) |
-| Bank matching | Besar/kecilnya tergantung modul BankTransfer yang sudah ada dan format referensi |
+| Bank matching | Import + template sudah ada di CDMS (`BankTransferController`); yang dibangun: auto-assign by Customer Account Number + Amount, daftar transaksi lintas import, tampilan di unit/customer page |
 | SAAF per seller | Builder form + print layout SAAF + upload signed copy |
 | KYC source | Tergantung jbap-revamp/API |
 | NOAH | Tergantung API NOAH (P3 V1) |
@@ -271,8 +271,8 @@ Query-nya disiapkan terpisah setelah dokumen ini disetujui.
 
 **Sesi 2, to-be (±2 jam):** tunjukkan scratch UI ini dan putuskan:
 1. Boleh BAAF/dispatch/DOAS email disiapkan CDMS dan terkirim pada pengiriman terjadwal (usulan: 16:00) kecuali di-Hold? Jam berapa cut-off yang cocok?
-2. SAAF (tanya ke Joel): bagaimana seller mengirim balik SAAF bertanda tangan (email scan / fisik / kurir)? Apa saja yang dicek SMD sebelum print (minimum bid, KYC, lainnya)? Bisakah QR di form dipakai untuk mencatat saat kembali?
-3. Pembayaran buyer bisa dicocokkan otomatis? Referensi apa yang dipakai?
+2. SAAF (tanya ke Joel): bagaimana seller mengirim balik SAAF bertanda tangan (email scan / fisik / kurir)? Cek SMD sebelum print cukup winning bid price dan buyer (perkiraan Calvin)? Bisakah QR di form dipakai untuk mencatat saat kembali?
+3. Pembayaran buyer bisa dicocokkan otomatis dari template import yang ada? *Customer Account Number* itu isinya apa, dan apakah ada di data customer? Bagaimana kalau satu transfer untuk beberapa lot?
 4. Rebate: dipotong dari tagihan buyer atau dibayar terpisah?
 5. Pull-out deadline seller DOAS mulai dari signed DOAS diterima (lihat bagian 5)?
 6. QR di transmittal untuk penerimaan dokumen: bisa dijalankan di kantor/yard?
