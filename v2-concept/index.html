@@ -38,7 +38,12 @@ td .btn{height:28px;padding:0 10px;font-size:12px}
 .demo-btns{display:grid;gap:8px}.demo-btns .btn{justify-content:flex-start}
 .top a.btn{text-decoration:none}
 .top .demo-date{font-size:12.5px;color:var(--faint)}
-.mail-b .apv{display:inline-block;background:var(--ok);color:#fff;border-radius:3px;padding:6px 14px;font-weight:600;margin:4px 0 8px}
+.saaf{border:1px solid #c9cfdd;background:#fff;padding:12px;font-size:12px;color:#1d2440}
+.saaf h3{margin:0 0 8px;text-align:center;font-size:14px;letter-spacing:.3px}
+.saaf table{width:100%;border-collapse:collapse}.saaf th,.saaf td{border:1px solid #c9cfdd;padding:3px 5px;height:auto}
+.saaf th{background:#f3f5fa;color:#1d2440;font-size:11px;font-weight:600;text-align:left}.saaf .fine{font-size:10.5px;text-align:center;margin:10px 0 18px;line-height:1.4}
+.saaf .sig{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;font-size:10.5px}.saaf .sig div{border-top:1px solid #1d2440;padding-top:4px}
+.saaf .qr{float:right;border:1px dashed #8a93ad;padding:4px 6px;font-size:10px;color:#55607e}
 @media (max-width:1100px){.tracks,.two{grid-template-columns:1fr}.kpis.v2{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:768px){.top .demo-date,.top a.btn{display:none}.top [data-open=demo]{padding:0 10px}}
 @media (max-width:480px){.top .proto-tag{display:none}}
@@ -102,8 +107,8 @@ const SELLERS={EWB:{release:'seller_ack',doas:'branch',fee:1000},SBC:{release:'s
   TFS:{release:'buyer_payment',doas:'none',fee:500},ORICO:{release:'doas',doas:'jbap',fee:500}};
 const SELLER_CODES=Object.keys(SELLERS);
 const RELEASE_TXT={seller_ack:'after Seller Acknowledgement',buyer_payment:'after Buyer Payment',doas:'after Buyer Payment + signed DOAS'};
-const SRC={auto:'Auto',link:'Via link',click:'1-click',scan:'Scan',manual:'Typed (correction)'};
-const EV={sold:'Sold at auction',kyc:'KYC approved',saaf_sent:'SAAF sent',saaf_ok:'Seller approved SAAF',rebate:'Rebate decided',
+const SRC={auto:'Auto',click:'1-click',scan:'Scan',manual:'Typed (correction)'};
+const EV={sold:'Sold at auction',kyc:'KYC approved',saaf_sent:'SAAF sent to seller',saaf_ok:'Seller signed SAAF',rebate:'Rebate decided',
   baaf:'Awarded (BAAF sent)',paid:'Buyer paid',seller_paid:'Payment to seller',comm_billed:'Commission billed',seller_ack:'Seller acknowledged',
   doas_sent:'DOAS sent for signing',doas_back:'Signed DOAS received',docs_in:'Documents from seller',docs_out:'Documents to buyer',
   dispatch:'Dispatch notice sent',release:'Unit released'};
@@ -111,26 +116,30 @@ const ORDER=['sold','kyc','saaf_sent','saaf_ok','rebate','baaf','paid','seller_p
 
 /* ===== Dummy data (anonymised) ===== */
 const BUYERS={D9001:'SAMPLE BUYER A',D9002:'SAMPLE BUYER B',D9003:'SAMPLE BUYER C',D9004:'SAMPLE BUYER D',D9005:'SAMPLE BUYER E',D9006:'SAMPLE BUYER F'};
-const E=(d,src='auto',by)=>({d,src,by:by||({auto:'system',link:'via link',click:'user',scan:'fad.user (scan)',manual:'user'})[src]});
+const E=(d,src='auto',by)=>({d,src,by:by||({auto:'system',click:'user',scan:'fad.user (scan)',manual:'user'})[src]});
 function seed(){
   const L=(id,auc,lot,plate,model,seller,buyer,price,ev,x={})=>Object.assign({id,auc,lot,plate,model,seller,buyer,price,ev},x);
-  const K=d=>E(d,'link','buyer (portal)');
+  const K=d=>E(d,'auto','buyer portal (KYC)');
   const lots=[
     L('L01',231,101,'XAA1001','TOYOTA VIOS 1.3 E','EWB','D9001',420000,{sold:E('2026-11-02')}),
     L('L02',231,102,'XAA1002','MITSUBISHI MIRAGE G4','SBC','D9002',385000,{sold:E('2026-11-02'),kyc:K('2026-11-02'),saaf_sent:E('2026-11-02')}),
-    L('L03',231,103,'XAA1003','TOYOTA INNOVA 2.8 G','TFS','D9003',1120000,{sold:E('2026-11-02'),kyc:K('2026-11-02'),saaf_sent:E('2026-11-02'),saaf_ok:E('2026-11-03','link','TFS (email link)')},{rebate:{amt:15000,status:'pending',req:'2026-11-04'}}),
-    L('L04',231,104,'XAA1004','HONDA CITY 1.5 S','ORICO','D9001',610000,{sold:E('2026-11-02'),kyc:K('2026-11-02'),saaf_sent:E('2026-11-02'),saaf_ok:E('2026-11-04','link','ORICO (email link)'),baaf:E('2026-11-04')},{pay:'ok'}),
-    L('L05',230,110,'XEW1005','FORD RANGER XLT','EWB','D9004',890000,{sold:E('2026-10-26'),kyc:K('2026-10-26'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-27','link','EWB (email link)'),baaf:E('2026-10-28')}),
-    L('L06',230,111,'XAA1006','NISSAN ALMERA 1.5','SBC','D9002',455000,{sold:E('2026-10-26'),kyc:K('2026-10-27'),saaf_sent:E('2026-10-27'),saaf_ok:E('2026-10-30','link','SBC (email link)'),baaf:E('2026-11-03')},{pay:'short'}),
-    L('L07',230,112,'XAA1007','TOYOTA FORTUNER 2.4 G','TFS','D9005',1350000,{sold:E('2026-10-26'),kyc:K('2026-10-26'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-27','link','TFS (email link)'),baaf:E('2026-10-28'),paid:E('2026-10-30','auto','system (bank match)'),dispatch:E('2026-10-30')}),
-    L('L08',230,113,'XAA1008','SUZUKI ERTIGA GL','ORICO','D9006',640000,{sold:E('2026-10-26'),kyc:K('2026-10-26'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-26','link','ORICO (email link)'),baaf:E('2026-10-26'),paid:E('2026-10-28','auto','system (bank match)'),doas_sent:E('2026-10-28'),seller_paid:E('2026-11-03','click','fad.manager'),comm_billed:E('2026-11-03')}),
-    L('L09',229,120,'XAA1009','HYUNDAI ACCENT 1.6','SBC','D9003',398000,{sold:E('2026-10-19'),kyc:K('2026-10-19'),saaf_sent:E('2026-10-19'),saaf_ok:E('2026-10-20','link','SBC (email link)'),baaf:E('2026-10-21'),paid:E('2026-10-26','auto','system (bank match)'),doas_sent:E('2026-10-26'),doas_back:E('2026-10-28','scan'),seller_paid:E('2026-10-28','click','fad.manager'),comm_billed:E('2026-10-28'),seller_ack:E('2026-10-29','link','SBC (email link)'),dispatch:E('2026-10-29'),release:E('2026-11-02','click','vwd.user'),docs_in:E('2026-11-04','scan')}),
-    L('L10',229,121,'XAA1010','TOYOTA WIGO 1.0 G','TFS','D9004',345000,{sold:E('2026-10-19'),kyc:K('2026-10-19'),saaf_sent:E('2026-10-19'),saaf_ok:E('2026-10-19','link','TFS (email link)'),baaf:E('2026-10-20'),paid:E('2026-10-21','auto','system (bank match)'),dispatch:E('2026-10-21'),seller_paid:E('2026-10-23','click','fad.manager'),comm_billed:E('2026-10-23'),release:E('2026-10-23','click','vwd.user'),seller_ack:E('2026-10-26','link','TFS (email link)'),docs_in:E('2026-10-27','scan'),docs_out:E('2026-10-28','click','fad.user')}),
+    L('L03',231,103,'XAA1003','TOYOTA INNOVA 2.8 G','TFS','D9003',1120000,{sold:E('2026-11-02'),kyc:K('2026-11-02'),saaf_sent:E('2026-11-02'),saaf_ok:E('2026-11-03','click','smd.user (signed SAAF)')},{rebate:{amt:15000,status:'pending',req:'2026-11-04'}}),
+    L('L04',231,104,'XAA1004','HONDA CITY 1.5 S','ORICO','D9001',610000,{sold:E('2026-11-02'),kyc:K('2026-11-02'),saaf_sent:E('2026-11-02'),saaf_ok:E('2026-11-04','click','smd.user (signed SAAF)'),baaf:E('2026-11-04')},{pay:'ok'}),
+    L('L05',230,110,'XEW1005','FORD RANGER XLT','EWB','D9004',890000,{sold:E('2026-10-26'),kyc:K('2026-10-26'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-27','click','smd.user (signed SAAF)'),baaf:E('2026-10-28')}),
+    L('L06',230,111,'XAA1006','NISSAN ALMERA 1.5','SBC','D9002',455000,{sold:E('2026-10-26'),kyc:K('2026-10-27'),saaf_sent:E('2026-10-27'),saaf_ok:E('2026-10-30','click','smd.user (signed SAAF)'),baaf:E('2026-11-03')},{pay:'short'}),
+    L('L07',230,112,'XAA1007','TOYOTA FORTUNER 2.4 G','TFS','D9005',1350000,{sold:E('2026-10-26'),kyc:K('2026-10-26'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-27','click','smd.user (signed SAAF)'),baaf:E('2026-10-28'),paid:E('2026-10-30','auto','system (bank match)'),dispatch:E('2026-10-30')}),
+    L('L08',230,113,'XAA1008','SUZUKI ERTIGA GL','ORICO','D9006',640000,{sold:E('2026-10-26'),kyc:K('2026-10-26'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-26','click','smd.user (signed SAAF)'),baaf:E('2026-10-26'),paid:E('2026-10-28','auto','system (bank match)'),doas_sent:E('2026-10-28'),seller_paid:E('2026-11-03','click','fad.manager'),comm_billed:E('2026-11-03')}),
+    L('L09',229,120,'XAA1009','HYUNDAI ACCENT 1.6','SBC','D9003',398000,{sold:E('2026-10-19'),kyc:K('2026-10-19'),saaf_sent:E('2026-10-19'),saaf_ok:E('2026-10-20','click','smd.user (signed SAAF)'),baaf:E('2026-10-21'),paid:E('2026-10-26','auto','system (bank match)'),doas_sent:E('2026-10-26'),doas_back:E('2026-10-28','scan'),seller_paid:E('2026-10-28','click','fad.manager'),comm_billed:E('2026-10-28'),seller_ack:E('2026-10-29','click','fad.user'),dispatch:E('2026-10-29'),release:E('2026-11-02','click','vwd.user'),docs_in:E('2026-11-04','scan')}),
+    L('L10',229,121,'XAA1010','TOYOTA WIGO 1.0 G','TFS','D9004',345000,{sold:E('2026-10-19'),kyc:K('2026-10-19'),saaf_sent:E('2026-10-19'),saaf_ok:E('2026-10-19','click','smd.user (signed SAAF)'),baaf:E('2026-10-20'),paid:E('2026-10-21','auto','system (bank match)'),dispatch:E('2026-10-21'),seller_paid:E('2026-10-23','click','fad.manager'),comm_billed:E('2026-10-23'),release:E('2026-10-23','click','vwd.user'),seller_ack:E('2026-10-26','click','fad.user'),docs_in:E('2026-10-27','scan'),docs_out:E('2026-10-28','click','fad.user')}),
     L('L11',231,105,'XEW1011','TOYOTA HILUX 2.4 E','EWB','D9006',980000,{sold:E('2026-11-03'),kyc:K('2026-11-05')}),
-    L('L12',230,114,'XEW1012','MITSUBISHI MONTERO GLS','EWB','D9001',1240000,{sold:E('2026-10-26'),kyc:K('2026-10-26'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-28','link','EWB (email link)'),baaf:E('2026-10-29'),paid:E('2026-11-04','auto','system (bank match)'),doas_sent:E('2026-11-04')}),
-    L('L13',229,122,'XAA1013','ISUZU D-MAX LS','SBC','D9005',760000,{sold:E('2026-10-19'),kyc:K('2026-10-19'),saaf_sent:E('2026-10-19'),saaf_ok:E('2026-10-20','link','SBC (email link)'),baaf:E('2026-10-21')},{cancel:{d:'2026-10-28',fee:10000,waived:false,feePaid:null},pay:'fee'}),
-    L('L14',231,106,'XAA1014','KIA PICANTO 1.2 EX','ORICO','D9005',330000,{sold:E('2026-11-03'),kyc:K('2026-11-03'),saaf_sent:E('2026-11-03'),saaf_ok:E('2026-11-04','link','ORICO (email link)'),baaf:E('2026-11-05')},{pay:'ok'})];
-  return {today:'2026-11-06',lots,exceptions:[],feed:[],imports:[],outbox:[],obSeq:1,
+    L('L12',230,114,'XEW1012','MITSUBISHI MONTERO GLS','EWB','D9001',1240000,{sold:E('2026-10-26'),kyc:K('2026-10-26'),saaf_sent:E('2026-10-26'),saaf_ok:E('2026-10-28','click','smd.user (signed SAAF)'),baaf:E('2026-10-29'),paid:E('2026-11-04','auto','system (bank match)'),doas_sent:E('2026-11-04')}),
+    L('L13',229,122,'XAA1013','ISUZU D-MAX LS','SBC','D9005',760000,{sold:E('2026-10-19'),kyc:K('2026-10-19'),saaf_sent:E('2026-10-19'),saaf_ok:E('2026-10-20','click','smd.user (signed SAAF)'),baaf:E('2026-10-21')},{cancel:{d:'2026-10-28',fee:10000,waived:false,feePaid:null},pay:'fee'}),
+    L('L14',231,106,'XAA1014','KIA PICANTO 1.2 EX','ORICO','D9005',330000,{sold:E('2026-11-03'),kyc:K('2026-11-03'),saaf_sent:E('2026-11-03'),saaf_ok:E('2026-11-04','click','smd.user (signed SAAF)'),baaf:E('2026-11-05')},{pay:'ok'})];
+  /* SAAF = one printed form per auction per seller (as today); seeded from the lots already sent */
+  const saafs=[],g={};lots.filter(l=>l.ev.saaf_sent).forEach(l=>{const k=`${l.auc}|${l.seller}|${l.ev.saaf_sent.d}`;
+    if(!g[k]){g[k]={id:saafs.length+1,auc:l.auc,seller:l.seller,lots:[],status:'sent',created:l.ev.saaf_sent.d,sent:l.ev.saaf_sent.d};saafs.push(g[k])}g[k].lots.push(l.id)});
+  saafs.forEach(f=>{const L=f.lots.map(id=>lots.find(l=>l.id===id));if(L.every(l=>l.ev.saaf_ok)){f.status='signed';f.signed=L.map(l=>l.ev.saaf_ok.d).sort().pop()}});
+  return {today:'2026-11-06',lots,saafs,exceptions:[],feed:[],imports:[],outbox:[],obSeq:1,
     approvals:[{id:1,type:'Rebate',lot:'L03',detail:'Rebate 15,000.00 requested by SMD',role:'President',status:'pending',req:'2026-11-04'}],seq:2};
 }
 let S=seed();
@@ -139,7 +148,7 @@ const lot=id=>S.lots.find(l=>l.id===id);
 const label=l=>`A${l.auc} Lot ${l.lot}`;
 let toastQ=[];
 const USER={SMD:'smd.user',FAD:'fad.user',VWD:'vwd.user',Approval:'president',Auction:'smd.user',Payment:'fad.user'};
-function log(msg,src='auto',mod='System',l=null,user){S.feed.unshift({d:S.today,msg,src,mod,rec:l?`${label(l)} · ${l.plate}`:'',user:user||(src==='auto'?'system':src==='link'?'external (email link)':USER[mod]||'user')});toastQ.push(msg)}
+function log(msg,src='auto',mod='System',l=null,user){S.feed.unshift({d:S.today,msg,src,mod,rec:l?`${label(l)} · ${l.plate}`:'',user:user||(src==='auto'?'system':USER[mod]||'user')});toastQ.push(msg)}
 
 /* ===== Lot rules ===== */
 const deadline=l=>l.ev.baaf?(l.deadlineOverride||addWD(l.ev.baaf.d,3)):null;
@@ -155,7 +164,7 @@ const closed=l=>l.cancel?(l.cancel.waived||!!l.cancel.feePaid):!!(l.ev.release&&
 function stage(l){
   if(l.cancel)return {k:'cancelled',t:closed(l)?'Cancelled':'Cancelled · fee unpaid',c:closed(l)?'ns':'cx'};
   if(!l.ev.kyc)return {k:'kyc',t:'Waiting KYC',c:'ns'};
-  if(!l.ev.saaf_ok)return {k:'saaf',t:'Waiting seller (SAAF)',c:'ns'};
+  if(!l.ev.saaf_ok)return l.saafDeclined?{k:'saaf',t:'Seller declined (SAAF)',c:'cx'}:{k:'saaf',t:l.ev.saaf_sent?'Waiting signed SAAF':'SAAF to send',c:'ns'};
   if(!l.ev.baaf)return {k:'award',t:rebateDone(l)?'Pending Awarding':'Pending Awarding · rebate',c:'up'};
   if(!l.ev.paid)return S.today>deadline(l)?{k:'pay',t:'Unpaid · overdue',c:'cx'}:{k:'pay',t:'Unpaid',c:'up'};
   if(closed(l))return {k:'closed',t:'Complete',c:'sold'};
@@ -165,7 +174,7 @@ function stage(l){
 }
 
 /* ===== Scheduled emails: built automatically, sent at the daily cut-off unless held ===== */
-const KIND={SAAF:{t:'SAAF',dept:'SMD',ev:'saaf_sent'},BAAF:{t:'BAAF (awarding)',dept:'FAD',ev:'baaf'},REMIND:{t:'Payment reminder',dept:'SMD',ev:null},
+const KIND={BAAF:{t:'BAAF (awarding)',dept:'FAD',ev:'baaf'},REMIND:{t:'Payment reminder',dept:'SMD',ev:null},
   DOAS:{t:'DOAS for signature',dept:'FAD',ev:'doas_sent'},DISPATCH:{t:'Vehicle dispatch notice',dept:'FAD',ev:'dispatch'}};
 const REBATE_HOLD='Rebate waiting for the President';
 const ob=(l,k)=>S.outbox.find(o=>o.lot===l.id&&o.kind===k&&o.status!=='dropped');
@@ -180,7 +189,7 @@ function runAuto(){
       if(l.cancel||(o.kind==='REMIND'&&e.paid)){o.status='dropped';return}
       if(o.kind==='BAAF'){if(!rebateDone(l)){o.status='held';o.hold=REBATE_HOLD}else if(o.hold===REBATE_HOLD){o.status='scheduled';o.hold=null}}});
     if(l.cancel)continue;
-    if(e.kyc&&!e.saaf_sent)schedule(l,'SAAF');
+    if(e.kyc&&!e.saaf_sent&&!saafOf(l))addToSaaf(l);
     if(e.saaf_ok&&!e.baaf)schedule(l,'BAAF',rebateDone(l)?null:REBATE_HOLD);
     if(e.baaf&&!e.paid&&addWD(S.today,1)===deadline(l)&&l.reminded!==S.today)schedule(l,'REMIND');
     if(e.paid&&s.doas!=='none'&&!e.doas_sent)schedule(l,'DOAS');
@@ -189,31 +198,45 @@ function runAuto(){
 }
 function mailOf(o){const l=lot(o.lot),b=BUYERS[l.buyer],m=money(l),buyerMail=`${l.buyer.toLowerCase()}@example.com`;
   const unit=`<div class="utbl"><table><tr><th>Seller</th><th>Auction</th><th>Lot</th><th>Make/Model</th><th>Plate Number</th></tr><tr><td>${l.seller}</td><td>${l.auc}</td><td>${l.lot}</td><td>${esc(l.model)}</td><td>${l.plate}</td></tr></table></div>`;
-  const M={SAAF:{from:'sales@jbap.com.ph',to:`${l.seller.toLowerCase()}@example.com`,cc:'finance@jbap.com.ph',sub:`JBAP SELLER AWARDING ACKNOWLEDGEMENT - A${l.auc} - ${l.seller}`,
-      body:`<p>Dear ${l.seller},</p><p>Please confirm the awarding of the unit below at ${peso(l.price)}.</p>${unit}<span class="apv">Approve awarding</span><p>One click records your approval in CDMS. Reply to this email if you do not approve.</p>`},
-    BAAF:{from:'finance@jbap.com.ph',to:buyerMail,cc:'sales@jbap.com.ph',sub:`JBAP AWARDING - ${b}`,
+  const M={BAAF:{from:'finance@jbap.com.ph',to:buyerMail,cc:'sales@jbap.com.ph',sub:`JBAP AWARDING - ${b}`,
       body:`<p>Dear ${b},</p><p>Congratulations, you are awarded the unit below. Amount due: <b>${peso(m.buyer)}</b> (awarded price ${peso(l.price)} + transfer fee ${peso(m.fee)}${m.reb?` − rebate ${peso(m.reb)}`:''}).</p>${unit}<p>Please pay by <b>${fmt(addWD(S.today,3))}</b> with reference <b>${l.buyer}-A${l.auc}-${l.lot}</b> so we can match your payment automatically.</p>`},
     REMIND:{from:'finance@jbap.com.ph',to:buyerMail,cc:'sales@jbap.com.ph',sub:`JBAP PAYMENT REMINDER - ${b}`,body:`<p>Dear ${b},</p><p>This is a reminder that payment of <b>${peso(m.buyer)}</b> for the unit below is due on <b>${fmt(deadline(l))}</b>. After that date the sale may be cancelled with a cancellation fee of 10,000.00.</p>${unit}`},
     DOAS:{from:'finance@jbap.com.ph',to:buyerMail,cc:'sales@jbap.com.ph',sub:SELLERS[l.seller].doas==='branch'?`EWB DOAS SIGNING NOTICE - ${b}`:`JBAP DOAS FOR SIGNATURE - ${b}`,body:`<p>Dear ${b},</p><p>${SELLERS[l.seller].doas==='branch'?'Please sign the Deed of Absolute Sale at the EWB branch for the unit below.':'Please visit JBAP to sign the Deed of Absolute Sale for the unit below.'}</p>${unit}`},
     DISPATCH:{from:'finance@jbap.com.ph',to:buyerMail,cc:'sales@jbap.com.ph, vwd@example.com',sub:`JBAP VEHICLE DISPATCH - ${b}`,body:`<p>Dear ${b},</p><p>Your unit is ready for pull-out. Please pull it out by <b>${fmt(addWD(S.today,3))}</b>. After that, a storage fee of 500.00 per day applies.</p>${unit}`}}[o.kind];
   return `<div class="mail"><div class="mail-h"><b>From</b><span>${M.from}</span><b>To</b><span>${M.to}</span><b>Cc</b><span>${M.cc}</span><b>Subject</b><span>${esc(M.sub)}</span></div><div class="mail-b">${M.body}</div></div>`}
 
+/* ===== SAAF: one form per auction per seller. CDMS builds it; signatures stay on paper; SMD records sent / signed ===== */
+const saafOf=l=>S.saafs.find(f=>f.lots.includes(l.id));
+const saafName=f=>`A${f.auc} · ${f.seller}`;
+const saafLots=f=>f.lots.map(lot);
+const nLots=n=>`${n} lot${n===1?'':'s'}`;
+function addToSaaf(l){let f=S.saafs.find(f=>f.auc===l.auc&&f.seller===l.seller&&f.status==='ready');
+  if(!f){f={id:S.saafs.length+1,auc:l.auc,seller:l.seller,lots:[],status:'ready',created:S.today};S.saafs.push(f)}f.lots.push(l.id)}
+const SAAF_ST={ready:['To print & send','up'],sent:['Waiting signed copy','up'],signed:['Signed','sold']};
+const saafActs=f=>f.status==='ready'?[['Print SAAF','saafPrint','ol',f.id],['Mark sent to seller','saafSent','pr',f.id]]:f.status==='sent'?[['Print SAAF','saafPrint','gh',f.id],['Record signed SAAF','saafSigned','pr',f.id]]:[['View SAAF','saafPrint','gh',f.id]];
+
 /* ===== Tasks per department (only work that needs a person) ===== */
 function tasks(){const T=[],W=[],t=S.today;
   for(const l of S.lots){const e=l.ev,s=SELLERS[l.seller];
     if(l.cancel){if(!closed(l))W.push({dept:'FAD',who:'Buyer',l,txt:`Cancellation fee ${peso(l.cancel.fee)} billed ${fmt(l.cancel.d)}; matched from the bank file when paid`});continue}
     if(!e.kyc){const n=wdBetween(e.sold.d,t);if(n>=2)T.push({dept:'SMD',sev:'med',l,title:'Buyer KYC still missing',m:`${n} working days since the sale; automatic reminders got no response`,due:addWD(e.sold.d,2),acts:[['Remind buyer','remindKyc','ol']]});else W.push({dept:'SMD',who:'Buyer',l,txt:'KYC in the buyer portal'});continue}
-    if(e.saaf_sent&&!e.saaf_ok){const n=wdBetween(e.saaf_sent.d,t);if(n>=2)T.push({dept:'SMD',sev:'med',l,title:`${l.seller} has not approved the SAAF`,m:`Sent ${fmt(e.saaf_sent.d)}, ${n} working days ago`,due:addWD(e.saaf_sent.d,2),acts:[['Nudge seller','nudge','ol'],['Record approval','saafManual','gh']]});else W.push({dept:'SMD',who:l.seller,l,txt:'SAAF approval (link in the email)'});continue}
-    if(!e.saaf_sent){W.push({dept:'SMD',who:'Scheduled send',l,txt:`SAAF goes out at the ${CUTOFF} send`});continue}
+    if(!e.saaf_ok){if(l.saafDeclined)T.push({dept:'SMD',sev:'high',l,title:`${l.seller} did not sign for this lot on the SAAF`,m:`Recorded ${fmt(l.saafDeclined)}. Cancel the sale, or record the approval if the seller agrees later`,due:null,acts:[['Cancel sale','cancel','dg'],['Record approval','saafManual','gh']]});
+      else if(e.saaf_sent)W.push({dept:'SMD',who:l.seller,l,saaf:1,txt:`Signed SAAF ${saafName(saafOf(l))} (SMD records it when the form comes back)`});continue}
     if(!e.baaf){if(!rebateDone(l))W.push({dept:'FAD',who:'President',l,txt:'Rebate decision; the BAAF is held until then'});else W.push({dept:'FAD',who:'Scheduled send',l,txt:`BAAF goes out at the ${CUTOFF} send`});continue}
     if(!e.paid){const dl=deadline(l);if(t>dl)T.push({dept:'SMD',sev:'high',l,title:'Unpaid after the deadline',m:`Deadline ${fmt(dl)}; the reminder was sent automatically`,due:dl,acts:[['Cancel sale','cancel','dg'],['Request +2 days','extend','ol']]});else W.push({dept:'SMD',who:'Buyer',l,txt:`Payment, deadline ${fmt(dl)}`});continue}
-    if(e.seller_paid&&!e.seller_ack)W.push({dept:'FAD',who:l.seller,l,txt:'Seller acknowledgement (link in the payment email)'});
-    if(e.doas_sent&&!e.doas_back){if(s.doas==='jbap')T.push({dept:'FAD',sev:'low',l,title:'Signed DOAS: scan on receipt',m:`DOAS emailed ${fmt(e.doas_sent.d)}; scanning the transmittal QR records the date`,due:null,acts:[['Scan signed DOAS','scanDoas','pr']]});else W.push({dept:'FAD',who:'EWB',l,txt:'DOAS signing at the EWB branch (EWB confirms via link)'})}
+    if(e.seller_paid&&!e.seller_ack)W.push({dept:'FAD',who:l.seller,l,txt:'Signed acknowledgement of payment (FAD records it when it comes back)'});
+    if(e.doas_sent&&!e.doas_back){if(s.doas==='jbap')T.push({dept:'FAD',sev:'low',l,title:'Signed DOAS: scan on receipt',m:`DOAS emailed ${fmt(e.doas_sent.d)}; scanning the transmittal QR records the date`,due:null,acts:[['Scan signed DOAS','scanDoas','pr']]});
+      else T.push({dept:'FAD',sev:'low',l,title:'DOAS signed at the EWB branch: record on confirmation',m:`Signing notice emailed ${fmt(e.doas_sent.d)}; record it when EWB confirms (email or the signed copy)`,due:null,acts:[['Record signed DOAS','doasBranch','pr']]})}
     if(e.seller_paid&&(s.doas==='none'||e.doas_back)&&!e.docs_in)T.push({dept:'FAD',sev:'low',l,title:'Documents from seller: scan on receipt',m:'ORCR / deed package from the seller',due:null,acts:[['Scan documents','scanDocs','pr']]});
     if(e.dispatch&&!e.release){const p=penalty(l),b=releaseBlock(l);T.push({dept:'VWD',sev:p?'high':'med',l,title:p?`Overdue for pull-out · penalty ${peso(p)}`:'Ready for pull-out',m:b?`Blocked: ${b}`:`Pull-out deadline ${fmt(pullDeadline(l))}`,due:pullDeadline(l),acts:[['Release vehicle','release','pr']]})}
     else if(!e.dispatch)W.push({dept:'VWD',who:s.release==='seller_ack'?l.seller:'Buyer',l,txt:`Dispatch ${RELEASE_TXT[s.release]}`});
     if(e.docs_in&&e.release&&!e.docs_out)T.push({dept:'FAD',sev:'low',l,title:'Hand documents to buyer',m:'Unit released; documents are in',due:null,acts:[['Mark handed over','docsOut','pr']]});
   }
+  for(const f of S.saafs){const n=f.lots.length,lt=`${n} lot${n>1?'s':''}`;
+    if(f.status==='ready')T.push({dept:'SMD',sev:'med',l:null,sf:f,title:`SAAF ${saafName(f)} ready to print (${lt})`,m:'Built from the lots with KYC approved. Print, have the Sales & Marketing Head and Finance & Admin Head sign, send to the seller',due:null,acts:saafActs(f)});
+    if(f.status==='sent'){const d=wdBetween(f.sent,t);if(d>=2)T.push({dept:'SMD',sev:'med',l:null,sf:f,title:`Signed SAAF ${saafName(f)} not back yet (${lt})`,m:`Sent ${fmt(f.sent)}, ${d} working days ago`,due:addWD(f.sent,2),acts:[['Remind seller','saafNudge','ol',f.id],['Record signed SAAF','saafSigned','pr',f.id]]})}}
+  const ack={};S.lots.filter(l=>l.ev.seller_paid&&!l.ev.seller_ack&&!l.cancel).forEach(l=>(ack[l.seller]=ack[l.seller]||[]).push(l));
+  for(const[sl,ls] of Object.entries(ack))T.push({dept:'FAD',sev:'low',l:null,sf:{seller:sl},title:`${sl}: acknowledgement of payment not recorded (${ls.length} lot${ls.length>1?'s':''})`,m:'Record it when the seller’s signed acknowledgement comes back',due:null,acts:[['Record acknowledgement','ackRecord','pr',sl]]});
   const run=runLots();
   if(run.length)T.push({dept:'FAD',sev:'med',l:null,title:'Seller settlement run is ready',m:`${run.length} paid lot(s); payable and commission already computed`,due:null,acts:[['Open settlement run','gorun','pr']]});
   for(const x of S.exceptions){const l=lot(x.lot);T.unshift({dept:'FAD',sev:'high',l,title:'Bank payment does not match',m:`Received ${peso(x.amt)}; expected ${peso(money(l).buyer)}`,due:null,acts:[['Accept & match','match','pr'],['Ask buyer for balance','short','ol']]})}
@@ -226,9 +249,26 @@ function runLots(){return S.lots.filter(l=>l.ev.paid&&!l.ev.seller_paid&&!l.canc
 const ACT={
   remindKyc:l=>log('KYC reminder emailed to the buyer','click','SMD',l),
   nudge:l=>log(`SAAF reminder resent to ${l.seller}`,'click','SMD',l),
-  saafManual:l=>modal('Record seller approval',`<p>${label(l)} · ${l.plate} · ${l.seller}</p><p class="note" style="padding:0">Only when the seller approved outside the link (reply email, phone). The date is today and the user is recorded.</p>
+  saafManual:l=>modal('Record seller approval',`<p>${label(l)} · ${l.plate} · ${l.seller}</p><p class="note" style="padding:0">Only when the seller agrees after declining on the SAAF (e.g. a signed revised SAAF or a reply email). The date is today and the user is recorded.</p>
     <div class="fld w3"><span class="lbl">Proof / remarks (required)</span><input class="ctl" id="proof" placeholder="e.g. seller replied by email"></div>`,
-    ()=>{const p=$('#proof').value.trim();if(!p)return err('Proof / remarks is required.');l.ev.saaf_ok=E(S.today,'click','smd.user');log(`Seller approval recorded by SMD: ${p}`,'click','SMD',l)},'Record approval','pr'),
+    ()=>{const p=$('#proof').value.trim();if(!p)return err('Proof / remarks is required.');l.ev.saaf_ok=E(S.today,'click','smd.user');delete l.saafDeclined;log(`Seller approval recorded by SMD: ${p}`,'click','SMD',l)},'Record approval','pr'),
+  saafPrint:(_,id)=>{const f=S.saafs.find(f=>f.id===+id);modal(`SAAF ${saafName(f)} · print preview`,saafForm(f)+`<p class="note" style="padding:8px 0 0">Same layout as the printed SAAF used today. CDMS fills it from the lots with KYC approved, so nothing is typed. The internal signatures (Sales &amp; Marketing Head, Finance &amp; Admin Head) and the seller’s signature stay on paper, as today; CDMS only records when the form is sent and when it comes back signed.</p>`,
+    f.status==='ready'?()=>{log(`SAAF ${saafName(f)} printed (${nLots(f.lots.length)})`,'click','SMD')}:null,'Print','pr')},
+  saafSent:(_,id)=>{const f=S.saafs.find(f=>f.id===+id);f.status='sent';f.sent=S.today;saafLots(f).forEach(l=>{l.ev.saaf_sent=E(S.today,'click','smd.user')});log(`SAAF ${saafName(f)} sent to the seller (${nLots(f.lots.length)})`,'click','SMD')},
+  saafNudge:(_,id)=>{const f=S.saafs.find(f=>f.id===+id);log(`Reminder emailed to ${f.seller} for the signed SAAF ${saafName(f)}`,'click','SMD')},
+  saafSigned:(_,id)=>{const f=S.saafs.find(f=>f.id===+id),L=saafLots(f).filter(l=>!l.ev.saaf_ok&&!l.cancel);
+    modal(`Record signed SAAF ${saafName(f)}`,`<p class="note" style="padding:0 0 8px">One step for the whole form. Untick a lot only if the seller did not sign for it. The date is today and the user is recorded (Change date on the unit corrects it).</p>
+      <div class="tw"><table><thead><tr>${['Signed','Lot','Plate Number','Make/Model','Winning Bid','Buyer'].map(h=>`<th><span class="hb">${h}</span></th>`).join('')}</tr></thead><tbody>${L.map(l=>`<tr><td class="c"><input type="checkbox" class="sg" value="${l.id}" checked aria-label="Seller signed lot ${l.lot}"></td><td class="c">${l.lot}</td><td>${l.plate}</td><td>${esc(l.model)}</td><td class="r">${peso(l.price)}</td><td>${BUYERS[l.buyer]}</td></tr>`).join('')}</tbody></table></div>
+      <div class="fld w3" style="margin-top:10px"><span class="lbl">Signed copy (scan / photo)</span><input class="ctl" type="file" id="sfile"></div><p class="note" style="padding:4px 0 0">In CDMS the signed copy is required; optional in this demo.</p>`,
+      ()=>{const ok=[...document.querySelectorAll('#modal .sg')].filter(c=>c.checked).map(c=>c.value);
+        L.forEach(l=>{if(ok.includes(l.id)){l.ev.saaf_ok=E(S.today,'click','smd.user (signed SAAF)');delete l.saafDeclined}else{l.saafDeclined=S.today;log(`${l.seller} did not sign for this lot on SAAF ${saafName(f)}`,'click','SMD',l)}});
+        f.status='signed';f.signed=S.today;log(`Signed SAAF ${saafName(f)} recorded: ${ok.length} of ${L.length} lots signed`,'click','SMD')},'Record signed SAAF','pr')},
+  ackRecord:(_,sl)=>{const L=S.lots.filter(l=>l.seller===sl&&l.ev.seller_paid&&!l.ev.seller_ack&&!l.cancel);
+    modal(`Record acknowledgement · ${sl}`,`<p class="note" style="padding:0 0 8px">Replaces typing the date in FAD › Seller Acknowledgement. Tick the lots on the signed acknowledgement the seller sent back.</p>
+      <div class="tw"><table><thead><tr>${['Received','Auction','Lot','Plate Number','Payment to Seller'].map(h=>`<th><span class="hb">${h}</span></th>`).join('')}</tr></thead><tbody>${L.map(l=>`<tr><td class="c"><input type="checkbox" class="ak" value="${l.id}" checked aria-label="Acknowledged lot ${l.lot}"></td><td class="c">${l.auc}</td><td class="c">${l.lot}</td><td>${l.plate}</td><td class="c">${fmt(l.ev.seller_paid.d)}</td></tr>`).join('')}</tbody></table></div>`,
+      ()=>{const ok=[...document.querySelectorAll('#modal .ak')].filter(c=>c.checked).map(c=>c.value);if(!ok.length)return err('Tick at least one lot.');
+        L.filter(l=>ok.includes(l.id)).forEach(l=>{l.ev.seller_ack=E(S.today,'click','fad.user');log(`${sl} acknowledgement of payment recorded`,'click','FAD',l)})},'Record acknowledgement','pr')},
+  doasBranch:l=>{l.ev.doas_back=E(S.today,'click','fad.user');log('DOAS signed at the EWB branch: recorded on EWB’s confirmation','click','FAD',l)},
   cancel:l=>modal('Cancel sale',`<p>${label(l)} · ${l.plate} · ${esc(l.model)} · ${BUYERS[l.buyer]}</p>
     <div class="fgrid"><div class="fld"><span class="lbl">Date Cancelled</span><input class="ctl" value="${fmt(S.today)}" readonly></div>
     <div class="fld"><span class="lbl">Cancellation fee</span><input class="ctl" value="10,000.00" readonly></div></div>
@@ -257,7 +297,7 @@ const ACT={
     <p class="note" style="padding:8px 0 0">As in V1 the President decides in Approval. New: the BAAF already scheduled for this lot is held automatically until the decision.</p>`,
     ()=>{const v=+$('#reb').value;if(!(v>0)||v>l.price)return err('Type an amount above 0 and not above the result price.');l.rebate={amt:v,status:'pending',req:S.today};
       S.approvals.push({id:S.seq++,type:'Rebate',lot:l.id,detail:`Rebate ${peso(v)} requested by SMD`,role:'President',status:'pending',req:S.today});log(`Rebate ${peso(v)} requested`,'click','Auction',l)},'Send for approval','pr'),
-  runApprove:()=>{const R=runLots();R.forEach(l=>{l.ev.seller_paid=E(S.today,'click','fad.manager')});log(`Settlement run approved: ${R.length} lot(s) paid; acknowledgement links emailed to the sellers`,'click','FAD',null,'fad.manager')},
+  runApprove:()=>{const R=runLots();R.forEach(l=>{l.ev.seller_paid=E(S.today,'click','fad.manager')});log(`Settlement run approved: ${R.length} lot(s) paid; payment advice emailed to the sellers (FAD records each signed acknowledgement)`,'click','FAD',null,'fad.manager')},
   changeDate:l=>{const keys=ORDER.filter(k=>l.ev[k]);modal('Change date',`<p>${label(l)} · ${l.plate}</p><p class="note" style="padding:0">For corrections only (same as V1 › Document Monitoring › Change date). The old and new date and the reason are logged.</p>
     <div class="fgrid"><div class="fld"><span class="lbl">Field</span><select class="ctl" id="cf">${keys.map(k=>`<option value="${k}">${EV[k]} (${fmt(l.ev[k].d)})</option>`).join('')}</select></div>
     <div class="fld"><span class="lbl">New date</span><input class="ctl" type="date" id="cd" max="${S.today}"></div><div class="fld w3"><span class="lbl">Reason (required)</span><input class="ctl" id="cr"></div></div>`,
@@ -287,12 +327,10 @@ const SIM={
       if(l.pay==='ok'){l.ev.paid=E(S.today,'auto','system (bank match)');rows.push([l,money(l).buyer,'Matched']);log('Buyer payment matched from the bank file','auto','Payment',l)}
       else if(l.pay==='short'&&!S.exceptions.some(x=>x.lot===l.id)){const a=money(l).buyer-5000;S.exceptions.push({lot:l.id,amt:a});rows.push([l,a,'Short: sent to FAD › My Tasks']);log('Payment short by 5,000.00; sent to FAD › My Tasks','auto','Payment',l)}}
     S.imports.unshift({d:S.today,file:`BANK_${S.today.replace(/-/g,'')}.csv`,rows});if(!rows.length)log('Bank file imported: nothing new to match','auto','Payment')},
-  seller:()=>{const l=S.lots.find(l=>!l.cancel&&l.ev.saaf_sent&&!l.ev.saaf_ok)||S.lots.find(l=>l.ev.seller_paid&&!l.ev.seller_ack)||S.lots.find(l=>SELLERS[l.seller].doas==='branch'&&l.ev.doas_sent&&!l.ev.doas_back);
-    if(!l)return log('No email is waiting for a seller');
-    if(!l.ev.saaf_ok){l.ev.saaf_ok=E(S.today,'link',`${l.seller} (email link)`);log(`${l.seller} approved the SAAF from the email`,'link','SMD',l)}
-    else if(!l.ev.seller_ack&&l.ev.seller_paid){l.ev.seller_ack=E(S.today,'link',`${l.seller} (email link)`);log(`${l.seller} acknowledged the payment from the email`,'link','FAD',l)}
-    else{l.ev.doas_back=E(S.today,'link','EWB (email link)');log('EWB confirmed the DOAS was signed at the branch','link','FAD',l)}},
-  kyc:()=>{const l=S.lots.find(l=>!l.ev.kyc);if(!l)return log('No buyer is waiting for KYC');l.ev.kyc=E(S.today,'link','buyer (portal)');log('Buyer finished KYC in the portal','link','Customer',l)},
+  seller:()=>{const f=S.saafs.find(f=>f.status==='sent');if(!f)return log('No SAAF is out with a seller. Mark one as sent first (SMD › SAAF).');
+    saafLots(f).filter(l=>!l.ev.saaf_ok&&!l.cancel).forEach(l=>{l.ev.saaf_ok=E(S.today,'click','smd.user (signed SAAF)')});f.status='signed';f.signed=S.today;
+    log(`Signed SAAF ${saafName(f)} came back; SMD recorded it (all lots signed)`,'click','SMD')},
+  kyc:()=>{const l=S.lots.find(l=>!l.ev.kyc);if(!l)return log('No buyer is waiting for KYC');l.ev.kyc=E(S.today,'auto','buyer portal (KYC)');log('Buyer finished KYC in the buyer portal','auto','Customer',l)},
   cutoff:()=>{const n=S.outbox.filter(o=>o.status==='scheduled').length;cutoff();if(!n)log(`${CUTOFF} send: nothing scheduled`)},
   day:()=>{cutoff();S.today=addWD(S.today,1);log(`New working day: ${fmt(S.today)}`)},
   reset:()=>{S=seed();for(const k in UI)delete UI[k];runAuto();S.feed=[];toastQ=[]}
@@ -312,14 +350,14 @@ function listCard({id,title,cols,rows,filters=[],tb='',none=['No records','']}){
   const pg=`<div class="pg"><span>Showing ${n?u.page*u.size+1:0} to ${Math.min(n,(u.page+1)*u.size)} of ${n} entries</span><div class="pgr"><button type="button" class="pb" data-lpage="${id}:${u.page-1}" ${u.page?'':'disabled'}>Previous</button>${Array.from({length:pages},(_,i)=>`<button type="button" class="pb ${i===u.page?'is-active':''}" data-lpage="${id}:${i}">${i+1}</button>`).join('')}<button type="button" class="pb" data-lpage="${id}:${u.page+1}" ${u.page<pages-1?'':'disabled'}>Next</button></div></div>`;
   return fc+`<section class="card"><div class="card-h"><div class="ico">${IC.table}</div>${title}<span class="bdg">${n}</span></div><div class="tb"><span>Show<select data-lsize="${id}">${[10,15,25,50].map(s=>`<option ${s===u.size?'selected':''}>${s}</option>`).join('')}</select>entries</span>${tb}</div>${body}${pg}</section>`}
 const C=(h,r,o={})=>Object.assign({h,r},o);
-const lotOf=r=>('l' in r)?r.l:(typeof r.lot==='string'?lot(r.lot):r);
+const lotOf=r=>('l' in r)?(r.l||r.sf||null):(typeof r.lot==='string'?lot(r.lot):r);
 const F={auc:{key:'auc',label:'Auction No.',get:r=>lotOf(r)?.auc},seller:{key:'seller',label:'Seller',type:'select',options:SELLER_CODES,get:r=>lotOf(r)?.seller},
-  plate:{key:'plate',label:'Plate Number',get:r=>lotOf(r)?.plate},cust:{key:'cust',label:'Customer Name / Buyer ID',get:r=>{const l=lotOf(r);return l?`${BUYERS[l.buyer]} ${l.buyer}`:''}}};
+  plate:{key:'plate',label:'Plate Number',get:r=>lotOf(r)?.plate},cust:{key:'cust',label:'Customer Name / Buyer ID',get:r=>{const l=lotOf(r);return l&&l.buyer?`${BUYERS[l.buyer]} ${l.buyer}`:''}}};
 
 /* ===== UI helpers ===== */
 const chip=src=>`<span class="src ${src}">${SRC[src]}</span>`;
-const unitLink=l=>l?`<a class="blink" href="#/unit/${l.id}">${l.plate}</a>`:'';
-const custLink=l=>l?`<a class="blink" href="#/customer/${l.buyer}">${BUYERS[l.buyer]}</a>`:'';
+const unitLink=l=>l&&l.plate?`<a class="blink" href="#/unit/${l.id}">${l.plate}</a>`:'';
+const custLink=l=>l&&l.buyer?`<a class="blink" href="#/customer/${l.buyer}">${BUYERS[l.buyer]}</a>`:'';
 const stHtml=l=>{const s=stage(l);return `<span class="st ${s.c}">${s.t}</span>`};
 const head=(crumbs,title,rule,acts=['View','Filter','Sort'])=>`<nav class="crumb" aria-label="Breadcrumb"><a href="#/">Home</a>›${crumbs.map(c=>Array.isArray(c)?`<a href="${c[1]}">${c[0]}</a>›`:`<span>${c}</span>›`).join('')}<b>${esc(title)}</b></nav>
   <div class="hrow"><h1>${esc(title)}</h1><div class="acts">Allowed actions&nbsp;${acts.map(a=>`<span class="pill ${a==='Update'?'u':''}">${a}</span>`).join('')}</div></div>
@@ -329,8 +367,8 @@ const btn=(t,act,cls,lid,extra='')=>`<button type="button" class="btn ${cls}" da
 const idCols=()=>[C('Auction No.',r=>lotOf(r)?.auc??'',{cls:'c'}),C('Lot',r=>lotOf(r)?.lot??'',{cls:'c'}),C('Plate Number',r=>unitLink(lotOf(r))),C('Customer Name',r=>custLink(lotOf(r))),C('Seller',r=>lotOf(r)?.seller??'',{cls:'c'})];
 
 /* ===== Screens ===== */
-const DEPT_RULE={SMD:'One list instead of SMD Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch. SAAFs and payment reminders are prepared by CDMS and go out at the '+CUTOFF+' send (preview, hold or send now in the Scheduled emails tab). Tasks show only what needs SMD: buyers or sellers who do not respond, and unpaid lots past the deadline.',
-  FAD:'One list instead of Pending Awarding, Unpaid, Payment Seller, Seller Acknowledgement, Vehicle Dispatch, Billing and Cancellation Billing. Payments are matched from the bank file; BAAF, DOAS and dispatch emails are prepared by CDMS and go out at the '+CUTOFF+' send. FAD handles the exceptions, the settlement run and the physical documents.',
+const DEPT_RULE={SMD:'One list instead of SMD Pending Awarding, Unpaid, Seller Acknowledgement and For Dispatch. CDMS builds each SAAF (one per auction per seller) and prepares payment reminders for the '+CUTOFF+' send. Tasks show only what needs SMD: a SAAF to print and send, a signed SAAF not back, buyers who do not respond, and unpaid lots past the deadline.',
+  FAD:'One list instead of Pending Awarding, Unpaid, Payment Seller, Seller Acknowledgement, Vehicle Dispatch, Billing and Cancellation Billing. Payments are matched from the bank file; BAAF, DOAS and dispatch emails are prepared by CDMS and go out at the '+CUTOFF+' send. FAD handles the exceptions, the settlement run, the physical documents and records what sellers send back (acknowledgement of payment, EWB DOAS).',
   VWD:'One list instead of VWD Unreleased Unit, Unreleased Unit (Overdue) and For Dispatch. A unit appears once the seller’s release condition is met; Release vehicle also collects the storage penalty.'};
 function vTasks(dept,tab){const {T,W}=tasks(),o={high:0,med:1,low:2};const mine=T.filter(x=>x.dept===dept).sort((a,b)=>o[a.sev]-o[b.sev]);
   const ww=W.filter(w=>w.dept===dept),obx=S.outbox.filter(x=>KIND[x.kind].dept===dept&&(x.status==='scheduled'||x.status==='held'));
@@ -345,9 +383,22 @@ function vTasks(dept,tab){const {T,W}=tasks(),o={high:0,med:1,low:2};const mine=
     cols:[...idCols(),C('Waiting on',w=>esc(w.who)),C('For',w=>esc(w.txt),{cls:'wrapcell'}),C('Stage',w=>stHtml(w.l))],none:['Nothing waiting','']});
   else body=listCard({id:dept+'-tasks',title:'Tasks',rows:mine,filters:[F.auc,F.seller,F.cust],
     cols:[C('',x=>`<span class="prio ${x.sev}"></span>`,{cls:'c',sv:x=>o[x.sev]}),C('Task',x=>`<b>${esc(x.title)}</b><br><span class="note" style="padding:0">${esc(x.m)}</span>`,{cls:'wrapcell'}),...idCols(),
-      C('Due',x=>`<span class="${x.due&&x.due<S.today?'late':''}">${fmt(x.due)}</span>`,{cls:'c',sv:x=>x.due||'9'}),C('Action',x=>x.acts.map(([t,a,c])=>btn(t,a,c,x.l?.id)).join(' '),{nosort:1})],
+      C('Due',x=>`<span class="${x.due&&x.due<S.today?'late':''}">${fmt(x.due)}</span>`,{cls:'c',sv:x=>x.due||'9'}),C('Action',x=>x.acts.map(([t,a,c,g])=>btn(t,a,c,x.l?.id,g!=null?`data-arg="${g}"`:'')).join(' '),{nosort:1})],
     none:['Nothing needs you right now','Everything else moves by itself. See the other tabs.']});
   return head([dept],'My Tasks',DEPT_RULE[dept],['View','Filter','Sort','Update'])+tabs+body}
+
+function saafForm(f){const L=saafLots(f);
+  return `<div class="saaf"><span class="qr">QR · SAAF-${f.auc}-${f.seller}-${f.id}</span><h3>SELLER ACKNOWLEDGEMENT AWARDING FORM</h3><table style="margin-bottom:6px"><tr><th style="width:140px">SELLER</th><td>${f.seller}</td></tr><tr><th>AUCTION NUMBER</th><td>${f.auc}</td></tr></table>
+  <div class="tw"><table><thead><tr>${['Lot No.','Make/Model','Plate Number','Winning Bid Price','Buyer Name','JBAP Customer ID'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${L.map(l=>`<tr><td style="text-align:center">${l.lot}</td><td>${esc(l.model)}</td><td>${l.plate}</td><td style="text-align:right">${peso(l.price)}</td><td>${BUYERS[l.buyer]}</td><td style="text-align:center">${l.buyer}</td></tr>`).join('')}</tbody></table></div>
+  <p class="fine">We hereby release JBA Philippines Inc. ("JBAP") from the obligations that may arise from the acceptance of vehicles by the said buyers reflected in this form. This also guarantees the release of the vehicle as soon as the payment is released to the seller by JBAP. This form further confirms that the minimum KYC requirements provided have been accomplished and accepted by the seller.</p>
+  <div class="sig"><div>Printed name and signature<br>Seller representative</div><div>Sales and Marketing Head</div><div>Finance and Admin Head</div></div></div>`}
+
+function vSaaf(){const rows=S.saafs.slice().sort((a,b)=>({ready:0,sent:1,signed:2}[a.status]-{ready:0,sent:1,signed:2}[b.status])||b.id-a.id);
+  return head(['SMD'],'SAAF','Replaces SMD › SAAF (tick For SAAF, email, type Seller Approved). CDMS builds one SAAF per auction per seller from the lots whose buyer KYC is approved; a lot approved later goes on a new form. Signatures stay on paper as today; SMD records two moments with one click each for the whole form: sent to the seller, and the signed copy back. The seller never opens CDMS.',['View','Filter','Sort','Update'])+
+  listCard({id:'saaf',title:'SAAF forms',rows,filters:[F.auc,F.seller,{key:'st',label:'Status',type:'select',options:Object.values(SAAF_ST).map(x=>x[0]),get:f=>SAAF_ST[f.status][0]}],
+    cols:[C('Auction No.',f=>f.auc,{cls:'c'}),C('Seller',f=>f.seller,{cls:'c'}),C('Lots',f=>saafLots(f).map(unitLink).join(', '),{cls:'wrapcell',sv:f=>f.lots.length}),C('Prepared',f=>fmt(f.created),{cls:'c'}),C('Sent to Seller',f=>fmt(f.sent),{cls:'c'}),C('Signed Copy Back',f=>fmt(f.signed),{cls:'c'}),
+      C('Status',f=>`<span class="st ${SAAF_ST[f.status][1]}">${SAAF_ST[f.status][0]}</span>${f.status==='signed'&&saafLots(f).some(l=>l.saafDeclined)?' <span class="st cx">lot declined</span>':''}`),C('Action',f=>saafActs(f).map(([t,a,c,g])=>btn(t,a,c,'',`data-arg="${g}"`)).join(' '),{nosort:1})],
+    none:['No SAAF yet','A SAAF is built as soon as a buyer’s KYC is approved.']})}
 
 function vSettlement(){const R=runLots(),by={};R.forEach(l=>(by[l.seller]=by[l.seller]||[]).push(l));
   return head(['FAD'],'Settlement Run','Replaces Payment Seller (tick Print, type the payment date, print) and Billing › Commission Billing (tick, type NOAH no., print). Lots the buyer has paid are grouped per seller with every amount computed as in V1. One approval records Payment to Seller, generates the commission billing per seller and emails the seller an acknowledgement link.',['View','Update'])+
@@ -385,7 +436,7 @@ function vBank(){const I=S.imports[0];return head(['Payment'],'Bank Transfer','E
   (I?listCard({id:'bank',title:'Matching result',rows:I.rows.map(([l,a,r])=>({l,a,r})),cols:[...idCols(),C('Amount',x=>peso(x.a),{cls:'r',sv:x=>x.a}),C('Result',x=>`<span class="st ${/Short/.test(x.r)?'cx':'sold'}">${x.r}</span>`)],none:['Nothing new to match','']}):'')}
 
 function vPipeline(){const st=S.lots.map(stage),cnt=k=>st.filter(s=>s.k===k).length;
-  const rows=[['kyc','Waiting KYC'],['saaf','Waiting seller (SAAF)'],['award','Pending Awarding'],['pay','Unpaid'],['after','Paid: settlement / documents / release'],['closed','Complete'],['cancelled','Cancelled']];
+  const rows=[['kyc','Waiting KYC'],['saaf','SAAF (to send / waiting signed copy)'],['award','Pending Awarding'],['pay','Unpaid'],['after','Paid: settlement / documents / release'],['closed','Complete'],['cancelled','Cancelled']];
   const max=Math.max(...rows.map(r=>cnt(r[0])),1);
   const overdue=S.lots.filter(l=>!l.cancel&&l.ev.baaf&&!l.ev.paid&&S.today>deadline(l)).length,pen=S.lots.reduce((a,l)=>a+penalty(l),0);
   const recv=S.lots.filter(l=>!l.cancel&&l.ev.baaf&&!l.ev.paid).reduce((a,l)=>a+money(l).buyer,0);
@@ -408,7 +459,7 @@ function vCustomer(b){const ls=S.lots.filter(l=>l.buyer===b);
     C('Deadline',l=>!l.ev.paid&&l.ev.baaf&&!l.cancel?fmt(deadline(l)):l.ev.dispatch&&!l.ev.release?fmt(pullDeadline(l)):'',{cls:'c'}),C('Penalty',l=>penalty(l)?peso(penalty(l)):'',{cls:'r'})]})}
 
 function vUnit(id){const l=lot(id);if(!l)return `<div class="empty">${IC.inbox}<b>Unit not found</b></div>`;const s=SELLERS[l.seller],m=money(l),e=l.ev;
-  const {T,W}=tasks(),my=T.filter(t=>t.l&&t.l.id===id),wt=W.filter(w=>w.l.id===id&&w.who!=='Scheduled send'),obx=S.outbox.filter(o=>o.lot===id&&(o.status==='scheduled'||o.status==='held'));
+  const {T,W}=tasks(),my=T.filter(t=>t.l&&t.l.id===id),wt=W.filter(w=>w.l.id===id&&w.who!=='Scheduled send'&&!w.saaf),sf=saafOf(l),obx=S.outbox.filter(o=>o.lot===id&&(o.status==='scheduled'||o.status==='held'));
   const main=['sold','kyc','saaf_sent','saaf_ok'].concat(l.rebate?['rebate']:[]).concat(['baaf','paid']),fm=main.find(k=>!e[k]);
   const box=(k,cur)=>{const x=e[k];return `<div class="step ${x?'done':cur?'cur':''}"><div class="h">${EV[k]}</div><div class="d">${x?`${fmt(x.d)} · ${esc(x.by)} ${chip(x.src)}`:cur?'next':'—'}</div></div>`};
   const trk=(t,keys)=>{const f=keys.find(k=>!e[k]);return `<div><h4>${t}</h4>${keys.map(k=>box(k,e.paid&&k===f)).join('')}</div>`};
@@ -416,9 +467,10 @@ function vUnit(id){const l=lot(id);if(!l)return `<div class="empty">${IC.inbox}<
   return head(['Unit'],`${label(l)} · ${l.plate}`,`${esc(l.model)} · Seller ${l.seller} (dispatch ${RELEASE_TXT[s.release]}; DOAS ${s.doas==='none'?'not used':s.doas==='branch'?'signed at the seller’s branch':'signed at JBAP'}) · Buyer ${custLink(l)} (${l.buyer}) · ${stHtml(l)}. One page for every department; in V1 this lot sits in up to 9 lists.`,['View','Update'])+
   `<section class="card"><div class="card-h"><div class="ico">${IC.task}</div>Next action</div><div class="nextbox">
    ${my.map(x=>`<div class="row"><span class="prio ${x.sev}"></span><b>${esc(x.title)}</b> <span class="st up">${x.dept}</span> <span class="note" style="padding:0">${esc(x.m)}</span> ${x.acts.map(([t,a,c])=>btn(t,a,c,id)).join(' ')}</div>`).join('')}
+   ${sf&&!e.saaf_ok&&!l.cancel&&sf.status!=='signed'?`<div class="row"><span class="prio med"></span><b>SAAF ${saafName(sf)}</b> (${sf.lots.length} lot${sf.lots.length>1?'s':''}): <span class="st up">${SAAF_ST[sf.status][0]}</span> <span class="st up">SMD</span> ${saafActs(sf).map(([t,a,c,g])=>btn(t,a,c,'',`data-arg="${g}"`)).join(' ')}</div>`:''}
    ${obx.map(o=>`<div class="row">${IC.mail} ${KIND[o.kind].t}: <span class="st ${o.status==='held'?'cx':'up'}">${o.status==='held'?'Held':'Scheduled '+CUTOFF}</span>${o.hold?` <span class="note" style="padding:0">${esc(o.hold)}</span>`:''} ${btn('Preview','obPreview','ol',id,`data-arg="${o.id}"`)}</div>`).join('')}
    ${wt.map(w=>`<div class="row">Waiting on <b>${esc(w.who)}</b>: ${esc(w.txt)}</div>`).join('')}
-   ${!my.length&&!wt.length&&!obx.length?`<div class="row">${closed(l)?'Complete. Nothing left to do.':'No action needed: CDMS handles the next step.'}</div>`:''}
+   ${!my.length&&!wt.length&&!obx.length&&!(sf&&!e.saaf_ok&&sf.status!=='signed')?`<div class="row">${closed(l)?'Complete. Nothing left to do.':'No action needed: CDMS handles the next step.'}</div>`:''}
    <div class="row">${!e.baaf&&!l.rebate&&!l.cancel&&e.saaf_ok?btn('Request rebate','rebate','ol',id):''}${!e.release&&!l.cancel?btn('Cancel sale','cancel','gh',id):''}</div></div></section>`+
   (l.cancel?card('Cancellation',null,`<div class="nextbox">Cancelled ${fmt(l.cancel.d)} · fee ${peso(l.cancel.fee)}${l.cancel.waived?' (waived)':''} · ${l.cancel.feePaid?'fee paid '+fmt(l.cancel.feePaid):l.cancel.waived?'':'fee unpaid'}</div>`):'')+
   card('Sale → payment',null,`<div class="steps">${main.map(k=>box(k,k===fm&&!l.cancel)).join('')}</div>${e.baaf&&!e.paid&&!l.cancel?`<p class="note">Payment deadline ${fmt(deadline(l))}${l.deadlineOverride?' (extended)':''}</p>`:''}`)+
@@ -429,27 +481,27 @@ function vUnit(id){const l=lot(id);if(!l)return `<div class="empty">${IC.inbox}<
    <tr><td><b>Buyer pays</b></td><td><b>${peso(m.buyer)}</b></td></tr><tr><td>Commission 5% + VAT (illustrative)</td><td>${peso(m.com+m.vat)}</td></tr><tr><td><b>Payable to Seller</b></td><td><b>${peso(m.payable)}</b></td></tr></tbody></table></div>`)+
   card('History',Object.keys(e).length,`<div class="tb">${btn('Change date','changeDate','ol',id)}<span>Corrections only, with a reason</span></div><div class="tw" style="padding-bottom:12px"><table><thead><tr>${['Date','Event','By','Recorded'].map(h=>`<th><span class="hb">${h}</span></th>`).join('')}</tr></thead><tbody>${Object.entries(e).sort((a,b)=>a[1].d<b[1].d?-1:a[1].d>b[1].d?1:ORDER.indexOf(a[0])-ORDER.indexOf(b[0])).map(([k,v])=>`<tr><td class="c">${fmt(v.d)}</td><td>${EV[k]}</td><td>${esc(v.by)}</td><td class="c">${chip(v.src)}</td></tr>`).join('')}</tbody></table></div>`)+`</div>`}
 
-function vLog(){return head([],'Log Activity','Every event, automatic or by a user, newest first, like V1 Log Activity. The Recorded column shows how the value came in: Auto, Via link, 1-click, Scan or Typed (correction). Per unit it also shows on the unit page (History).')+
+function vLog(){return head([],'Log Activity','Every event, automatic or by a user, newest first, like V1 Log Activity. The Recorded column shows how the value came in: Auto, 1-click, Scan or Typed (correction). Per unit it also shows on the unit page (History).')+
   listCard({id:'log',title:'Activity',rows:S.feed,filters:[{key:'mod',label:'Module',type:'select',options:['Auction','Approval','Customer','FAD','Payment','SMD','VWD','System'],get:f=>f.mod},{key:'rec',label:'Record / Plate',get:f=>f.rec},{key:'user',label:'User',get:f=>f.user}],
     cols:[C('Date',f=>fmt(f.d),{cls:'c'}),C('User',f=>esc(f.user)),C('Module',f=>f.mod),C('Record',f=>esc(f.rec)),C('Activity',f=>esc(f.msg),{cls:'wrapcell'}),C('Recorded',f=>chip(f.src),{cls:'c'})],none:['No activity yet','Use Demo events or any action.']})}
 
 function vHome(){const {T}=tasks(),c=d=>T.filter(t=>t.dept===d).length,sc=d=>S.outbox.filter(o=>KIND[o.kind].dept===d&&(o.status==='scheduled'||o.status==='held')).length;
   const hc=(d,items)=>`<div class="hcard"><div class="card-h"><div class="ico">${deptSvg(d==='Approval'?'APP':d)}</div><span style="font-family:var(--font-head);font-size:20px">${d}</span></div><ul>${items.map(([t,h,n])=>`<li><a href="${h}">${t}${n!=null?`<span class="cnt">${n}</span>`:''}</a></li>`).join('')}</ul></div>`;
-  return `<div class="home"><h1>Post-Auction · V2 concept</h1><p class="lead">The same CDMS and the same FAD / SMD / VWD menus, with the post-auction work as one flow. Each department opens <b>My Tasks</b>: only what needs a person, most urgent first. CDMS prepares the emails (SAAF, BAAF, reminders, DOAS, dispatch) and sends them at the ${CUTOFF} cut-off unless someone holds them; payments are matched from the bank file; every date is recorded by the event that caused it. Use <b>Demo events</b> in the header to see lots move, and <b>V1 vs V2</b> for the comparison with the current prototype.</p>
-  <div class="hgrid">${hc('SMD',[['My Tasks','#/SMD/my-tasks',c('SMD')],['Scheduled emails','#/SMD/my-tasks/scheduled',sc('SMD')],['Auction › Result Price','#/Auction/result-price',null],['Customer Inquiry','#/Customer/customer-inquiry',null]])}
+  return `<div class="home"><h1>Post-Auction · V2 concept</h1><p class="lead">The same CDMS and the same FAD / SMD / VWD menus, with the post-auction work as one flow. Each department opens <b>My Tasks</b>: only what needs a person, most urgent first. CDMS builds the SAAF per seller and prepares the emails (BAAF, reminders, DOAS, dispatch), sent at the ${CUTOFF} cut-off unless someone holds them; payments are matched from the bank file; every date is recorded by the event that caused it. Use <b>Demo events</b> in the header to see lots move, and <b>V1 vs V2</b> for the comparison with the current prototype.</p>
+  <div class="hgrid">${hc('SMD',[['My Tasks','#/SMD/my-tasks',c('SMD')],['SAAF','#/SMD/saaf',S.saafs.filter(f=>f.status!=='signed').length],['Scheduled emails','#/SMD/my-tasks/scheduled',sc('SMD')],['Auction › Result Price','#/Auction/result-price',null],['Customer Inquiry','#/Customer/customer-inquiry',null]])}
   ${hc('FAD',[['My Tasks','#/FAD/my-tasks',c('FAD')],['Scheduled emails','#/FAD/my-tasks/scheduled',sc('FAD')],['Settlement Run','#/FAD/settlement-run',runLots().length],['Documents','#/FAD/documents',null],['Payment › Bank Transfer','#/Payment/bank-transfer',null]])}
   ${hc('VWD',[['My Tasks','#/VWD/my-tasks',c('VWD')]])}
   ${hc('Approval',[['Approvals','#/Approval/approvals',pendingApprovals().length],['Report › Pipeline','#/Report/pipeline',null],['Log Activity','#/log',null]])}</div></div>`}
 
 function vCompare(){const R=[
   ['Result & KYC','Auction › Result Price: KYC switched Pending/Approved by hand','KYC read from the buyer’s KYC in the portal','1 switch','0'],
-  ['Seller approval (SAAF)','SMD › SAAF: tick For SAAF › Email; later type Seller Approved','Prepared when KYC is approved, sent at the '+CUTOFF+' send; seller clicks Approve in the email (fallback: Record approval with proof)','tick + send + typed date','0 (seller clicks)'],
+  ['Seller approval (SAAF)','SMD › SAAF: tick For SAAF › Email per lot; later type Seller Approved per lot','SMD › SAAF: CDMS builds one form per auction per seller from the KYC-approved lots; signatures stay on paper; SMD clicks Mark sent and Record signed SAAF once per form','tick + send + typed date, per lot','2 clicks per form'],
   ['Rebate','Result Price: type rebate › Update; President decides in Approval','Same, in one Approval inbox; the scheduled BAAF is held automatically until the decision','2','2'],
   ['Awarding (BAAF)','FAD › Pending Awarding: tick For BAAF, check Awarding Date › Email BAAF','Prepared when KYC, SAAF and rebate are clear; sent at the '+CUTOFF+' send (Preview / Hold / Send now); Awarding Date = send date','tick + send','0 (optional hold)'],
   ['Buyer payment','FAD › Unpaid: type Buyer Paid › Save','Payment › Bank Transfer import matches it by the BAAF reference; only mismatches reach FAD › My Tasks','typed date','0 (exceptions only)'],
   ['Unpaid after deadline','Someone notices on Unpaid; cancel in Result Price','Reminder before the deadline is automatic; overdue lot is an SMD task with Cancel / Extend','find + dialog','1 decision'],
   ['Payment to seller','FAD › Payment Seller: tick Print › type date › print','FAD › Settlement Run: one approval per run','tick + typed date','1 per run'],
-  ['Seller acknowledgement','FAD › Seller Acknowledgement: type date','Seller clicks Acknowledge in the payment email','typed date','0 (seller clicks)'],
+  ['Seller acknowledgement','FAD › Seller Acknowledgement: type date per lot','FAD › My Tasks: Record acknowledgement per seller (ticks the lots on the signed copy); date and user recorded','typed date per lot','1 per seller'],
   ['Commission billing','FAD › Billing: tick Print? › type NOAH no. and date › print','Generated with the settlement run (NOAH integration to check)','tick + 2 typed fields','0'],
   ['Dispatch','FAD › Vehicle Dispatch: tick For Dispatch Email? › type Dispatch Date','Notice prepared when the seller’s release condition is met; sent at the '+CUTOFF+' send','tick + typed date','0'],
   ['DOAS & documents','FAD › Document Monitoring: tick DOAS email; type up to 5 receipt dates','FAD › Documents: DOAS email prepared automatically; physical receipts by scanning the transmittal QR','tick + up to 5 dates','2 scans'],
@@ -458,8 +510,8 @@ function vCompare(){const R=[
   ['Correcting a date','Change date with a reason (Document Monitoring only)','Change date with a reason on every unit (kept from V1)','—','only when needed'],
   ['Where is this unit?','Look through up to ~9 lists in FAD, SMD and VWD','One unit page: next action, timeline, money, history','several screens','1 page']];
   return head(['Concept'],'V1 vs V2','Per step of one lot’s life. “Touches” = what a JBAP user does by hand. V2 numbers are design targets that depend on the checks in v2-concept/README.md.')+
-  `<div class="kpis v2"><div class="kpi"><div class="k">Screens</div><div class="v">39 → 20</div><div class="s">13 new or changed + 7 kept as V1</div></div><div class="kpi"><div class="k">Typed date fields, normal flow</div><div class="v">21 → 0</div><div class="s">Change date stays for corrections</div></div>
-  <div class="kpi"><div class="k">“For …?” tick columns</div><div class="v">9 → 0</div><div class="s">Scheduled send with Hold</div></div><div class="kpi"><div class="k">Touches per normal lot</div><div class="v">±15–20 → ±3–4</div><div class="s">design target</div></div></div>`+
+  `<div class="kpis v2"><div class="kpi"><div class="k">Screens</div><div class="v">39 → 21</div><div class="s">14 new or changed + 7 kept as V1</div></div><div class="kpi"><div class="k">Typed date fields, normal flow</div><div class="v">21 → 0</div><div class="s">Change date stays for corrections</div></div>
+  <div class="kpi"><div class="k">“For …?” tick columns</div><div class="v">9 → 0</div><div class="s">Scheduled send with Hold</div></div><div class="kpi"><div class="k">Touches per normal lot</div><div class="v">±15–20 → ±4–6</div><div class="s">design target</div></div></div>`+
   card('Step by step',R.length,`<div class="tb">${Object.keys(SRC).map(k=>chip(k)).join(' ')}<span>how each date is recorded in V2</span></div><div class="tw"><table><thead><tr>${['Step','V1 (current prototype)','V2 (this concept)','V1 touches','V2 touches'].map(h=>`<th><span class="hb">${h}</span></th>`).join('')}</tr></thead><tbody>
   ${R.map(r=>`<tr><td class="wrapcell" style="min-width:140px"><b>${r[0]}</b></td><td class="wrapcell">${r[1]}</td><td class="wrapcell">${r[2]}</td><td class="wrapcell" style="min-width:110px">${r[3]}</td><td class="wrapcell" style="min-width:110px">${r[4]}</td></tr>`).join('')}</tbody></table></div><div class="pg"></div>`)}
 
@@ -469,7 +521,7 @@ const MENU=[['Dashboard','dashboard'],['Customer','customer',[['Customer Inquiry
   ['Report','report',[['Pipeline','Report/pipeline',null,1],['Rebate Monitoring (as V1)',null],['Liability to Seller (as V1)',null],['Inventory Summary (as V1)',null],['Cancellation Monitoring (as V1)',null]]],
   ['Approval','APP',[['Approvals','Approval/approvals',()=>pendingApprovals().length,1]]],
   ['FAD','FAD',[['My Tasks','FAD/my-tasks',()=>tasks().T.filter(t=>t.dept==='FAD').length,1],['Settlement Run','FAD/settlement-run',()=>runLots().length,1],['Documents','FAD/documents',null,1],['Security Bond (as V1)',null]]],
-  ['SMD','SMD',[['My Tasks','SMD/my-tasks',()=>tasks().T.filter(t=>t.dept==='SMD').length,1],['Return to Seller (as V1, approvals in inbox)',null]]],
+  ['SMD','SMD',[['My Tasks','SMD/my-tasks',()=>tasks().T.filter(t=>t.dept==='SMD').length,1],['SAAF','SMD/saaf',()=>S.saafs.filter(f=>f.status!=='signed').length,1],['Return to Seller (as V1, approvals in inbox)',null]]],
   ['VWD','VWD',[['My Tasks','VWD/my-tasks',()=>tasks().T.filter(t=>t.dept==='VWD').length,1]]],
   ['Sales Summary','sales-summary'],['Cashier Closing','cashier-closing'],['Deposit','deposit'],['Payment','payment',[['Bank Transfer','Payment/bank-transfer',null,1]]],['Inspection','inspection'],['Staff','staff'],['Log Activity','LOG',null]];
 function renderMenu(route){$('#menu').innerHTML=MENU.map(([t,ic,items])=>{const icon=DEPT_ICON[ic]?deptSvg(ic):`<img src="../assets/ic-${ic}.png" alt="">`;
@@ -493,14 +545,14 @@ function modal(title,body,ok,okText,okCls){modalOk=ok||null;$('#modal').innerHTM
   setTimeout(()=>{const f=$('#modal input:not([readonly]):not([type=checkbox])');(f||$('#modal [data-ok]')||$('#modal [data-close]'))?.focus()},0)}
 const closeModal=()=>{$('#modal').innerHTML='';modalOk=null};
 function demoModal(){modal('Demo events',`<p class="note" style="padding:0 0 10px">In V2 most dates are set by events, not typed. Press one and watch My Tasks, the unit pages and Log Activity change. Demo date: <b>${fmt(S.today)}</b>.</p>
-  <div class="demo-btns">${btn('Import bank statement (Payment › Bank Transfer)','sim:bank','ol')}${btn('A seller clicks the link in a SAAF / acknowledgement email','sim:seller','ol')}${btn('A buyer completes KYC in the portal','sim:kyc','ol')}${btn(`Run today’s ${CUTOFF} send (scheduled emails go out)`,'sim:cutoff','ol')}${btn(`Next working day ▶ (${CUTOFF} send, then reminders, deadlines, penalties)`,'sim:day','pr')}${btn('Reset demo data','sim:reset','gh')}</div>`)}
+  <div class="demo-btns">${btn('Import bank statement (Payment › Bank Transfer)','sim:bank','ol')}${btn('A seller returns a signed SAAF (SMD records it)','sim:seller','ol')}${btn('A buyer completes KYC in the portal','sim:kyc','ol')}${btn(`Run today’s ${CUTOFF} send (scheduled emails go out)`,'sim:cutoff','ol')}${btn(`Next working day ▶ (${CUTOFF} send, then reminders, deadlines, penalties)`,'sim:day','pr')}${btn('Reset demo data','sim:reset','gh')}</div>`)}
 function flushToasts(){const w=$('#toasts');const n=toastQ.length;toastQ.slice(-2).forEach(m=>{const d=document.createElement('div');d.className='toast';d.textContent=m;w.appendChild(d);setTimeout(()=>d.remove(),3500)});
   if(n>2){const d=document.createElement('div');d.className='toast';d.innerHTML=`+${n-2} more · <a href="#/log" style="color:#fff">Log Activity</a>`;w.appendChild(d);setTimeout(()=>d.remove(),3500)}
   while(w.children.length>3)w.firstChild.remove();toastQ=[]}
 function toast(m){toastQ.push(m);flushToasts()}
 function render(){const h=(location.hash||'#/').slice(2),p=h.split('/');
   $('#today').textContent='Demo date '+fmt(S.today);renderMenu(h);
-  const v=h===''?vHome():p[0]==='unit'?vUnit(p[1]):p[0]==='customer'?vCustomer(p[1]):p[1]==='my-tasks'&&['FAD','SMD','VWD'].includes(p[0])?vTasks(p[0],p[2]):h==='FAD/settlement-run'?vSettlement():h==='FAD/documents'?vDocs():
+  const v=h===''?vHome():p[0]==='unit'?vUnit(p[1]):p[0]==='customer'?vCustomer(p[1]):p[1]==='my-tasks'&&['FAD','SMD','VWD'].includes(p[0])?vTasks(p[0],p[2]):h==='FAD/settlement-run'?vSettlement():h==='SMD/saaf'?vSaaf():h==='FAD/documents'?vDocs():
     h==='Approval/approvals'?vApprovals():h==='Auction/result-price'?vResultPrice():h==='Payment/bank-transfer'?vBank():h==='Report/pipeline'?vPipeline():h==='Customer/customer-inquiry'?vCustomers():h==='log'?vLog():h==='compare'?vCompare():vHome();
   $('#content').innerHTML=v;flushToasts()}
 function after(){runAuto();render()}
