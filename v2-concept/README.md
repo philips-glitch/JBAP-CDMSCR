@@ -54,13 +54,13 @@ Di `jbap-cdms` sudah ada controller untuk: `PaymentCustomer`, `PaymentCustomerDi
 ## 3. Prinsip desain V2
 
 1. **Satu unit, satu record, satu halaman.** Semua departemen melihat lot yang sama; tidak ada list duplikat.
-2. **Tanggal adalah event, bukan input.** Tanggal tercatat saat aksi terjadi, oleh sistem, oleh pihak luar lewat link, atau oleh satu klik/scan. Mengetik tanggal hanya untuk koreksi (dengan alasan, seperti *Change date* di V1).
+2. **Tanggal adalah event, bukan input.** Tanggal tercatat saat aksi terjadi, oleh sistem, atau oleh satu klik/scan dari user CDMS. Mengetik tanggal hanya untuk koreksi (dengan alasan, seperti *Change date* di V1).
 3. **Centang diganti trigger otomatis atau satu tombol aksi massal.**
 4. **Approval = tombol** dengan identitas user dan waktu otomatis, dalam satu inbox.
 5. **Tampilkan pengecualian dulu.** User melihat yang butuh keputusan (overdue, tidak cocok, terblokir), bukan semua data. Yang sedang menunggu pihak lain disembunyikan dan diingatkan otomatis.
-6. **Buyer dan seller ikut bekerja lewat link/portal** (approve SAAF, acknowledge, KYC), bukan staf JBAP yang mengetik balasan email mereka.
+6. **Seller dan buyer tidak membuka CDMS** (link CDMS tidak diekspos ke luar; masukan Calvin 12 Nov). Dokumen dari seller (SAAF bertanda tangan, acknowledgement, konfirmasi DOAS EWB) dicatat user CDMS dengan satu klik **per dokumen**, bukan mengetik tanggal per lot. KYC buyer dibaca dari buyer portal (sistem terpisah).
 
-Setiap tanggal di V2 diberi label sumber: **Auto** (sistem), **Via link** (seller/buyer), **1-click** (staf menekan tombol), **Scan** (dokumen fisik), **Typed** (manual, harus mendekati nol).
+Setiap tanggal di V2 diberi label sumber: **Auto** (sistem atau buyer portal), **1-click** (staf menekan tombol), **Scan** (dokumen fisik), **Typed** (manual, harus mendekati nol).
 
 ---
 
@@ -87,13 +87,13 @@ flowchart LR
 ```mermaid
 flowchart LR
   S([Sold]) --> K{KYC ok?}
-  K -- auto from portal --> SF[SAAF auto-sent]
-  SF -- seller clicks link --> R{Rebate?}
+  K -- auto from portal --> SF[SAAF built per seller per auction<br/>SMD prints, sends]
+  SF -- signed copy back, SMD records --> R{Rebate?}
   R -- none / decided --> B[BAAF auto-sent<br/>deadline set]
   R -- pending --> P[President approves] --> B
   B -- bank match --> PD([Buyer paid])
   B -- overdue --> X[Task: Cancel / Extend]
-  PD --> T1[Settlement: run approved → commission auto-billed → seller acks via link]
+  PD --> T1[Settlement: run approved → commission auto-billed → FAD records seller ack per seller]
   PD --> T2[Documents: DOAS auto-emailed → scan signed DOAS → scan seller docs → hand to buyer]
   PD --> T3[Release: dispatch notice auto when condition met → VWD releases, penalty collected]
   T1 & T2 & T3 --> C([Closed])
@@ -110,13 +110,13 @@ Kolom **Kelayakan**: *Tinggi* = bisa dibangun di CDMS tanpa pihak luar; *Cek* = 
 | # | V1 (manual) | V2 | Sumber tanggal | Kelayakan |
 |---|---|---|---|---|
 | 1 | KYC Status di-switch di Result Price | Diambil dari status KYC buyer (registrasi di jbap-revamp / API) | Auto | Cek: sumber dan definisi KYC |
-| 2 | SAAF: centang For SAAF → Email | SAAF disiapkan otomatis begitu KYC approved, dikirim pada **pengiriman terjadwal 16:00** (bisa Preview / Hold / Send now) | Auto | Tinggi |
-| 3 | Seller Approved diketik | Seller klik **Approve** di email (link bertanda tangan, tanpa login) | Via link | Sepakati: seller bersedia; fallback 1-click oleh SMD |
+| 2 | SAAF: centang For SAAF → Email per lot | SAAF **disusun otomatis per seller per auction** dari lot yang KYC-nya approved (layout form kertas sekarang); SMD Print lalu **Mark sent to seller** sekali per form. Tanda tangan internal tetap di kertas, tidak dicatat | Auto + 1-click | Tinggi |
+| 3 | Seller Approved diketik per lot | SMD klik **Record signed SAAF** sekali per form saat kertas kembali (untick lot yang tidak ditandatangani; lampirkan scan) | 1-click (opsi: scan QR di form) | Tinggi |
 | 4 | Pending Awarding: centang For BAAF, cek Awarding Date | BAAF disiapkan otomatis saat KYC + SAAF beres, dikirim pada pengiriman 16:00; **ditahan otomatis** selama rebate menunggu President; Awarding Date = tanggal kirim | Auto | Tinggi |
 | 5 | Buyer Paid diketik | Dicocokkan dari import mutasi bank / modul payment; hanya yang tidak cocok masuk ke FAD | Auto | Cek: modul BankTransfer/PaymentCustomer dipakai? format referensi pembayaran buyer |
 | 6 | Unpaid lewat deadline diketahui manual | Reminder H-1 otomatis; lewat deadline muncul tugas **Cancel / Extend** | Auto + 1-click | Tinggi |
 | 7 | Payment Seller: centang + ketik tanggal + print | **Settlement run** per seller, satu approval | 1-click | Cek: modul PaymentSeller; cara transfer ke seller |
-| 8 | Seller Acknowledgement diketik | Seller klik **Acknowledge** di email | Via link | Sepakati |
+| 8 | Seller Acknowledgement diketik per lot | FAD › My Tasks › **Record acknowledgement** sekali per seller (centang lot di dokumen) | 1-click | Tinggi |
 | 9 | Commission Billing: centang + ketik NOAH no. + print | Dibuat otomatis bersama settlement run | Auto | Cek: integrasi NOAH (P3 V1) |
 | 10 | Unpaid Billing: ketik Payment Date + CR | Dicocokkan dari mutasi bank seperti #5 | Auto | Cek |
 | 11 | For Dispatch: centang email + ketik Dispatch Date | Notice disiapkan saat syarat release seller terpenuhi, dikirim pada pengiriman 16:00 | Auto | Tinggi |
@@ -148,7 +148,7 @@ V2 **bukan aplikasi baru**: semuanya ada di CDMS yang sudah berjalan, dengan sid
 | Report | Rebate Monitoring, Liability to Seller, Inventory Summary, Cancellation Monitoring | As V1 | Report formal yang dikirim ke pihak lain |
 | Approval | **Approvals** | Baru (menggantikan Rebate Approval) | Satu inbox: rebate, fee waiver, extension, return to seller. Tombol Approve/Reject |
 | FAD | **My Tasks** | Baru | Hanya pengecualian: pembayaran tidak cocok, settlement run siap, dokumen fisik untuk di-scan, serah dokumen |
-| FAD / SMD | My Tasks › **Scheduled emails** | Baru | Email yang disiapkan CDMS (SAAF, BAAF, reminder, DOAS, dispatch) dan akan terkirim pada pengiriman 16:00: Preview (layout email V1), Hold dengan alasan, Release hold, Send now |
+| FAD / SMD | My Tasks › **Scheduled emails** | Baru | Email yang disiapkan CDMS (BAAF, reminder, DOAS, dispatch) dan akan terkirim pada pengiriman 16:00: Preview (layout email V1), Hold dengan alasan, Release hold, Send now |
 | FAD | **Settlement Run** | Baru | Lot yang sudah dibayar buyer, per seller, nilai terhitung; satu approval membayar seller dan membuat commission billing |
 | FAD | **Documents** | Menggantikan Document Monitoring | Tanggal tercatat dari email, scan QR, atau release; tidak ada tanggal diketik |
 | FAD | Security Bond | As V1 | |
@@ -160,7 +160,7 @@ V2 **bukan aplikasi baru**: semuanya ada di CDMS yang sudah berjalan, dengan sid
 | (dari link plat) | **Unit page** | Baru | Satu halaman per lot: next action, timeline sale→payment, 3 track paralel, uang, history dengan sumber tiap tanggal |
 | Log Activity | Log Activity | Existing | Semua event otomatis dan manual |
 
-Total: 39 layar V1 → **20** (13 baru/berubah + 7 tetap *as V1*). Tombol **Demo events** di header mensimulasikan event (import bank, seller klik link, buyer KYC, hari kerja berikutnya); **V1 vs V2** membuka tabel perbandingan.
+Total: 39 layar V1 → **21** (14 baru/berubah + 7 tetap *as V1*; SMD › SAAF berubah menjadi daftar form per seller). Tombol **Demo events** di header mensimulasikan event (import bank, SAAF bertanda tangan kembali, buyer KYC, hari kerja berikutnya); **V1 vs V2** membuka tabel perbandingan.
 
 ### 6.1 Pemetaan 39 layar V1 → V2
 
@@ -170,14 +170,14 @@ Total: 39 layar V1 → **20** (13 baru/berubah + 7 tetap *as V1*). Tombol **Demo
 | Approval › Rebate Approval | Approvals |
 | FAD › Pending Awarding, Unpaid | Otomatis (BAAF, bank match); yang tersisa muncul di My Tasks (overdue, mismatch) |
 | FAD › Payment Seller, Billing (Commission Billing, Billing Monitoring, Unpaid Billing) | Settlement run + matching otomatis; Billing Monitoring jadi filter/report |
-| FAD › Seller Acknowledgement | Seller link; overdue → My Tasks |
+| FAD › Seller Acknowledgement | FAD › My Tasks: Record acknowledgement per seller |
 | FAD › Vehicle Dispatch (For Dispatch, RTS Approval) | Otomatis; RTS approval → Approvals |
 | FAD › Unreleased Unit | My Tasks (VWD) + Unit page |
 | FAD › Document Monitoring | Track Documents di Unit page + task Scan; list monitoring tetap ada sebagai filter Pipeline |
 | FAD › Cancellation Billing & Payment | Otomatis saat cancel + bank match |
 | FAD › Rebate Payable | Settlement/refund run (tergantung aturan rebate) |
 | FAD › Security Bond | Track tambahan di Unit page (belum di scratch) |
-| SMD › SAAF | Otomatis + seller link; overdue → My Tasks |
+| SMD › SAAF | SMD › SAAF (form per seller per auction: Print, Mark sent, Record signed); overdue → My Tasks |
 | SMD › Pending Awarding, Unpaid, Seller Ack, For Dispatch, Unreleased (snapshot/duplikat) | Dihapus: semua lihat All units / Unit page |
 | SMD › Return to Seller, SMD Manager Approval | RTS flow + Approvals |
 | VWD › Unreleased Unit, Unreleased (Overdue), For Dispatch, For Return to Seller | My Tasks (VWD) |
@@ -195,14 +195,14 @@ Total: 39 layar V1 → **20** (13 baru/berubah + 7 tetap *as V1*). Tombol **Demo
 | Aspek | V1 (Philips) | V2 (konsep) |
 |---|---|---|
 | Unit desain | Layar per departemen (FAD/SMD/VWD) | Perjalanan satu unit + antrian kerja per role |
-| Cara lot maju | Staf mengetik tanggal / centang lalu Save | Event: sistem, link seller/buyer, scan, satu klik |
-| Jumlah layar | 39 | 20 di scratch UI (13 baru/berubah + 7 *as V1*) |
+| Cara lot maju | Staf mengetik tanggal / centang lalu Save | Event: sistem, scan, satu klik per dokumen |
+| Jumlah layar | 39 | 21 di scratch UI (14 baru/berubah + 7 *as V1*) |
 | Field tanggal diketik | 21 (+ dialog) | 0 dalam alur normal; koreksi via Change date |
 | Kolom centang "For …?" | 9 | 0 (trigger otomatis / aksi massal) |
 | Approval | Campuran: tombol (Rebate) dan tanggal/nama diketik (RTS, Extend) | Satu inbox, semua tombol |
 | Melihat status satu unit | Cari di beberapa list | Satu Unit page |
 | Pengecualian (overdue, mismatch) | Tercampur di list; kolom merah | Muncul sebagai task dengan keputusan yang jelas |
-| Peran seller & buyer | Pasif; staf mengetik balasan mereka | Aktif lewat link/portal |
+| Peran seller & buyer | Pasif; staf mengetik tanggal per lot | Tetap tidak membuka CDMS; staf mencatat sekali per dokumen (SAAF, acknowledgement) |
 | Paralelisme setelah bayar | Tersembunyi di list berbeda | Terlihat sebagai 3 track |
 
 ### 7.2 Skenario: satu lot normal (seller SBC) dari terjual sampai selesai
@@ -210,11 +210,11 @@ Total: 39 layar V1 → **20** (13 baru/berubah + 7 tetap *as V1*). Tombol **Demo
 | Langkah | V1: sentuhan manual | V2: sentuhan manual |
 |---|---|---|
 | KYC | 1 (switch) | 0 |
-| SAAF kirim + approval | 3 (centang, kirim, ketik tanggal) | 0 (seller klik) |
+| SAAF kirim + approval | 3 per lot (centang, kirim, ketik tanggal) | 2 per form (Mark sent, Record signed) |
 | BAAF | 2 (centang, kirim) | 0 |
 | Buyer Paid | 1 (ketik) + Save | 0 (bank match) |
 | Payment to Seller | 3 (centang, tanggal, print) | ⅟n (satu approval per run) |
-| Seller Ack | 1 | 0 (seller klik) |
+| Seller Ack | 1 per lot | 1 per seller |
 | Commission billing | 3 (centang, NOAH no., print) | 0 |
 | Dispatch | 2 (centang email, tanggal) | 0 |
 | DOAS & dokumen | 1 centang + hingga 5 tanggal | 2 scan |
@@ -242,9 +242,9 @@ Estimasi lama (preliminary 100–150 MD dari Alvin; ±41 MD bagian saya) **tidak
 |---|---|
 | Core lot state machine + event log | Inti V2; menggantikan banyak list |
 | My Tasks, Approvals inbox, Unit page, Pipeline | Lebih sedikit layar daripada V1, tapi tiap layar lebih "pintar" |
-| Automation jobs (SAAF, BAAF, reminder, dispatch, DOAS email, billing) | Scheduler + template email (layout reuse V1) |
+| Automation jobs (SAAF builder, BAAF, reminder, dispatch, DOAS email, billing) | Scheduler + template email (layout reuse V1) |
 | Bank matching | Besar/kecilnya tergantung modul BankTransfer yang sudah ada dan format referensi |
-| Link seller (SAAF, Ack, EWB DOAS) | Signed link + halaman konfirmasi sederhana |
+| SAAF per seller | Builder form + print layout SAAF + upload signed copy |
 | KYC source | Tergantung jbap-revamp/API |
 | NOAH | Tergantung API NOAH (P3 V1) |
 | QR transmittal + scan | Kecil kalau pakai scanner/kamera biasa |
@@ -270,8 +270,8 @@ Query-nya disiapkan terpisah setelah dokumen ini disetujui.
 **Sesi 1, as-is (±2 jam):** telusuri satu lot nyata dari terjual sampai release. Catat siapa yang menyentuh, berapa lama tiap langkah, di mana sering salah atau terlambat, dan KPI yang JBAP pedulikan.
 
 **Sesi 2, to-be (±2 jam):** tunjukkan scratch UI ini dan putuskan:
-1. Boleh BAAF/SAAF/dispatch/DOAS email disiapkan CDMS dan terkirim pada pengiriman terjadwal (usulan: 16:00) kecuali di-Hold? Jam berapa cut-off yang cocok?
-2. Apakah seller bersedia approve SAAF dan acknowledge lewat link? Seller mana yang tidak?
+1. Boleh BAAF/dispatch/DOAS email disiapkan CDMS dan terkirim pada pengiriman terjadwal (usulan: 16:00) kecuali di-Hold? Jam berapa cut-off yang cocok?
+2. SAAF: dikirim ke seller lewat email (scan) atau fisik? Perlukah tanda tangan internal dicatat (sekarang tidak)? Bisakah QR di form dipakai untuk mencatat saat kembali?
 3. Pembayaran buyer bisa dicocokkan otomatis? Referensi apa yang dipakai?
 4. Rebate: dipotong dari tagihan buyer atau dibayar terpisah?
 5. Pull-out deadline seller DOAS mulai dari signed DOAS diterima (lihat bagian 5)?
@@ -290,8 +290,8 @@ Query-nya disiapkan terpisah setelah dokumen ini disetujui.
 | User operasional JBAP terbiasa Access dan menolak perubahan | Workshop melibatkan mereka; tunjukkan pengurangan kerja per lot; transisi bertahap |
 | Otomasi salah kirim (BAAF/SAAF) | "Auto kecuali ditahan", preview harian, log lengkap, email tetap bisa diedit seperti V1 |
 | Integrasi (bank, NOAH, KYC) tidak siap | Fallback 1-click per titik; desain tetap jalan tanpa integrasi, otomasi menyusul |
-| Seller tidak mau klik link | Fallback 1-click oleh SMD dengan bukti email terlampir |
-| Estimasi membengkak | Fase: (1) core state + tasks + auto email, (2) bank matching + seller link, (3) NOAH/QR |
+| Seller tidak tanda tangan untuk satu lot | Lot di-untick saat Record signed SAAF → task SMD (Cancel sale / Record approval) |
+| Estimasi membengkak | Fase: (1) core state + tasks + auto email, (2) bank matching, (3) NOAH/QR |
 | DOAS/dokumen tetap fisik dan notaris | V2 tidak mengubah proses fisik; hanya cara mencatatnya. E-signature untuk DOAS **tidak** diasumsikan (belum diketahui legalitasnya di Filipina) |
 
 ---
@@ -312,5 +312,5 @@ Query-nya disiapkan terpisah setelah dokumen ini disetujui.
 6. **FAD › Settlement Run** → Approve run: seller dibayar, commission billing terbentuk sendiri.
 7. **VWD › My Tasks** → Release vehicle: penalty ditagih di langkah yang sama.
 8. **SMD › My Tasks** → Cancel sale (dengan request waiver) → muncul di Approvals.
-9. **Demo events** → seller klik link, buyer KYC, next working day: lihat SAAF/BAAF/reminder berjalan sendiri.
+9. **Demo events** → SAAF bertanda tangan kembali, buyer KYC, next working day: lihat SAAF/BAAF/reminder berjalan sendiri.
 10. **V1 vs V2** di header untuk tabel perbandingan.
