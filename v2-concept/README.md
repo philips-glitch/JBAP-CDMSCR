@@ -110,7 +110,7 @@ Kolom **Kelayakan**: *Tinggi* = bisa dibangun di CDMS tanpa pihak luar; *Cek* = 
 | # | V1 (manual) | V2 | Sumber tanggal | Kelayakan |
 |---|---|---|---|---|
 | 1 | KYC Status di-switch di Result Price | Diambil dari status KYC buyer (registrasi di jbap-revamp / API) | Auto | Cek: sumber dan definisi KYC |
-| 2 | SAAF: centang For SAAF → Email per lot | SAAF **disusun otomatis per seller per auction** dari lot yang KYC-nya approved (layout form kertas sekarang); SMD Print lalu **Mark sent to seller** sekali per form. Tanda tangan internal tetap di kertas, tidak dicatat | Auto + 1-click | Tinggi |
+| 2 | SAAF: centang For SAAF → Email per lot | SAAF **disusun otomatis per seller per auction** dari lot yang KYC-nya approved (layout form kertas sekarang, termasuk Minimum Bid Price); SMD **Checked & print** (cek tercatat, lot di bawah minimum bid ditandai) lalu **Mark sent to seller** sekali per form. Tanda tangan internal tetap di kertas, tidak dicatat | Auto + 1-click | Tinggi |
 | 3 | Seller Approved diketik per lot | SMD klik **Record signed SAAF** sekali per form saat kertas kembali (untick lot yang tidak ditandatangani; lampirkan scan) | 1-click (opsi: scan QR di form) | Tinggi |
 | 4 | Pending Awarding: centang For BAAF, cek Awarding Date | BAAF disiapkan otomatis saat KYC + SAAF beres, dikirim pada pengiriman 16:00; **ditahan otomatis** selama rebate menunggu President; Awarding Date = tanggal kirim | Auto | Tinggi |
 | 5 | Buyer Paid diketik | Dicocokkan dari import mutasi bank / modul payment; hanya yang tidak cocok masuk ke FAD | Auto | Cek: modul BankTransfer/PaymentCustomer dipakai? format referensi pembayaran buyer |
@@ -155,7 +155,7 @@ V2 **bukan aplikasi baru**: semuanya ada di CDMS yang sudah berjalan, dengan sid
 | SMD | **My Tasks** | Baru | Buyer/seller yang tidak merespons, unpaid lewat deadline (Cancel / Extend) |
 | SMD | Return to Seller | As V1 | Approval manager pindah ke inbox |
 | VWD | **My Tasks** | Baru | Unit siap/overdue pull-out; Release vehicle sekaligus menagih penalty |
-| Payment | Bank Transfer | Existing, diubah | Import mutasi bank (modul CDMS existing) + matching otomatis ke lot / cancellation fee |
+| Payment | Bank Transfer | Existing, diubah | Import mutasi bank (modul CDMS existing) + matching otomatis ke lot / cancellation fee + daftar semua transaksi bank dari semua import (juga tampil di unit page dan customer page) |
 | Master | Holiday List | As V1 | (+ import tahunan, belum di scratch) |
 | (dari link plat) | **Unit page** | Baru | Satu halaman per lot: next action, timeline sale→payment, 3 track paralel, uang, history dengan sumber tiap tanggal |
 | Log Activity | Log Activity | Existing | Semua event otomatis dan manual |
@@ -210,7 +210,7 @@ Total: 39 layar V1 → **21** (14 baru/berubah + 7 tetap *as V1*; SMD › SAAF b
 | Langkah | V1: sentuhan manual | V2: sentuhan manual |
 |---|---|---|
 | KYC | 1 (switch) | 0 |
-| SAAF kirim + approval | 3 per lot (centang, kirim, ketik tanggal) | 2 per form (Mark sent, Record signed) |
+| SAAF kirim + approval | 3 per lot (centang, kirim, ketik tanggal) | 3 per form (Checked & print, Mark sent, Record signed) |
 | BAAF | 2 (centang, kirim) | 0 |
 | Buyer Paid | 1 (ketik) + Save | 0 (bank match) |
 | Payment to Seller | 3 (centang, tanggal, print) | ⅟n (satu approval per run) |
@@ -271,7 +271,7 @@ Query-nya disiapkan terpisah setelah dokumen ini disetujui.
 
 **Sesi 2, to-be (±2 jam):** tunjukkan scratch UI ini dan putuskan:
 1. Boleh BAAF/dispatch/DOAS email disiapkan CDMS dan terkirim pada pengiriman terjadwal (usulan: 16:00) kecuali di-Hold? Jam berapa cut-off yang cocok?
-2. SAAF: dikirim ke seller lewat email (scan) atau fisik? Perlukah tanda tangan internal dicatat (sekarang tidak)? Bisakah QR di form dipakai untuk mencatat saat kembali?
+2. SAAF (tanya ke Joel): bagaimana seller mengirim balik SAAF bertanda tangan (email scan / fisik / kurir)? Apa saja yang dicek SMD sebelum print (minimum bid, KYC, lainnya)? Bisakah QR di form dipakai untuk mencatat saat kembali?
 3. Pembayaran buyer bisa dicocokkan otomatis? Referensi apa yang dipakai?
 4. Rebate: dipotong dari tagihan buyer atau dibayar terpisah?
 5. Pull-out deadline seller DOAS mulai dari signed DOAS diterima (lihat bagian 5)?

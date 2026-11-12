@@ -114,7 +114,11 @@ Format tiap fitur: **apa**, **menggantikan apa di V1**, **cara kerja**, **coba d
 - **Apa**: memakai modul CDMS yang **sudah ada** (import CSV mutasi bank), ditambah pencocokan otomatis.
 - **Menggantikan**: mengetik Buyer Paid di FAD › Unpaid, Date Paid di Cancellation Billing, dan Payment Date di Unpaid Billing.
 - **Cara kerja**: BAAF mencantumkan referensi pembayaran `BuyerID-Auction-Lot`. Saat file bank diimport, kredit yang cocok (referensi + jumlah) langsung menandai lot *Paid*. Yang tidak cocok (kurang bayar, tanpa referensi) masuk FAD › My Tasks dengan tombol **Accept & match** / **Ask buyer for balance**. Fee cancel juga dicocokkan dengan cara yang sama.
-- **Coba**: Payment › Bank Transfer › Import bank statement: 2 lot cocok, 1 kurang bayar, 1 fee cancel lunas.
+- **Riwayat pembayaran (masukan Calvin, 12 Nov)**: setiap kredit dari semua file import **tersimpan** dan tampil di:
+  - Payment › Bank Transfer › *Bank transactions (all imports)*: tanggal, file bank, referensi, lot, buyer, tipe (Buyer payment / Balance / Cancellation fee), jumlah, hasil, dan siapa yang mencocokkan. Bisa difilter dan di-sort.
+  - Unit page › Money: *Received …* per pembayaran.
+  - Customer page: kolom *Paid*.
+- **Coba**: Payment › Bank Transfer › Import bank statement: 2 lot cocok, 1 kurang bayar, 1 fee cancel lunas, dan semuanya masuk daftar bersama pembayaran sebelumnya.
 - **Konfirmasi (penting)**: apakah JBAP PH memakai modul ini sekarang; bank apa dan format file-nya; apakah buyer bisa diminta mencantumkan referensi. Kalau tidak bisa, fallback-nya FAD mencocokkan per baris (tetap lebih cepat daripada mengetik tanggal).
 
 ### 3.6 FAD › Settlement Run
@@ -182,13 +186,13 @@ Format tiap fitur: **apa**, **menggantikan apa di V1**, **cara kerja**, **coba d
 - **Apa**: CDMS menyusun SAAF dengan layout yang sama dengan form kertas sekarang (Seller, Auction Number, daftar lot, Winning Bid Price, Buyer Name, JBAP Customer ID, kalimat release, tiga kolom tanda tangan), satu form per seller per auction, dari lot yang KYC buyer-nya sudah approved. Lot yang KYC-nya approved belakangan masuk form baru (SAAF susulan).
 - **Menggantikan**: SMD › SAAF di V1 (centang For SAAF, kirim email, ketik Seller Approved **per lot**).
 - **Cara kerja**:
-  1. Form muncul di SMD › My Tasks: *SAAF A231 · EWB ready to print*. Tombol **Print SAAF**.
-  2. Tanda tangan internal (Sales & Marketing Head, Finance & Admin Head) tetap di kertas dan **tidak dicatat** di CDMS, sama seperti di Access sekarang.
+  1. Form muncul di SMD › My Tasks: *SAAF A231 · EWB ready to check & print*. Tombol **Check & print** membuka form dengan hasil cek: KYC semua lot, dan lot yang **winning bid di bawah minimum bid** (kolom Minimum Bid Price ada di form kertas). Klik **Checked & print**: CDMS mencatat SMD sudah cek (user dan tanggal). Ini menggantikan pengecekan SMD sebelum print yang sekarang tidak tercatat (masukan Calvin).
+  2. Tanda tangan SMD head dan Finance & Admin Head tetap di kertas; CDMS tidak mencatat tanda tangannya, hanya langkah cek SMD di atas.
   3. SMD klik **Mark sent to seller**: tanggal *SAAF sent to seller* tercatat untuk semua lot di form.
   4. Seller tanda tangan di kertas. Saat kembali, SMD klik **Record signed SAAF**: semua lot tercentang; untick lot yang tidak ditandatangani seller; lampirkan scan. Tanggal *Seller signed SAAF* tercatat untuk lot yang dicentang, dan BAAF lot itu masuk antrean 16:00.
   5. Kalau lebih dari 2 hari kerja belum kembali: task *Signed SAAF … not back yet* dengan **Remind seller**.
-- **Coba**: SMD › SAAF, atau SMD › My Tasks: Print SAAF A231 · EWB → Mark sent to seller → Record signed SAAF. Atau Demo events › *A seller returns a signed SAAF*.
-- **Konfirmasi**: apakah SAAF dikirim ke seller lewat email (scan) atau fisik; apakah perlu dicatat siapa yang tanda tangan internal (sekarang tidak); apakah QR di form bisa dipakai untuk mencatat saat kembali (scan, bukan klik).
+- **Coba**: SMD › SAAF, atau SMD › My Tasks: Check & print SAAF A231 · EWB (lot 105 di bawah minimum bid) → Mark sent to seller → Record signed SAAF. Atau Demo events › *A seller returns a signed SAAF*.
+- **Konfirmasi** (tanya ke Joel): bagaimana seller mengirim balik SAAF bertanda tangan (email scan, fisik, kurir) dan berapa lama biasanya; apa saja yang dicek SMD sebelum print selain minimum bid; apakah perlu dicatat siapa yang tanda tangan internal (sekarang tidak); apakah QR di form bisa dipakai untuk mencatat saat kembali (scan, bukan klik).
 
 ---
 
@@ -221,7 +225,7 @@ Setiap fase tetap bisa dipakai walau fase berikutnya belum jalan (fallback 1-cli
 6. **Approval › Approvals › Approve** rebate: BAAF berubah jadi *Scheduled 4:00 PM*.
 7. **FAD › Settlement Run › Approve run**: payment to seller + commission billing tercatat.
 8. **VWD › My Tasks › Release vehicle**: penalty ditagih sekaligus.
-9. **SMD › SAAF**: Print SAAF A231 · EWB → Mark sent to seller → Record signed SAAF (untick satu lot untuk lihat task *seller did not sign*).
+9. **SMD › SAAF**: Check & print SAAF A231 · EWB → Mark sent to seller → Record signed SAAF (untick satu lot untuk lihat task *seller did not sign*).
 10. **Demo events › Next working day**: email terkirim pada 16:00, reminder dan penalty bergerak.
 11. **Log Activity**: semua kejadian dengan kolom *Recorded*. Tutup dengan **V1 vs V2** di header.
 
